@@ -1,19 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useAuth } from "../lib/auth-context";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+
+  if (isAuthenticated && user) {
+    if (user.role === "teacher") {
+      navigate({ to: "/teacher/dashboard" });
+    } else {
+      navigate({ to: "/student/dashboard" });
+    }
+    return null;
+  }
+
+  navigate({ to: "/login" });
+  return null;
 }

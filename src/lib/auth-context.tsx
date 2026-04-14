@@ -20,7 +20,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const login = useCallback((role: Role) => {
-    if (role === "teacher") {
+    if (role === "admin") {
+      setUser({ id: "admin1", name: "Principal Admin", role: "admin" });
+    } else if (role === "teacher") {
       setUser({ id: teachers[0].id, name: teachers[0].name, role: "teacher" });
     } else {
       setUser({ id: students[0].id, name: students[0].name, role: "student" });

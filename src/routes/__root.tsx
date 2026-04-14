@@ -28,6 +28,12 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Student Rewards App" },
       { name: "description", content: "Gamified student rewards system with QR scanning and point tracking" },
+      { property: "og:title", content: "Student Rewards App" },
+      { name: "twitter:title", content: "Student Rewards App" },
+      { property: "og:description", content: "Gamified student rewards system with QR scanning and point tracking" },
+      { name: "twitter:description", content: "Gamified student rewards system with QR scanning and point tracking" },
+      { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

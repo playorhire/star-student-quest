@@ -1,4 +1,4 @@
-export type Role = "teacher" | "student";
+export type Role = "admin" | "teacher" | "student";
 
 export interface Student {
   id: string;
@@ -14,8 +14,15 @@ export interface Student {
 export interface Teacher {
   id: string;
   name: string;
+  email: string;
   assignedClasses: string[];
   assignedSubjects: string[];
+}
+
+export interface ClassInfo {
+  id: string;
+  name: string;
+  sections: string[];
 }
 
 export interface Subject {
@@ -69,6 +76,14 @@ export interface Redemption {
   timestamp: string;
 }
 
+// --- Mutable store (simulates DB) ---
+
+export const classes: ClassInfo[] = [
+  { id: "c1", name: "10A", sections: ["A"] },
+  { id: "c2", name: "10B", sections: ["B"] },
+  { id: "c3", name: "9A", sections: ["A"] },
+];
+
 export const students: Student[] = [
   { id: "s1", name: "Aarav Sharma", rollNumber: "101", className: "10A", section: "A", qrCode: "STU-s1-101", totalPoints: 450, avatarEmoji: "🧑‍🎓" },
   { id: "s2", name: "Priya Patel", rollNumber: "102", className: "10A", section: "A", qrCode: "STU-s2-102", totalPoints: 620, avatarEmoji: "👩‍🎓" },
@@ -78,8 +93,8 @@ export const students: Student[] = [
 ];
 
 export const teachers: Teacher[] = [
-  { id: "t1", name: "Mrs. Deepa Nair", assignedClasses: ["10A", "10B"], assignedSubjects: ["Mathematics", "Science"] },
-  { id: "t2", name: "Mr. Rajesh Verma", assignedClasses: ["10A"], assignedSubjects: ["English", "History"] },
+  { id: "t1", name: "Mrs. Deepa Nair", email: "deepa@school.edu", assignedClasses: ["10A", "10B"], assignedSubjects: ["Mathematics", "Science"] },
+  { id: "t2", name: "Mr. Rajesh Verma", email: "rajesh@school.edu", assignedClasses: ["10A"], assignedSubjects: ["English", "History"] },
 ];
 
 export const subjects: Subject[] = [
@@ -120,6 +135,8 @@ export const redemptions: Redemption[] = [
   { id: "red2", studentId: "s1", rewardId: "r1", rewardName: "Extra Recess", pointsSpent: 100, status: "pending", timestamp: "2026-04-13T15:00:00Z" },
 ];
 
+// --- Helper functions ---
+
 export function findStudentByQR(qrCode: string): Student | undefined {
   return students.find(s => s.qrCode === qrCode);
 }
@@ -139,4 +156,59 @@ export function getNextBadge(totalPoints: number): Badge | undefined {
 
 export function getLeaderboard(): Student[] {
   return [...students].sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+// --- Mutation helpers (simulate DB writes) ---
+
+let nextId = 100;
+function genId(prefix: string) { return `${prefix}${nextId++}`; }
+
+export function addClass(name: string, sectionsList: string[]): ClassInfo {
+  const c: ClassInfo = { id: genId("c"), name, sections: sectionsList };
+  classes.push(c);
+  return c;
+}
+
+export function removeClass(id: string) {
+  const idx = classes.findIndex(c => c.id === id);
+  if (idx >= 0) classes.splice(idx, 1);
+}
+
+export function addSubject(name: string, className: string, passingMarks: number, multiplier: number): Subject {
+  const s: Subject = { id: genId("sub"), name, className, passingMarks, multiplier };
+  subjects.push(s);
+  return s;
+}
+
+export function updateSubject(id: string, updates: Partial<Pick<Subject, "passingMarks" | "multiplier">>) {
+  const s = subjects.find(x => x.id === id);
+  if (s) Object.assign(s, updates);
+}
+
+export function removeSubject(id: string) {
+  const idx = subjects.findIndex(s => s.id === id);
+  if (idx >= 0) subjects.splice(idx, 1);
+}
+
+export function addStudent(name: string, rollNumber: string, className: string, section: string): Student {
+  const id = genId("s");
+  const s: Student = { id, name, rollNumber, className, section, qrCode: `STU-${id}-${rollNumber}`, totalPoints: 0, avatarEmoji: "🧑‍🎓" };
+  students.push(s);
+  return s;
+}
+
+export function removeStudent(id: string) {
+  const idx = students.findIndex(s => s.id === id);
+  if (idx >= 0) students.splice(idx, 1);
+}
+
+export function addTeacher(name: string, email: string, assignedClasses: string[], assignedSubjects: string[]): Teacher {
+  const t: Teacher = { id: genId("t"), name, email, assignedClasses, assignedSubjects };
+  teachers.push(t);
+  return t;
+}
+
+export function removeTeacher(id: string) {
+  const idx = teachers.findIndex(t => t.id === id);
+  if (idx >= 0) teachers.splice(idx, 1);
 }

@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated.teacher'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated.student'
+import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated.parent'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherHistoryRouteImport } from './routes/_authenticated.teacher.history'
@@ -22,6 +23,9 @@ import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authe
 import { Route as AuthenticatedStudentQrRouteImport } from './routes/_authenticated.student.qr'
 import { Route as AuthenticatedStudentHistoryRouteImport } from './routes/_authenticated.student.history'
 import { Route as AuthenticatedStudentDashboardRouteImport } from './routes/_authenticated.student.dashboard'
+import { Route as AuthenticatedParentNotificationsRouteImport } from './routes/_authenticated.parent.notifications'
+import { Route as AuthenticatedParentMessagesRouteImport } from './routes/_authenticated.parent.messages'
+import { Route as AuthenticatedParentDashboardRouteImport } from './routes/_authenticated.parent.dashboard'
 import { Route as AuthenticatedAdminTeachersRouteImport } from './routes/_authenticated.admin.teachers'
 import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated.admin.students'
 import { Route as AuthenticatedAdminRulesRouteImport } from './routes/_authenticated.admin.rules'
@@ -50,6 +54,11 @@ const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
 const AuthenticatedStudentRoute = AuthenticatedStudentRouteImport.update({
   id: '/student',
   path: '/student',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedParentRoute = AuthenticatedParentRouteImport.update({
+  id: '/parent',
+  path: '/parent',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -98,6 +107,24 @@ const AuthenticatedStudentDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedParentNotificationsRoute =
+  AuthenticatedParentNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedParentRoute,
+  } as any)
+const AuthenticatedParentMessagesRoute =
+  AuthenticatedParentMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => AuthenticatedParentRoute,
+  } as any)
+const AuthenticatedParentDashboardRoute =
+  AuthenticatedParentDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedParentRoute,
+  } as any)
 const AuthenticatedAdminTeachersRoute =
   AuthenticatedAdminTeachersRouteImport.update({
     id: '/teachers',
@@ -132,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/parent': typeof AuthenticatedParentRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
@@ -139,6 +167,9 @@ export interface FileRoutesByFullPath {
   '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/parent/dashboard': typeof AuthenticatedParentDashboardRoute
+  '/parent/messages': typeof AuthenticatedParentMessagesRoute
+  '/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
@@ -151,6 +182,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/parent': typeof AuthenticatedParentRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
@@ -158,6 +190,9 @@ export interface FileRoutesByTo {
   '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/parent/dashboard': typeof AuthenticatedParentDashboardRoute
+  '/parent/messages': typeof AuthenticatedParentMessagesRoute
+  '/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
@@ -172,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/_authenticated/admin/classes': typeof AuthenticatedAdminClassesRoute
@@ -179,6 +215,9 @@ export interface FileRoutesById {
   '/_authenticated/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/_authenticated/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/_authenticated/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/_authenticated/parent/dashboard': typeof AuthenticatedParentDashboardRoute
+  '/_authenticated/parent/messages': typeof AuthenticatedParentMessagesRoute
+  '/_authenticated/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/_authenticated/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/_authenticated/student/history': typeof AuthenticatedStudentHistoryRoute
   '/_authenticated/student/qr': typeof AuthenticatedStudentQrRoute
@@ -193,6 +232,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin'
+    | '/parent'
     | '/student'
     | '/teacher'
     | '/admin/classes'
@@ -200,6 +240,9 @@ export interface FileRouteTypes {
     | '/admin/rules'
     | '/admin/students'
     | '/admin/teachers'
+    | '/parent/dashboard'
+    | '/parent/messages'
+    | '/parent/notifications'
     | '/student/dashboard'
     | '/student/history'
     | '/student/qr'
@@ -212,6 +255,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/admin'
+    | '/parent'
     | '/student'
     | '/teacher'
     | '/admin/classes'
@@ -219,6 +263,9 @@ export interface FileRouteTypes {
     | '/admin/rules'
     | '/admin/students'
     | '/admin/teachers'
+    | '/parent/dashboard'
+    | '/parent/messages'
+    | '/parent/notifications'
     | '/student/dashboard'
     | '/student/history'
     | '/student/qr'
@@ -232,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/admin'
+    | '/_authenticated/parent'
     | '/_authenticated/student'
     | '/_authenticated/teacher'
     | '/_authenticated/admin/classes'
@@ -239,6 +287,9 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rules'
     | '/_authenticated/admin/students'
     | '/_authenticated/admin/teachers'
+    | '/_authenticated/parent/dashboard'
+    | '/_authenticated/parent/messages'
+    | '/_authenticated/parent/notifications'
     | '/_authenticated/student/dashboard'
     | '/_authenticated/student/history'
     | '/_authenticated/student/qr'
@@ -289,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof AuthenticatedStudentRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/parent': {
+      id: '/_authenticated/parent'
+      path: '/parent'
+      fullPath: '/parent'
+      preLoaderRoute: typeof AuthenticatedParentRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin': {
@@ -347,6 +405,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentDashboardRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/parent/notifications': {
+      id: '/_authenticated/parent/notifications'
+      path: '/notifications'
+      fullPath: '/parent/notifications'
+      preLoaderRoute: typeof AuthenticatedParentNotificationsRouteImport
+      parentRoute: typeof AuthenticatedParentRoute
+    }
+    '/_authenticated/parent/messages': {
+      id: '/_authenticated/parent/messages'
+      path: '/messages'
+      fullPath: '/parent/messages'
+      preLoaderRoute: typeof AuthenticatedParentMessagesRouteImport
+      parentRoute: typeof AuthenticatedParentRoute
+    }
+    '/_authenticated/parent/dashboard': {
+      id: '/_authenticated/parent/dashboard'
+      path: '/dashboard'
+      fullPath: '/parent/dashboard'
+      preLoaderRoute: typeof AuthenticatedParentDashboardRouteImport
+      parentRoute: typeof AuthenticatedParentRoute
+    }
     '/_authenticated/admin/teachers': {
       id: '/_authenticated/admin/teachers'
       path: '/teachers'
@@ -404,6 +483,21 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedParentRouteChildren {
+  AuthenticatedParentDashboardRoute: typeof AuthenticatedParentDashboardRoute
+  AuthenticatedParentMessagesRoute: typeof AuthenticatedParentMessagesRoute
+  AuthenticatedParentNotificationsRoute: typeof AuthenticatedParentNotificationsRoute
+}
+
+const AuthenticatedParentRouteChildren: AuthenticatedParentRouteChildren = {
+  AuthenticatedParentDashboardRoute: AuthenticatedParentDashboardRoute,
+  AuthenticatedParentMessagesRoute: AuthenticatedParentMessagesRoute,
+  AuthenticatedParentNotificationsRoute: AuthenticatedParentNotificationsRoute,
+}
+
+const AuthenticatedParentRouteWithChildren =
+  AuthenticatedParentRoute._addFileChildren(AuthenticatedParentRouteChildren)
+
 interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentDashboardRoute: typeof AuthenticatedStudentDashboardRoute
   AuthenticatedStudentHistoryRoute: typeof AuthenticatedStudentHistoryRoute
@@ -438,12 +532,14 @@ const AuthenticatedTeacherRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedParentRoute: typeof AuthenticatedParentRouteWithChildren
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
   AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedParentRoute: AuthenticatedParentRouteWithChildren,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
   AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
 }

@@ -1,20 +1,19 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, QrCode, History, Gift, LogOut } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Bell, LogOut } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/student")({
-  component: StudentLayout,
+export const Route = createFileRoute("/_authenticated/parent")({
+  component: ParentLayout,
 });
 
-function StudentLayout() {
+function ParentLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
   const navItems = [
-    { to: "/student/dashboard" as const, label: "Home", icon: LayoutDashboard },
-    { to: "/student/qr" as const, label: "My QR", icon: QrCode },
-    { to: "/student/history" as const, label: "History", icon: History },
-    { to: "/student/rewards" as const, label: "Rewards", icon: Gift },
+    { to: "/parent/dashboard" as const, label: "Home", icon: LayoutDashboard },
+    { to: "/parent/messages" as const, label: "Messages", icon: MessageSquare },
+    { to: "/parent/notifications" as const, label: "Alerts", icon: Bell },
   ];
 
   return (
@@ -22,8 +21,8 @@ function StudentLayout() {
       <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🎓</span>
-            <span className="font-bold text-foreground">My Rewards</span>
+            <span className="text-xl">👨‍👩‍👧</span>
+            <span className="font-bold text-foreground">Parent Portal</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
@@ -41,7 +40,7 @@ function StudentLayout() {
           {navItems.map(({ to, label, icon: Icon }) => {
             const isActive = location.pathname === to;
             return (
-              <Link key={to} to={to} className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+              <Link key={to} to={to} className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
                 <Icon className="h-5 w-5" />
                 <span className="text-[10px] font-semibold">{label}</span>
               </Link>

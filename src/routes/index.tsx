@@ -7,18 +7,24 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (loading) return;
     if (isAuthenticated && user) {
       if (user.role === "admin") navigate({ to: "/admin/dashboard" });
       else if (user.role === "teacher") navigate({ to: "/teacher/dashboard" });
+      else if (user.role === "parent") navigate({ to: "/parent/dashboard" });
       else navigate({ to: "/student/dashboard" });
     } else {
       navigate({ to: "/login" });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, loading, navigate]);
 
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-4xl animate-bounce">🎓</div>
+    </div>
+  );
 }

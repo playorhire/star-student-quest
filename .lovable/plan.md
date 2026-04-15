@@ -1,70 +1,93 @@
 
 
-# Student Rewards App — Core Flow First
+# Student Rewards App — Lovable Cloud + Parent Features
 
-## Approach
+## Overview
 
-Build the core rewards flow as a **fully functional frontend with mock data** first, since Supabase is not yet connected. This lets you see and interact with the entire QR scanning, point assignment, and student dashboard flow immediately. We will wire up the real database in a follow-up step.
+Migrate from mock data to Lovable Cloud (Supabase) for real auth, persistent storage, and RLS. Add a new **Parent** role with email notifications and a parent-teacher messaging system.
 
-## What Gets Built
+## Phase 1: Enable Lovable Cloud & Database Schema
 
-### 1. Playful Theme & Layout
-- Update CSS variables to a bright, playful palette (vibrant purple primary, warm orange accents, soft rounded corners)
-- Shared layout component with colorful header, role indicator, and navigation
-- Mobile-first responsive design
+### Tables to create (via migrations)
 
-### 2. Auth & Role Simulation (Mock)
-- Simple login page where you pick a role (Teacher or Student) to test each flow
-- Auth context that stores selected role in state
-- Role-based route guards using `_authenticated` layout pattern
+1. **user_roles** — `user_id (uuid, FK auth.users)`, `role (app_role enum: admin, teacher, student, parent)`
+2. **classes** — `id, name, created_at`
+3. **sections** — `id, name, class_id (FK classes)`
+4. **students** — `id, user_id (FK auth.users, nullable for admin-created), name, roll_number, class_id, section_id, qr_code (uuid), total_points, avatar_emoji`
+5. **subjects** — `id, name, class_id`
+6. **point_rules** — `id, subject_id, passing_marks, multiplier`
+7. **teachers** — `id, user_id (FK auth.users), name, email`
+8. **teacher_assignments** — `id, teacher_id, class_id, subject_id`
+9. **point_transactions** — `id, student_id, teacher_id, subject_id, marks_entered, passing_marks, multiplier, points_awarded, created_at`
+10. **badges** — `id, name, description, emoji, required_points`
+11. **rewards** — `id, name, description, emoji, point_cost, stock, category`
+12. **redemptions** — `id, student_id, reward_id, points_spent, status (pending/fulfilled), created_at`
+13. **parent_student_links** — `id, parent_user_id (FK auth.users), student_id (FK students)` — links parents to their children
+14. **messages** — `id, sender_id (FK auth.users), receiver_id (FK auth.users), student_id (FK students, nullable), content, read, created_at` — parent-teacher messaging
+15. **notifications** — `id, user_id (FK auth.users), title, body, read, created_at` — in-app notification log
 
-### 3. Teacher Flow (3 routes)
-- **`/teacher/dashboard`** — Overview of recent point assignments, assigned classes
-- **`/teacher/scan`** — Browser camera QR scanner using `html5-qrcode`. Scans a student QR code, shows student info, lets teacher select subject, enter marks. Auto-calculates points: `(marks - passing_marks) × multiplier` (only if marks >= passing). Confirm and assign with confetti animation
-- **`/teacher/history`** — List of past point assignments with filters
+### Security
 
-### 4. Student Flow (4 routes)
-- **`/student/dashboard`** — Animated total points counter, recent activity feed, earned badges, progress bar to next badge
-- **`/student/qr`** — Full-screen QR code display (student ID card) using `qrcode.react`
-- **`/student/history`** — Transaction history with subject breakdown
-- **`/student/rewards`** — Browse rewards marketplace, redeem points, view redemption status
+- `has_role()` SECURITY DEFINER function for RLS policies
+- RLS on all tables scoped by role (admins see all, teachers see assigned classes, students see own data, parents see linked children)
+- Parent notifications: when a point_transaction is inserted, a database trigger (or app-level logic) creates a notification row and optionally sends an email
 
-### 5. Shared Components
-- `PointCounter` — Animated number counter
-- `BadgeCard` — Badge display with unlock state
-- `LeaderboardTable` — Class rankings
-- `RewardCard` — Marketplace item card
+## Phase 2: Authentication
 
-## New Dependencies
-- `html5-qrcode` — Browser camera QR scanning
-- `qrcode.react` — QR code generation
-- `canvas-confetti` — Confetti animation on point assignment
+- Replace mock auth context with real Supabase Auth (email/password)
+- Update `_authenticated.tsx` to check Supabase session + role from `user_roles`
+- Update login page to use `supabase.auth.signInWithPassword()`
+- Admin creates accounts for teachers/students/parents (or invite flow)
+- Role-based redirects after login
 
-## Route Structure
-```text
-src/routes/
-  login.tsx                              → /login
-  _authenticated.tsx                     → auth guard layout
-  _authenticated/_teacher.tsx            → teacher layout
-  _authenticated/_teacher/dashboard.tsx  → /teacher/dashboard
-  _authenticated/_teacher/scan.tsx       → /teacher/scan
-  _authenticated/_teacher/history.tsx    → /teacher/history
-  _authenticated/_student.tsx            → student layout
-  _authenticated/_student/dashboard.tsx  → /student/dashboard
-  _authenticated/_student/qr.tsx         → /student/qr
-  _authenticated/_student/history.tsx    → /student/history
-  _authenticated/_student/rewards.tsx    → /student/rewards
-```
+## Phase 3: Parent Role & Routes
 
-## Mock Data
-All data (students, subjects, point rules, transactions, rewards, badges) will be defined in `src/lib/mock-data.ts` so everything works without a database. This file will be swapped for real Supabase queries later.
+### New routes
+- `/parent/dashboard` — see linked children's points, recent activity
+- `/parent/messages` — messaging interface with teachers
+- `/parent/notifications` — notification feed
+
+### Parent layout
+- Bottom nav: Dashboard, Messages, Notifications
+- Header with child selector (if multiple children linked)
+
+## Phase 4: Notification System
+
+- **In-app**: `notifications` table, queried on parent dashboard, unread badge count
+- **Email**: When points are awarded, trigger an email to parent: "Your child [name] earned [X] points in [subject] today"
+- Email sending via Lovable's built-in email infrastructure (requires email domain setup)
+
+## Phase 5: Parent-Teacher Messaging
+
+- Simple 1:1 messaging between parents and teachers of linked students
+- Messages table with sender/receiver and optional student context
+- Real-time updates via Supabase Realtime subscriptions
+- Unread message count badges in nav
+
+## Phase 6: Migrate Existing Features
+
+- Replace all `mock-data.ts` imports with Supabase queries
+- Admin CRUD operations become real inserts/updates/deletes
+- Teacher scan flow writes to `point_transactions` table
+- Student dashboard reads from real tables
+- CSV import inserts into real tables
 
 ## Implementation Order
-1. Install dependencies, set up playful theme colors
-2. Create auth context + login page with role picker
-3. Create layout routes with navigation
-4. Build teacher scan flow (QR scanner + point calculator)
-5. Build student dashboard (points, QR card, badges)
-6. Build rewards marketplace
-7. Add leaderboard and history views
+
+1. Enable Lovable Cloud, create database schema + RLS + seed data
+2. Set up Supabase client files and auth middleware
+3. Replace auth context with Supabase Auth
+4. Migrate admin panel to real DB queries
+5. Migrate teacher and student flows to real DB
+6. Add parent role, routes, and dashboard
+7. Add messaging system
+8. Set up email notifications for parents
+
+## Technical Notes
+
+- All Supabase clients follow the three-client pattern (browser, auth-middleware, admin)
+- RLS policies use `has_role()` security definer function to avoid recursion
+- Messages use Supabase Realtime for live updates
+- Email notifications use Lovable's built-in email infrastructure (email domain setup required)
+- No edge functions needed — all server logic via TanStack Start server functions
 

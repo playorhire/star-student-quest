@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { classes, subjects, addClass, removeClass, addSubject, removeSubject, type ClassInfo } from "../lib/mock-data";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,41 +12,55 @@ export const Route = createFileRoute("/_authenticated/admin/classes")({
   component: AdminClasses,
 });
 
+interface ClassRow { id: string; name: string; }
+interface SubjectRow { id: string; name: string; class_id: string; }
+
 function AdminClasses() {
-  const [, setTick] = useState(0);
-  const rerender = () => setTick(t => t + 1);
-
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [subjects, setSubjects] = useState<SubjectRow[]>([]);
   const [newClassName, setNewClassName] = useState("");
-  const [newSections, setNewSections] = useState("A");
   const [newSubjectName, setNewSubjectName] = useState("");
-  const [newSubjectClass, setNewSubjectClass] = useState("");
+  const [newSubjectClassId, setNewSubjectClassId] = useState("");
 
-  const handleAddClass = () => {
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    const [c, s] = await Promise.all([
+      supabase.from("classes").select("id, name").order("name"),
+      supabase.from("subjects").select("id, name, class_id").order("name"),
+    ]);
+    setClasses(c.data || []);
+    setSubjects(s.data || []);
+  }
+
+  async function handleAddClass() {
     if (!newClassName.trim()) return;
-    const secs = newSections.split(",").map(s => s.trim()).filter(Boolean);
-    addClass(newClassName.trim(), secs.length ? secs : ["A"]);
+    await supabase.from("classes").insert({ name: newClassName.trim() });
     setNewClassName("");
-    setNewSections("A");
-    rerender();
-  };
+    load();
+  }
 
-  const handleRemoveClass = (id: string) => {
-    removeClass(id);
-    rerender();
-  };
+  async function handleRemoveClass(id: string) {
+    await supabase.from("classes").delete().eq("id", id);
+    load();
+  }
 
-  const handleAddSubject = () => {
-    if (!newSubjectName.trim() || !newSubjectClass) return;
-    addSubject(newSubjectName.trim(), newSubjectClass, 35, 1);
+  async function handleAddSubject() {
+    if (!newSubjectName.trim() || !newSubjectClassId) return;
+    const { data } = await supabase.from("subjects").insert({ name: newSubjectName.trim(), class_id: newSubjectClassId }).select().single();
+    if (data) {
+      // Also create a default point rule
+      await supabase.from("point_rules").insert({ subject_id: data.id, passing_marks: 35, multiplier: 1.0 });
+    }
     setNewSubjectName("");
-    setNewSubjectClass("");
-    rerender();
-  };
+    setNewSubjectClassId("");
+    load();
+  }
 
-  const handleRemoveSubject = (id: string) => {
-    removeSubject(id);
-    rerender();
-  };
+  async function handleRemoveSubject(id: string) {
+    await supabase.from("subjects").delete().eq("id", id);
+    load();
+  }
 
   return (
     <div className="space-y-6">
@@ -55,21 +69,12 @@ function AdminClasses() {
         <p className="text-sm text-muted-foreground">Manage school structure</p>
       </div>
 
-      {/* Add Class */}
       <Card className="border-2 border-primary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold">Add Class</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Class</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Class Name</Label>
-              <Input placeholder="e.g. 10A" value={newClassName} onChange={e => setNewClassName(e.target.value)} className="rounded-xl" />
-            </div>
-            <div>
-              <Label className="text-xs">Sections (comma-separated)</Label>
-              <Input placeholder="A, B" value={newSections} onChange={e => setNewSections(e.target.value)} className="rounded-xl" />
-            </div>
+          <div>
+            <Label className="text-xs">Class Name</Label>
+            <Input placeholder="e.g. 10A" value={newClassName} onChange={e => setNewClassName(e.target.value)} className="rounded-xl" />
           </div>
           <Button onClick={handleAddClass} className="rounded-xl" disabled={!newClassName.trim()}>
             <Plus className="h-4 w-4 mr-1" /> Add Class
@@ -77,10 +82,9 @@ function AdminClasses() {
         </CardContent>
       </Card>
 
-      {/* Class List */}
       <div className="space-y-2">
-        {classes.map((cls) => {
-          const classSubjects = subjects.filter(s => s.className === cls.name);
+        {classes.map(cls => {
+          const classSubjects = subjects.filter(s => s.class_id === cls.id);
           return (
             <Card key={cls.id} className="border-0 shadow-sm">
               <CardContent className="p-4">
@@ -88,9 +92,6 @@ function AdminClasses() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🏫</span>
                     <span className="font-bold text-card-foreground">{cls.name}</span>
-                    {cls.sections.map(s => (
-                      <Badge key={s} variant="secondary" className="text-[10px]">Sec {s}</Badge>
-                    ))}
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveClass(cls.id)} className="h-8 w-8 text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
@@ -112,11 +113,8 @@ function AdminClasses() {
         })}
       </div>
 
-      {/* Add Subject */}
       <Card className="border-2 border-secondary/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold">Add Subject</CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Subject</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -125,13 +123,13 @@ function AdminClasses() {
             </div>
             <div>
               <Label className="text-xs">For Class</Label>
-              <select value={newSubjectClass} onChange={e => setNewSubjectClass(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
+              <select value={newSubjectClassId} onChange={e => setNewSubjectClassId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
                 <option value="">Select class</option>
-                {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
           </div>
-          <Button onClick={handleAddSubject} variant="secondary" className="rounded-xl" disabled={!newSubjectName.trim() || !newSubjectClass}>
+          <Button onClick={handleAddSubject} variant="secondary" className="rounded-xl" disabled={!newSubjectName.trim() || !newSubjectClassId}>
             <Plus className="h-4 w-4 mr-1" /> Add Subject
           </Button>
         </CardContent>

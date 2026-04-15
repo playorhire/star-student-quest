@@ -1,73 +1,95 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { rewards, redemptions, students } from "../lib/mock-data";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import confetti from "canvas-confetti";
+import { ShoppingCart } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/student/rewards")({
   component: StudentRewards,
 });
 
 function StudentRewards() {
-  const student = students[0];
-  const [remainingPoints, setRemainingPoints] = useState(student.totalPoints);
-  const [myRedemptions, setMyRedemptions] = useState(redemptions.filter((r) => r.studentId === student.id));
-  const categories = [...new Set(rewards.map((r) => r.category))];
+  const { user } = useAuth();
+  const [rewards, setRewards] = useState<any[]>([]);
+  const [student, setStudent] = useState<any>(null);
+  const [redemptions, setRedemptions] = useState<any[]>([]);
 
-  const handleRedeem = (reward: (typeof rewards)[0]) => {
-    if (remainingPoints < reward.pointCost) return;
-    setRemainingPoints((p) => p - reward.pointCost);
-    setMyRedemptions((prev) => [{ id: `red-${Date.now()}`, studentId: student.id, rewardId: reward.id, rewardName: reward.name, pointsSpent: reward.pointCost, status: "pending" as const, timestamp: new Date().toISOString() }, ...prev]);
-    confetti({ particleCount: 60, spread: 50, origin: { y: 0.7 }, colors: ["#8b5cf6", "#f97316", "#ec4899"] });
-  };
+  useEffect(() => { if (user) load(); }, [user]);
+
+  async function load() {
+    const { data: s } = await supabase.from("students").select("id, total_points").eq("user_id", user!.id).single();
+    setStudent(s);
+    const [r, red] = await Promise.all([
+      supabase.from("rewards").select("*").order("point_cost"),
+      s ? supabase.from("redemptions").select("*, rewards(name, emoji)").eq("student_id", s.id).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
+    ]);
+    setRewards(r.data || []);
+    setRedemptions(red.data || []);
+  }
+
+  async function handleRedeem(rewardId: string, cost: number) {
+    if (!student || student.total_points < cost) return;
+    await supabase.from("redemptions").insert({ student_id: student.id, reward_id: rewardId, points_spent: cost });
+    // Deduct points (via admin or we update directly)
+    await supabase.from("students").update({ total_points: student.total_points - cost }).eq("id", student.id);
+    load();
+  }
+
+  if (!student) return <div className="flex justify-center py-12"><div className="text-2xl animate-bounce">🎁</div></div>;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-foreground">Rewards Shop</h1>
-        <p className="text-sm text-muted-foreground">Redeem your points for awesome rewards</p>
-      </div>
-      <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
-        <CardContent className="p-4 text-center">
-          <div className="text-sm font-semibold text-muted-foreground">Your Balance</div>
-          <div className="text-4xl font-black text-primary">{remainingPoints}</div>
-          <div className="text-xs text-muted-foreground">points available</div>
-        </CardContent>
-      </Card>
-      {categories.map((category) => (
-        <div key={category}>
-          <h2 className="text-lg font-bold text-foreground mb-3">{category}</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {rewards.filter((r) => r.category === category).map((reward) => {
-              const canAfford = remainingPoints >= reward.pointCost;
-              return (
-                <Card key={reward.id} className={`border-0 shadow-sm ${!canAfford ? "opacity-60" : ""}`}>
-                  <CardContent className="p-4 text-center">
-                    <div className="text-3xl mb-2">{reward.emoji}</div>
-                    <div className="font-bold text-sm text-card-foreground">{reward.name}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{reward.description}</div>
-                    <div className="mt-2 flex items-center justify-center gap-1"><span className="text-xs">⭐</span><span className="font-black text-primary text-sm">{reward.pointCost}</span></div>
-                    <Badge variant="secondary" className="mt-1 text-[10px]">{reward.stock} left</Badge>
-                    <Button onClick={() => handleRedeem(reward)} disabled={!canAfford} className="w-full mt-3 rounded-xl text-xs h-8" size="sm">{canAfford ? "Redeem" : "Not enough"}</Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {myRedemptions.length > 0 && (
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-foreground mb-3">My Redemptions</h2>
+          <h1 className="text-2xl font-black text-foreground">Rewards</h1>
+          <p className="text-sm text-muted-foreground">Redeem your points</p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-black text-primary">{student.total_points}</div>
+          <div className="text-[10px] text-muted-foreground">points available</div>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        {rewards.map(r => {
+          const canAfford = student.total_points >= r.point_cost;
+          return (
+            <Card key={r.id} className={`border-0 shadow-sm ${!canAfford ? "opacity-60" : ""}`}>
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="text-3xl">{r.emoji}</div>
+                <div className="flex-1">
+                  <div className="font-bold text-sm text-card-foreground">{r.name}</div>
+                  <div className="text-xs text-muted-foreground">{r.description}</div>
+                  <div className="text-xs font-bold text-primary mt-1">{r.point_cost} pts • {r.stock} left</div>
+                </div>
+                <Button size="sm" className="rounded-xl" disabled={!canAfford || r.stock <= 0} onClick={() => handleRedeem(r.id, r.point_cost)}>
+                  <ShoppingCart className="h-3 w-3 mr-1" /> Redeem
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {redemptions.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-foreground mb-2">My Redemptions</h3>
           <div className="space-y-2">
-            {myRedemptions.map((red) => (
+            {redemptions.map(red => (
               <Card key={red.id} className="border-0 shadow-sm">
-                <CardContent className="flex items-center gap-3 p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10 text-lg">{rewards.find((r) => r.id === red.rewardId)?.emoji || "🎁"}</div>
-                  <div className="flex-1"><div className="font-semibold text-sm text-card-foreground">{red.rewardName}</div><div className="text-xs text-muted-foreground">{red.pointsSpent} points</div></div>
-                  <Badge variant={red.status === "fulfilled" ? "default" : "secondary"}>{red.status}</Badge>
+                <CardContent className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{red.rewards?.emoji}</span>
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{red.rewards?.name}</div>
+                      <div className="text-xs text-muted-foreground">{red.points_spent} pts</div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${red.status === "fulfilled" ? "bg-green-500/10 text-green-600" : "bg-yellow-500/10 text-yellow-600"}`}>
+                    {red.status}
+                  </span>
                 </CardContent>
               </Card>
             ))}

@@ -28,7 +28,7 @@ function AdminLayout() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
-            <button onClick={logout} className="text-muted-foreground hover:text-destructive transition-colors">
+            <button onClick={() => logout()} className="text-muted-foreground hover:text-destructive transition-colors">
               <LogOut className="h-4 w-4" />
             </button>
           </div>

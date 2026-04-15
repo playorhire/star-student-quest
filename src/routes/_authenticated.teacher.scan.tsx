@@ -97,7 +97,7 @@ function TeacherScan() {
     const { data: teacher } = await supabase
       .from("teachers")
       .select("id")
-      .eq("user_id", user?.id)
+      .eq("user_id", user?.id ?? "")
       .single();
 
     if (!teacher) return;

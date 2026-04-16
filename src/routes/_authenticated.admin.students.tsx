@@ -6,14 +6,14 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Plus, Trash2, Upload, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle, KeyRound } from "lucide-react";
 import Papa from "papaparse";
 
 export const Route = createFileRoute("/_authenticated/admin/students")({
   component: AdminStudents,
 });
 
-interface StudentRow { id: string; name: string; roll_number: string; section: string; total_points: number; avatar_emoji: string; class_id: string; classes: { name: string } | null; }
+interface StudentRow { id: string; name: string; roll_number: string; section: string; total_points: number; avatar_emoji: string; class_id: string; user_id: string | null; classes: { name: string } | null; }
 interface ClassRow { id: string; name: string; }
 
 function AdminStudents() {
@@ -24,14 +24,18 @@ function AdminStudents() {
   const [roll, setRoll] = useState("");
   const [classId, setClassId] = useState("");
   const [section, setSection] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [csvResult, setCsvResult] = useState<{ count: number } | null>(null);
   const [filterClassId, setFilterClassId] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     const [s, c] = await Promise.all([
-      supabase.from("students").select("id, name, roll_number, section, total_points, avatar_emoji, class_id, classes(name)").order("name"),
+      supabase.from("students").select("id, name, roll_number, section, total_points, avatar_emoji, class_id, user_id, classes(name)").order("name"),
       supabase.from("classes").select("id, name").order("name"),
     ]);
     setStudents(s.data as any || []);
@@ -40,9 +44,28 @@ function AdminStudents() {
 
   async function handleAdd() {
     if (!name.trim() || !roll.trim() || !classId) return;
-    await supabase.from("students").insert({ name: name.trim(), roll_number: roll.trim(), class_id: classId, section: section || "A" });
-    setName(""); setRoll(""); setClassId(""); setSection("");
-    load();
+    setCreating(true);
+    setError("");
+    try {
+      // Create student record first
+      const { data: student, error: insertErr } = await supabase.from("students").insert({ name: name.trim(), roll_number: roll.trim(), class_id: classId, section: section || "A" }).select("id").single();
+      if (insertErr) throw insertErr;
+
+      // If email+password provided, create login account
+      if (email.trim() && password.trim()) {
+        const res = await supabase.functions.invoke("create-user", {
+          body: { email: email.trim(), password, role: "student", meta: { studentId: student.id } },
+        });
+        if (res.data?.error) throw new Error(res.data.error);
+      }
+
+      setName(""); setRoll(""); setClassId(""); setSection(""); setEmail(""); setPassword("");
+      load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function handleRemove(id: string) {
@@ -63,7 +86,6 @@ function AdminStudents() {
           const c = row.class || row.Class || "";
           const s = row.section || row.Section || "A";
           if (n.trim() && r.trim() && c.trim()) {
-            // Find class by name
             const cls = classes.find(cl => cl.name === c.trim());
             if (cls) {
               await supabase.from("students").insert({ name: n.trim(), roll_number: r.trim(), class_id: cls.id, section: s.trim() });
@@ -121,8 +143,16 @@ function AdminStudents() {
             </div>
             <div><Label className="text-xs">Section</Label><Input placeholder="A" value={section} onChange={e => setSection(e.target.value)} className="rounded-xl" /></div>
           </div>
-          <Button onClick={handleAdd} className="rounded-xl" disabled={!name.trim() || !roll.trim() || !classId}>
-            <Plus className="h-4 w-4 mr-1" /> Add Student
+          <div className="border-t border-border pt-3 mt-2">
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><KeyRound className="h-3 w-3" /> Optional: Create login account</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">Email</Label><Input placeholder="student@school.edu" value={email} onChange={e => setEmail(e.target.value)} className="rounded-xl" /></div>
+              <div><Label className="text-xs">Password</Label><Input type="password" placeholder="Min 6 chars" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl" /></div>
+            </div>
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button onClick={handleAdd} className="rounded-xl" disabled={!name.trim() || !roll.trim() || !classId || creating}>
+            <Plus className="h-4 w-4 mr-1" /> {creating ? "Creating..." : "Add Student"}
           </Button>
         </CardContent>
       </Card>
@@ -143,10 +173,15 @@ function AdminStudents() {
                 <div className="font-semibold text-sm text-card-foreground truncate">{s.name}</div>
                 <div className="text-xs text-muted-foreground">Roll #{s.roll_number} • {s.classes?.name} ({s.section})</div>
               </div>
-              <div className="text-right mr-2">
+              <div className="text-right mr-1">
                 <div className="font-black text-primary text-sm">{s.total_points}</div>
                 <div className="text-[10px] text-muted-foreground">pts</div>
               </div>
+              {s.user_id ? (
+                <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-600">Login</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">No Login</Badge>
+              )}
               <Button variant="ghost" size="icon" onClick={() => handleRemove(s.id)} className="h-8 w-8 text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>

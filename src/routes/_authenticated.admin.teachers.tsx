@@ -6,34 +6,50 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Plus, Trash2, Upload, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle, KeyRound } from "lucide-react";
 import Papa from "papaparse";
 
 export const Route = createFileRoute("/_authenticated/admin/teachers")({
   component: AdminTeachers,
 });
 
-interface TeacherRow { id: string; name: string; email: string; }
+interface TeacherRow { id: string; name: string; email: string; user_id: string | null; }
 
 function AdminTeachers() {
   const [teachers, setTeachers] = useState<TeacherRow[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [csvResult, setCsvResult] = useState<{ count: number } | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const { data } = await supabase.from("teachers").select("id, name, email").order("name");
+    const { data } = await supabase.from("teachers").select("id, name, email, user_id").order("name");
     setTeachers(data || []);
   }
 
   async function handleAdd() {
-    if (!name.trim() || !email.trim()) return;
-    await supabase.from("teachers").insert({ name: name.trim(), email: email.trim() });
-    setName(""); setEmail("");
-    load();
+    if (!name.trim() || !email.trim() || !password.trim()) return;
+    setCreating(true);
+    setError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-user", {
+        body: { email: email.trim(), password, role: "teacher", meta: { name: name.trim() } },
+      });
+      if (res.error) throw new Error(res.error.message || "Failed to create account");
+      if (res.data?.error) throw new Error(res.data.error);
+      setName(""); setEmail(""); setPassword("");
+      load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function handleRemove(id: string) {
@@ -76,7 +92,7 @@ function AdminTeachers() {
           <div className="flex items-center justify-between">
             <div>
               <div className="font-bold text-sm text-card-foreground">Import from CSV</div>
-              <div className="text-[10px] text-muted-foreground">Columns: name, email</div>
+              <div className="text-[10px] text-muted-foreground">Columns: name, email (no login account created)</div>
             </div>
             <div className="flex items-center gap-2">
               {csvResult && <Badge className="bg-green-500/10 text-green-600 border-0 gap-1"><CheckCircle className="h-3 w-3" /> {csvResult.count} imported</Badge>}
@@ -90,14 +106,19 @@ function AdminTeachers() {
       </Card>
 
       <Card className="border-2 border-primary/20">
-        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Teacher</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Teacher with Login</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div><Label className="text-xs">Name</Label><Input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Email</Label><Input placeholder="email@school.edu" value={email} onChange={e => setEmail(e.target.value)} className="rounded-xl" /></div>
           </div>
-          <Button onClick={handleAdd} className="rounded-xl" disabled={!name.trim() || !email.trim()}>
-            <Plus className="h-4 w-4 mr-1" /> Add Teacher
+          <div>
+            <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> Password</Label>
+            <Input type="password" placeholder="Min 6 characters" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl" />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button onClick={handleAdd} className="rounded-xl" disabled={!name.trim() || !email.trim() || !password.trim() || creating}>
+            <Plus className="h-4 w-4 mr-1" /> {creating ? "Creating..." : "Add Teacher"}
           </Button>
         </CardContent>
       </Card>
@@ -111,6 +132,11 @@ function AdminTeachers() {
                 <div className="font-semibold text-sm text-card-foreground truncate">{t.name}</div>
                 <div className="text-xs text-muted-foreground">{t.email}</div>
               </div>
+              {t.user_id ? (
+                <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-600">Has Login</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">No Login</Badge>
+              )}
               <Button variant="ghost" size="icon" onClick={() => handleRemove(t.id)} className="h-8 w-8 text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>

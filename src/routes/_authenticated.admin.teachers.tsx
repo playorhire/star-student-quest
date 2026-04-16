@@ -6,7 +6,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Plus, Trash2, Upload, CheckCircle, KeyRound } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Plus, Trash2, Upload, CheckCircle, KeyRound, Pencil } from "lucide-react";
 import Papa from "papaparse";
 
 export const Route = createFileRoute("/_authenticated/admin/teachers")({
@@ -25,6 +26,12 @@ function AdminTeachers() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
+  const [editTeacher, setEditTeacher] = useState<TeacherRow | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
   useEffect(() => { load(); }, []);
 
   async function load() {
@@ -37,7 +44,6 @@ function AdminTeachers() {
     setCreating(true);
     setError("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-user", {
         body: { email: email.trim(), password, role: "teacher", meta: { name: name.trim() } },
       });
@@ -55,6 +61,29 @@ function AdminTeachers() {
   async function handleRemove(id: string) {
     await supabase.from("teachers").delete().eq("id", id);
     load();
+  }
+
+  function openEdit(t: TeacherRow) {
+    setEditTeacher(t);
+    setEditName(t.name);
+    setEditEmail(t.email);
+    setEditError("");
+  }
+
+  async function handleSaveEdit() {
+    if (!editTeacher || !editName.trim() || !editEmail.trim()) return;
+    setSaving(true);
+    setEditError("");
+    try {
+      const { error } = await supabase.from("teachers").update({ name: editName.trim(), email: editEmail.trim() }).eq("id", editTeacher.id);
+      if (error) throw error;
+      setEditTeacher(null);
+      load();
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +166,9 @@ function AdminTeachers() {
               ) : (
                 <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">No Login</Badge>
               )}
+              <Button variant="ghost" size="icon" onClick={() => openEdit(t)} className="h-8 w-8">
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => handleRemove(t.id)} className="h-8 w-8 text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -144,6 +176,20 @@ function AdminTeachers() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={!!editTeacher} onOpenChange={open => !open && setEditTeacher(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Teacher</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Name</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" /></div>
+            <div><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="rounded-xl" /></div>
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+            <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editEmail.trim() || saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
-import { Plus, Trash2, Upload, CheckCircle, KeyRound } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Plus, Trash2, Upload, CheckCircle, KeyRound, Pencil } from "lucide-react";
 import Papa from "papaparse";
 
 export const Route = createFileRoute("/_authenticated/admin/students")({
@@ -31,6 +32,15 @@ function AdminStudents() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
+  const [editStudent, setEditStudent] = useState<StudentRow | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRoll, setEditRoll] = useState("");
+  const [editClassId, setEditClassId] = useState("");
+  const [editSection, setEditSection] = useState("");
+  const [editEmoji, setEditEmoji] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
   useEffect(() => { load(); }, []);
 
   async function load() {
@@ -47,11 +57,9 @@ function AdminStudents() {
     setCreating(true);
     setError("");
     try {
-      // Create student record first
       const { data: student, error: insertErr } = await supabase.from("students").insert({ name: name.trim(), roll_number: roll.trim(), class_id: classId, section: section || "A" }).select("id").single();
       if (insertErr) throw insertErr;
 
-      // If email+password provided, create login account
       if (email.trim() && password.trim()) {
         const res = await supabase.functions.invoke("create-user", {
           body: { email: email.trim(), password, role: "student", meta: { studentId: student.id } },
@@ -71,6 +79,38 @@ function AdminStudents() {
   async function handleRemove(id: string) {
     await supabase.from("students").delete().eq("id", id);
     load();
+  }
+
+  function openEdit(s: StudentRow) {
+    setEditStudent(s);
+    setEditName(s.name);
+    setEditRoll(s.roll_number);
+    setEditClassId(s.class_id);
+    setEditSection(s.section);
+    setEditEmoji(s.avatar_emoji);
+    setEditError("");
+  }
+
+  async function handleSaveEdit() {
+    if (!editStudent || !editName.trim() || !editRoll.trim() || !editClassId) return;
+    setSaving(true);
+    setEditError("");
+    try {
+      const { error } = await supabase.from("students").update({
+        name: editName.trim(),
+        roll_number: editRoll.trim(),
+        class_id: editClassId,
+        section: editSection || "A",
+        avatar_emoji: editEmoji || "🧑‍🎓",
+      }).eq("id", editStudent.id);
+      if (error) throw error;
+      setEditStudent(null);
+      load();
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,6 +222,9 @@ function AdminStudents() {
               ) : (
                 <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">No Login</Badge>
               )}
+              <Button variant="ghost" size="icon" onClick={() => openEdit(s)} className="h-8 w-8">
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => handleRemove(s.id)} className="h-8 w-8 text-destructive">
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -189,6 +232,29 @@ function AdminStudents() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={!!editStudent} onOpenChange={open => !open && setEditStudent(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Student</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Name</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" /></div>
+            <div><Label className="text-xs">Roll Number</Label><Input value={editRoll} onChange={e => setEditRoll(e.target.value)} className="rounded-xl" /></div>
+            <div>
+              <Label className="text-xs">Class</Label>
+              <select value={editClassId} onChange={e => setEditClassId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
+                <option value="">Select</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div><Label className="text-xs">Section</Label><Input value={editSection} onChange={e => setEditSection(e.target.value)} className="rounded-xl" /></div>
+            <div><Label className="text-xs">Avatar Emoji</Label><Input value={editEmoji} onChange={e => setEditEmoji(e.target.value)} className="rounded-xl" /></div>
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+            <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editRoll.trim() || !editClassId || saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

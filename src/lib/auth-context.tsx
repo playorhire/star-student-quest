@@ -46,21 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        const role = await fetchUserRole(session.user.id);
-        if (role) {
-          setUser(buildAuthUser(session.user, role));
-        } else {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
+    // Restore session first (synchronous-ish path)
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
@@ -71,6 +57,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
+
+    // Listen for subsequent auth changes (sign in/out) — no await inside
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (session?.user) {
+          // Fire and forget — don't block the listener
+          fetchUserRole(session.user.id).then((role) => {
+            if (role) {
+              setUser(buildAuthUser(session.user!, role));
+            } else {
+              setUser(null);
+            }
+          });
+        } else {
+          setUser(null);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);

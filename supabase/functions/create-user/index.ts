@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: caller } } = await supabase.auth.getUser(token);
@@ -24,7 +23,6 @@ Deno.serve(async (req) => {
 
     const { email, password, role, meta } = await req.json();
 
-    // Create auth user
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -33,19 +31,27 @@ Deno.serve(async (req) => {
     if (createError) throw createError;
 
     const userId = newUser.user.id;
-
-    // Assign role
     await supabase.from("user_roles").insert({ user_id: userId, role });
 
-    // Link to teacher/student record if applicable
     if (role === "teacher" && meta?.teacherId) {
       await supabase.from("teachers").update({ user_id: userId }).eq("id", meta.teacherId);
     } else if (role === "student" && meta?.studentId) {
       await supabase.from("students").update({ user_id: userId }).eq("id", meta.studentId);
     } else if (role === "teacher") {
       await supabase.from("teachers").insert({ name: meta?.name || email, email, user_id: userId });
-    } else if (role === "student") {
-      // student record created separately
+    } else if (role === "parent") {
+      await supabase.from("parents").insert({
+        user_id: userId,
+        name: meta?.name || email,
+        email,
+        phone: meta?.phone || null,
+      });
+      if (meta?.studentId) {
+        await supabase.from("parent_student_links").insert({
+          parent_user_id: userId,
+          student_id: meta.studentId,
+        });
+      }
     }
 
     return new Response(JSON.stringify({ userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

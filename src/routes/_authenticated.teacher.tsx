@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, ScanLine, History, LogOut } from "lucide-react";
+import { LayoutDashboard, ScanLine, History, Gift, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/teacher")({
   component: TeacherLayout,
@@ -14,6 +14,7 @@ function TeacherLayout() {
     { to: "/teacher/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
     { to: "/teacher/scan" as const, label: "Scan", icon: ScanLine },
     { to: "/teacher/history" as const, label: "History", icon: History },
+    { to: "/teacher/rewards" as const, label: "Rewards", icon: Gift },
   ];
 
   return (

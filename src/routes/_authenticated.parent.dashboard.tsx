@@ -28,6 +28,7 @@ interface Transaction {
 function ParentDashboard() {
   const { user } = useAuth();
   const [children, setChildren] = useState<ChildData[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | "all">("all");
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,8 +37,12 @@ function ParentDashboard() {
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    if (!children.length) return;
+    loadActivity();
+  }, [selectedChildId, children]);
+
   async function loadData() {
-    // Get linked children
     const { data: links } = await supabase
       .from("parent_student_links")
       .select("student_id")
@@ -65,19 +70,19 @@ function ParentDashboard() {
         roll_number: s.roll_number,
       })));
     }
+    setLoading(false);
+  }
 
-    // Recent transactions for linked children
+  async function loadActivity() {
+    const ids = selectedChildId === "all" ? children.map(c => c.id) : [selectedChildId];
+    if (!ids.length) return;
     const { data: txns } = await supabase
       .from("point_transactions")
       .select("id, points_awarded, marks_entered, created_at, subjects(name), students(name)")
-      .in("student_id", studentIds)
+      .in("student_id", ids)
       .order("created_at", { ascending: false })
       .limit(10);
-
-    if (txns) {
-      setRecentActivity(txns as any);
-    }
-    setLoading(false);
+    if (txns) setRecentActivity(txns as any);
   }
 
   if (loading) {

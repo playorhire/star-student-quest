@@ -6,4 +6,10 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-export default defineConfig();
+export default defineConfig({
+  server: {
+    host: '0.0.0.0',
+    allowedHosts: ["localhost", "exposure-undergo-tubular.ngrok-free.dev"],
+    port: 8080
+  }
+});

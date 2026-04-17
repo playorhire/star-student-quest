@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, MessageSquare, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Bell, User, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parent")({
   component: ParentLayout,
@@ -14,6 +14,7 @@ function ParentLayout() {
     { to: "/parent/dashboard" as const, label: "Home", icon: LayoutDashboard },
     { to: "/parent/messages" as const, label: "Messages", icon: MessageSquare },
     { to: "/parent/notifications" as const, label: "Alerts", icon: Bell },
+    { to: "/parent/profile" as const, label: "Profile", icon: User },
   ];
 
   return (

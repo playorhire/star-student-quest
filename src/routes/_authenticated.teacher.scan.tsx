@@ -33,6 +33,7 @@ function TeacherScan() {
   const [marks, setMarks] = useState("");
   const [calculatedPoints, setCalculatedPoints] = useState(0);
   const [manualQR, setManualQR] = useState("");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrRef = useRef<any>(null);
 
@@ -61,14 +62,49 @@ function TeacherScan() {
     let scanner: any = null;
     const startScanner = async () => {
       try {
+        setCameraError(null);
+        // Request camera permissions first
+        try {
+          await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        } catch (permError) {
+          setCameraError("Camera permission denied. Please allow camera access in your browser settings.");
+          console.error("Permission error:", permError);
+          return;
+        }
+
         const { Html5Qrcode } = await import("html5-qrcode");
         scanner = new Html5Qrcode("qr-reader");
         html5QrRef.current = scanner;
-        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (decodedText: string) => handleQRResult(decodedText), () => {});
-      } catch {}
+        
+        // Try with optimized mobile constraints
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1
+        };
+        
+        await scanner.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText: string) => handleQRResult(decodedText),
+          (error: any) => console.warn("QR decode error:", error)
+        );
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Failed to start camera";
+        setCameraError(`Camera error: ${errorMsg}`);
+        console.error("Scanner error:", error);
+      }
     };
     startScanner();
-    return () => { if (scanner) { try { scanner.stop(); } catch {} } };
+    return () => { 
+      if (scanner) { 
+        try { 
+          scanner.stop(); 
+        } catch (e) {
+          console.warn("Error stopping scanner:", e);
+        } 
+      } 
+    };
   }, [step, handleQRResult]);
 
   const getSelectedRule = () => {
@@ -102,7 +138,7 @@ function TeacherScan() {
 
     if (!teacher) return;
 
-    await supabase.from("point_transactions").insert({
+    const { error } = await supabase.from("point_transactions").insert({
       student_id: student.id,
       teacher_id: teacher.id,
       subject_id: selectedSubjectId,
@@ -111,6 +147,11 @@ function TeacherScan() {
       multiplier: rule.multiplier,
       points_awarded: calculatedPoints,
     });
+
+    if (error) {
+      console.error("Failed to assign points:", error);
+      return;
+    }
 
     setStep("confirmed");
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#8b5cf6", "#f97316", "#ec4899", "#22c55e"] });
@@ -131,6 +172,14 @@ function TeacherScan() {
 
       {step === "scanning" && (
         <div className="space-y-4">
+          {cameraError && (
+            <Card className="border-2 border-destructive/50 bg-destructive/10">
+              <CardContent className="p-4">
+                <div className="text-sm font-semibold text-destructive">{cameraError}</div>
+                <div className="text-xs text-muted-foreground mt-2">Try using manual entry below, or check your browser camera permissions.</div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="overflow-hidden border-2 border-primary/20">
             <div id="qr-reader" ref={scannerRef} className="w-full" />
             <CardContent className="p-4 text-center">

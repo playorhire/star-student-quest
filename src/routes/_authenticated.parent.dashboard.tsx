@@ -28,6 +28,7 @@ interface Transaction {
 function ParentDashboard() {
   const { user } = useAuth();
   const [children, setChildren] = useState<ChildData[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | "all">("all");
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,8 +37,12 @@ function ParentDashboard() {
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    if (!children.length) return;
+    loadActivity();
+  }, [selectedChildId, children]);
+
   async function loadData() {
-    // Get linked children
     const { data: links } = await supabase
       .from("parent_student_links")
       .select("student_id")
@@ -65,19 +70,19 @@ function ParentDashboard() {
         roll_number: s.roll_number,
       })));
     }
+    setLoading(false);
+  }
 
-    // Recent transactions for linked children
+  async function loadActivity() {
+    const ids = selectedChildId === "all" ? children.map(c => c.id) : [selectedChildId];
+    if (!ids.length) return;
     const { data: txns } = await supabase
       .from("point_transactions")
       .select("id, points_awarded, marks_entered, created_at, subjects(name), students(name)")
-      .in("student_id", studentIds)
+      .in("student_id", ids)
       .order("created_at", { ascending: false })
       .limit(10);
-
-    if (txns) {
-      setRecentActivity(txns as any);
-    }
-    setLoading(false);
+    if (txns) setRecentActivity(txns as any);
   }
 
   if (loading) {
@@ -98,27 +103,62 @@ function ParentDashboard() {
           <p className="text-xs text-muted-foreground mt-1">Ask the school admin to link your child.</p>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {children.map(child => (
-            <div key={child.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">{child.avatar_emoji}</div>
-                <div className="flex-1">
-                  <div className="font-bold text-foreground">{child.name}</div>
-                  <div className="text-xs text-muted-foreground">{child.class_name} • Roll #{child.roll_number}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black text-primary">{child.total_points}</div>
-                  <div className="text-[10px] text-muted-foreground">points</div>
-                </div>
-              </div>
+        <>
+          {children.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedChildId("all")}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-colors ${
+                  selectedChildId === "all"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-foreground border-border"
+                }`}
+              >
+                All
+              </button>
+              {children.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedChildId(c.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border transition-colors flex items-center gap-1 ${
+                    selectedChildId === c.id
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-foreground border-border"
+                  }`}
+                >
+                  <span>{c.avatar_emoji}</span>
+                  <span>{c.name.split(" ")[0]}</span>
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+
+          <div className="grid gap-3">
+            {children
+              .filter(c => selectedChildId === "all" || c.id === selectedChildId)
+              .map(child => (
+                <div key={child.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">{child.avatar_emoji}</div>
+                    <div className="flex-1">
+                      <div className="font-bold text-foreground">{child.name}</div>
+                      <div className="text-xs text-muted-foreground">{child.class_name} • Roll #{child.roll_number}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-black text-primary">{child.total_points}</div>
+                      <div className="text-[10px] text-muted-foreground">points</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </>
       )}
 
       <div>
-        <h3 className="text-lg font-bold text-foreground mb-3">Recent Activity</h3>
+        <h3 className="text-lg font-bold text-foreground mb-3">
+          Recent Activity{selectedChildId !== "all" && children.find(c => c.id === selectedChildId) ? ` — ${children.find(c => c.id === selectedChildId)!.name}` : ""}
+        </h3>
         {recentActivity.length === 0 ? (
           <p className="text-sm text-muted-foreground">No recent activity</p>
         ) : (
@@ -129,7 +169,7 @@ function ParentDashboard() {
                   <div className="text-sm font-semibold text-foreground">{(tx.students as any)?.name}</div>
                   <div className="text-xs text-muted-foreground">{(tx.subjects as any)?.name} • {tx.marks_entered} marks</div>
                 </div>
-                <div className="text-sm font-bold text-green-600">+{tx.points_awarded} pts</div>
+                <div className="text-sm font-bold text-primary">+{tx.points_awarded} pts</div>
               </div>
             ))}
           </div>

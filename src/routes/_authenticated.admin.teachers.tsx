@@ -198,6 +198,12 @@ function AdminTeachers() {
           <div className="space-y-3">
             <div><Label className="text-xs">Name</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="rounded-xl" /></div>
+            {editTeacher?.user_id && (
+              <div>
+                <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password (leave blank to keep current)</Label>
+                <Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 characters" />
+              </div>
+            )}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editEmail.trim() || saving}>
               {saving ? "Saving..." : "Save Changes"}

@@ -167,7 +167,7 @@ function ParentMessages() {
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         <div className="flex items-center gap-3 pb-3 border-b border-border">
           <button onClick={() => setSelectedTeacher(null)} className="text-primary font-semibold text-sm">← Back</button>
-          <div className="font-bold text-foreground">{conv?.teacherName}</div>
+          <div className="font-bold text-foreground">{conv?.teacherName || selectedTeacherName || "Teacher"}</div>
         </div>
         <div className="flex-1 overflow-y-auto py-3 space-y-2">
           {messages.map(msg => (

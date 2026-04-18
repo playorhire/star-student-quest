@@ -201,6 +201,13 @@ function ParentDashboard() {
                       <div className="text-[10px] text-muted-foreground">points</div>
                     </div>
                   </div>
+                  <button
+                    onClick={() => openTeacherPicker(child)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:border-primary hover:text-primary px-3 py-2 text-xs font-bold text-foreground transition-colors"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Message a Teacher
+                  </button>
                 </div>
               ))}
           </div>

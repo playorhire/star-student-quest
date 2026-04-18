@@ -38,6 +38,8 @@ function AdminStudents() {
   const [editClassId, setEditClassId] = useState("");
   const [editSection, setEditSection] = useState("");
   const [editEmoji, setEditEmoji] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -88,11 +90,17 @@ function AdminStudents() {
     setEditClassId(s.class_id);
     setEditSection(s.section);
     setEditEmoji(s.avatar_emoji);
+    setEditEmail("");
+    setEditPassword("");
     setEditError("");
   }
 
   async function handleSaveEdit() {
     if (!editStudent || !editName.trim() || !editRoll.trim() || !editClassId) return;
+    if (editPassword && editPassword.length < 6) {
+      setEditError("Password must be at least 6 characters");
+      return;
+    }
     setSaving(true);
     setEditError("");
     try {
@@ -104,6 +112,15 @@ function AdminStudents() {
         avatar_emoji: editEmoji || "🧑‍🎓",
       }).eq("id", editStudent.id);
       if (error) throw error;
+
+      if (editStudent.user_id && (editPassword || editEmail.trim())) {
+        const body: any = { targetUserId: editStudent.user_id };
+        if (editEmail.trim()) body.email = editEmail.trim();
+        if (editPassword) body.password = editPassword;
+        const res = await supabase.functions.invoke("admin-update-user", { body });
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+      }
       setEditStudent(null);
       load();
     } catch (err: any) {
@@ -248,6 +265,13 @@ function AdminStudents() {
             </div>
             <div><Label className="text-xs">Section</Label><Input value={editSection} onChange={e => setEditSection(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Avatar Emoji</Label><Input value={editEmoji} onChange={e => setEditEmoji(e.target.value)} className="rounded-xl" /></div>
+            {editStudent?.user_id && (
+              <div className="border-t border-border pt-3 space-y-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><KeyRound className="h-3 w-3" /> Login Account (leave blank to keep current)</p>
+                <div><Label className="text-xs">New Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="rounded-xl" placeholder="Optional" /></div>
+                <div><Label className="text-xs">New Password</Label><Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 chars" /></div>
+              </div>
+            )}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editRoll.trim() || !editClassId || saving}>
               {saving ? "Saving..." : "Save Changes"}

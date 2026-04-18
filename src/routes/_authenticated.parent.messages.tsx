@@ -6,6 +6,10 @@ import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parent/messages")({
   component: ParentMessages,
+  validateSearch: (search: Record<string, unknown>) => ({
+    with: typeof search.with === "string" ? search.with : undefined,
+    name: typeof search.name === "string" ? search.name : undefined,
+  }),
 });
 
 interface Conversation {
@@ -28,12 +32,21 @@ interface Message {
 
 function ParentMessages() {
   const { user } = useAuth();
+  const search = Route.useSearch();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
+  const [selectedTeacherName, setSelectedTeacherName] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (search.with) {
+      setSelectedTeacher(search.with);
+      setSelectedTeacherName(search.name || "Teacher");
+    }
+  }, [search.with, search.name]);
 
   useEffect(() => {
     if (!user) return;
@@ -154,7 +167,7 @@ function ParentMessages() {
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         <div className="flex items-center gap-3 pb-3 border-b border-border">
           <button onClick={() => setSelectedTeacher(null)} className="text-primary font-semibold text-sm">← Back</button>
-          <div className="font-bold text-foreground">{conv?.teacherName}</div>
+          <div className="font-bold text-foreground">{conv?.teacherName || selectedTeacherName || "Teacher"}</div>
         </div>
         <div className="flex-1 overflow-y-auto py-3 space-y-2">
           {messages.map(msg => (

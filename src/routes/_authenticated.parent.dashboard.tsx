@@ -36,10 +36,52 @@ interface Transaction {
 
 function ParentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [children, setChildren] = useState<ChildData[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | "all">("all");
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pickerChild, setPickerChild] = useState<ChildData | null>(null);
+  const [pickerTeachers, setPickerTeachers] = useState<TeacherOption[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  async function openTeacherPicker(child: ChildData) {
+    setPickerChild(child);
+    setPickerLoading(true);
+    setPickerTeachers([]);
+    const { data } = await supabase
+      .from("teacher_assignments")
+      .select("teachers(id, name, user_id), subjects(name)")
+      .eq("class_id", child.class_id);
+    const opts: TeacherOption[] = (data || [])
+      .map((row: any) => ({
+        id: row.teachers?.id,
+        name: row.teachers?.name || "Teacher",
+        user_id: row.teachers?.user_id || null,
+        subject_name: row.subjects?.name || "",
+      }))
+      .filter((t: TeacherOption) => t.id);
+    // dedupe teachers, combine subjects
+    const map = new Map<string, TeacherOption>();
+    for (const t of opts) {
+      const existing = map.get(t.id);
+      if (existing) {
+        existing.subject_name = existing.subject_name
+          ? `${existing.subject_name}, ${t.subject_name}`
+          : t.subject_name;
+      } else {
+        map.set(t.id, { ...t });
+      }
+    }
+    setPickerTeachers([...map.values()]);
+    setPickerLoading(false);
+  }
+
+  function startConversation(teacher: TeacherOption) {
+    if (!teacher.user_id) return;
+    setPickerChild(null);
+    navigate({ to: "/parent/messages" });
+  }
 
   useEffect(() => {
     if (!user) return;

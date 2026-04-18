@@ -66,7 +66,7 @@ function ParentDashboard() {
 
     const { data: studentsData } = await supabase
       .from("students")
-      .select("id, name, total_points, avatar_emoji, roll_number, classes(name)")
+      .select("id, name, total_points, avatar_emoji, roll_number, class_id, classes(name)")
       .in("id", studentIds);
 
     if (studentsData) {
@@ -76,6 +76,7 @@ function ParentDashboard() {
         total_points: s.total_points,
         avatar_emoji: s.avatar_emoji,
         class_name: s.classes?.name || "",
+        class_id: s.class_id,
         roll_number: s.roll_number,
       })));
     }

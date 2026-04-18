@@ -68,16 +68,30 @@ function AdminTeachers() {
     setEditTeacher(t);
     setEditName(t.name);
     setEditEmail(t.email);
+    setEditPassword("");
     setEditError("");
   }
 
   async function handleSaveEdit() {
     if (!editTeacher || !editName.trim() || !editEmail.trim()) return;
+    if (editPassword && editPassword.length < 6) {
+      setEditError("Password must be at least 6 characters");
+      return;
+    }
     setSaving(true);
     setEditError("");
     try {
       const { error } = await supabase.from("teachers").update({ name: editName.trim(), email: editEmail.trim() }).eq("id", editTeacher.id);
       if (error) throw error;
+
+      if (editTeacher.user_id && (editPassword || editEmail.trim() !== editTeacher.email)) {
+        const body: any = { targetUserId: editTeacher.user_id };
+        if (editEmail.trim() !== editTeacher.email) body.email = editEmail.trim();
+        if (editPassword) body.password = editPassword;
+        const res = await supabase.functions.invoke("admin-update-user", { body });
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+      }
       setEditTeacher(null);
       load();
     } catch (err: any) {

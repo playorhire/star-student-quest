@@ -80,7 +80,7 @@ function ParentDashboard() {
   function startConversation(teacher: TeacherOption) {
     if (!teacher.user_id) return;
     setPickerChild(null);
-    navigate({ to: "/parent/messages" });
+    navigate({ to: "/parent/messages", search: { with: teacher.user_id, name: teacher.name } as any });
   }
 
   useEffect(() => {

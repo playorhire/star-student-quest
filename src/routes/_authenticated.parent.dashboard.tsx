@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { MessageSquare, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parent/dashboard")({
   component: ParentDashboard,
@@ -13,7 +14,15 @@ interface ChildData {
   total_points: number;
   avatar_emoji: string;
   class_name: string;
+  class_id: string;
   roll_number: string;
+}
+
+interface TeacherOption {
+  id: string;
+  name: string;
+  user_id: string | null;
+  subject_name: string;
 }
 
 interface Transaction {
@@ -27,10 +36,52 @@ interface Transaction {
 
 function ParentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [children, setChildren] = useState<ChildData[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | "all">("all");
   const [recentActivity, setRecentActivity] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pickerChild, setPickerChild] = useState<ChildData | null>(null);
+  const [pickerTeachers, setPickerTeachers] = useState<TeacherOption[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  async function openTeacherPicker(child: ChildData) {
+    setPickerChild(child);
+    setPickerLoading(true);
+    setPickerTeachers([]);
+    const { data } = await supabase
+      .from("teacher_assignments")
+      .select("teachers(id, name, user_id), subjects(name)")
+      .eq("class_id", child.class_id);
+    const opts: TeacherOption[] = (data || [])
+      .map((row: any) => ({
+        id: row.teachers?.id,
+        name: row.teachers?.name || "Teacher",
+        user_id: row.teachers?.user_id || null,
+        subject_name: row.subjects?.name || "",
+      }))
+      .filter((t: TeacherOption) => t.id);
+    // dedupe teachers, combine subjects
+    const map = new Map<string, TeacherOption>();
+    for (const t of opts) {
+      const existing = map.get(t.id);
+      if (existing) {
+        existing.subject_name = existing.subject_name
+          ? `${existing.subject_name}, ${t.subject_name}`
+          : t.subject_name;
+      } else {
+        map.set(t.id, { ...t });
+      }
+    }
+    setPickerTeachers([...map.values()]);
+    setPickerLoading(false);
+  }
+
+  function startConversation(teacher: TeacherOption) {
+    if (!teacher.user_id) return;
+    setPickerChild(null);
+    navigate({ to: "/parent/messages", search: { with: teacher.user_id, name: teacher.name } as any });
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -57,7 +108,7 @@ function ParentDashboard() {
 
     const { data: studentsData } = await supabase
       .from("students")
-      .select("id, name, total_points, avatar_emoji, roll_number, classes(name)")
+      .select("id, name, total_points, avatar_emoji, roll_number, class_id, classes(name)")
       .in("id", studentIds);
 
     if (studentsData) {
@@ -67,6 +118,7 @@ function ParentDashboard() {
         total_points: s.total_points,
         avatar_emoji: s.avatar_emoji,
         class_name: s.classes?.name || "",
+        class_id: s.class_id,
         roll_number: s.roll_number,
       })));
     }
@@ -149,6 +201,13 @@ function ParentDashboard() {
                       <div className="text-[10px] text-muted-foreground">points</div>
                     </div>
                   </div>
+                  <button
+                    onClick={() => openTeacherPicker(child)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:border-primary hover:text-primary px-3 py-2 text-xs font-bold text-foreground transition-colors"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Message a Teacher
+                  </button>
                 </div>
               ))}
           </div>
@@ -175,6 +234,45 @@ function ParentDashboard() {
           </div>
         )}
       </div>
+
+      {pickerChild && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={() => setPickerChild(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-4 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-bold text-foreground">Message a Teacher</div>
+                <div className="text-xs text-muted-foreground">For {pickerChild.name}</div>
+              </div>
+              <button onClick={() => setPickerChild(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {pickerLoading ? (
+              <div className="text-center py-6 text-2xl animate-bounce">👩‍🏫</div>
+            ) : pickerTeachers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No teachers assigned to this class yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {pickerTeachers.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => startConversation(t)}
+                    disabled={!t.user_id}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border bg-background p-3 text-left hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="text-2xl">👩‍🏫</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm text-foreground">{t.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{t.subject_name || "Teacher"}</div>
+                    </div>
+                    {!t.user_id && <span className="text-[10px] text-muted-foreground">No account</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

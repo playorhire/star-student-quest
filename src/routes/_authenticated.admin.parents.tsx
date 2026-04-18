@@ -35,6 +35,7 @@ function AdminParents() {
   const [eEmail, setEEmail] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eStudentId, setEStudentId] = useState("");
+  const [ePassword, setEPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 

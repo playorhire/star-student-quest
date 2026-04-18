@@ -29,6 +29,7 @@ function AdminTeachers() {
   const [editTeacher, setEditTeacher] = useState<TeacherRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 

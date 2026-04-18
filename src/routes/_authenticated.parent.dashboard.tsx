@@ -14,7 +14,15 @@ interface ChildData {
   total_points: number;
   avatar_emoji: string;
   class_name: string;
+  class_id: string;
   roll_number: string;
+}
+
+interface TeacherOption {
+  id: string;
+  name: string;
+  user_id: string | null;
+  subject_name: string;
 }
 
 interface Transaction {

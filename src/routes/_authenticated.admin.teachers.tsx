@@ -29,6 +29,7 @@ function AdminTeachers() {
   const [editTeacher, setEditTeacher] = useState<TeacherRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -67,16 +68,30 @@ function AdminTeachers() {
     setEditTeacher(t);
     setEditName(t.name);
     setEditEmail(t.email);
+    setEditPassword("");
     setEditError("");
   }
 
   async function handleSaveEdit() {
     if (!editTeacher || !editName.trim() || !editEmail.trim()) return;
+    if (editPassword && editPassword.length < 6) {
+      setEditError("Password must be at least 6 characters");
+      return;
+    }
     setSaving(true);
     setEditError("");
     try {
       const { error } = await supabase.from("teachers").update({ name: editName.trim(), email: editEmail.trim() }).eq("id", editTeacher.id);
       if (error) throw error;
+
+      if (editTeacher.user_id && (editPassword || editEmail.trim() !== editTeacher.email)) {
+        const body: any = { targetUserId: editTeacher.user_id };
+        if (editEmail.trim() !== editTeacher.email) body.email = editEmail.trim();
+        if (editPassword) body.password = editPassword;
+        const res = await supabase.functions.invoke("admin-update-user", { body });
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+      }
       setEditTeacher(null);
       load();
     } catch (err: any) {
@@ -183,6 +198,12 @@ function AdminTeachers() {
           <div className="space-y-3">
             <div><Label className="text-xs">Name</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="rounded-xl" /></div>
+            {editTeacher?.user_id && (
+              <div>
+                <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password (leave blank to keep current)</Label>
+                <Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 characters" />
+              </div>
+            )}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editEmail.trim() || saving}>
               {saving ? "Saving..." : "Save Changes"}

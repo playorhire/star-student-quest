@@ -35,6 +35,7 @@ function AdminParents() {
   const [eEmail, setEEmail] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eStudentId, setEStudentId] = useState("");
+  const [ePassword, setEPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -81,6 +82,7 @@ function AdminParents() {
     setEName(p.name);
     setEEmail(p.email);
     setEPhone(p.phone || "");
+    setEPassword("");
     const existing = links.find(l => l.parent_user_id === p.user_id);
     setEStudentId(existing?.student_id || "");
     setEditError("");
@@ -88,6 +90,10 @@ function AdminParents() {
 
   async function handleSaveEdit() {
     if (!editParent) return;
+    if (ePassword && ePassword.length < 6) {
+      setEditError("Password must be at least 6 characters");
+      return;
+    }
     setSaving(true);
     setEditError("");
     try {
@@ -100,6 +106,16 @@ function AdminParents() {
       if (eStudentId) {
         await supabase.from("parent_student_links").insert({ parent_user_id: editParent.user_id, student_id: eStudentId });
       }
+
+      if (ePassword || eEmail.trim() !== editParent.email) {
+        const body: any = { targetUserId: editParent.user_id };
+        if (eEmail.trim() !== editParent.email) body.email = eEmail.trim();
+        if (ePassword) body.password = ePassword;
+        const res = await supabase.functions.invoke("admin-update-user", { body });
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+      }
+
       setEditParent(null);
       load();
     } catch (err: any) {
@@ -181,6 +197,10 @@ function AdminParents() {
                 <option value="">— None —</option>
                 {students.map(s => <option key={s.id} value={s.id}>{s.name} (#{s.roll_number})</option>)}
               </select>
+            </div>
+            <div className="border-t border-border pt-3">
+              <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password (leave blank to keep current)</Label>
+              <Input type="password" value={ePassword} onChange={e => setEPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 characters" />
             </div>
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!eName.trim() || !eEmail.trim() || saving}>

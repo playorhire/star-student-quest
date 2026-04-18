@@ -90,11 +90,17 @@ function AdminStudents() {
     setEditClassId(s.class_id);
     setEditSection(s.section);
     setEditEmoji(s.avatar_emoji);
+    setEditEmail("");
+    setEditPassword("");
     setEditError("");
   }
 
   async function handleSaveEdit() {
     if (!editStudent || !editName.trim() || !editRoll.trim() || !editClassId) return;
+    if (editPassword && editPassword.length < 6) {
+      setEditError("Password must be at least 6 characters");
+      return;
+    }
     setSaving(true);
     setEditError("");
     try {
@@ -106,6 +112,15 @@ function AdminStudents() {
         avatar_emoji: editEmoji || "🧑‍🎓",
       }).eq("id", editStudent.id);
       if (error) throw error;
+
+      if (editStudent.user_id && (editPassword || editEmail.trim())) {
+        const body: any = { targetUserId: editStudent.user_id };
+        if (editEmail.trim()) body.email = editEmail.trim();
+        if (editPassword) body.password = editPassword;
+        const res = await supabase.functions.invoke("admin-update-user", { body });
+        if (res.error) throw new Error(res.error.message);
+        if (res.data?.error) throw new Error(res.data.error);
+      }
       setEditStudent(null);
       load();
     } catch (err: any) {

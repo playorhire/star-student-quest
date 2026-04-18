@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { MessageSquare, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parent/dashboard")({
   component: ParentDashboard,

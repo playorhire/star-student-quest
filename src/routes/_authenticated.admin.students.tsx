@@ -265,6 +265,13 @@ function AdminStudents() {
             </div>
             <div><Label className="text-xs">Section</Label><Input value={editSection} onChange={e => setEditSection(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Avatar Emoji</Label><Input value={editEmoji} onChange={e => setEditEmoji(e.target.value)} className="rounded-xl" /></div>
+            {editStudent?.user_id && (
+              <div className="border-t border-border pt-3 space-y-3">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><KeyRound className="h-3 w-3" /> Login Account (leave blank to keep current)</p>
+                <div><Label className="text-xs">New Email</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="rounded-xl" placeholder="Optional" /></div>
+                <div><Label className="text-xs">New Password</Label><Input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 chars" /></div>
+              </div>
+            )}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!editName.trim() || !editRoll.trim() || !editClassId || saving}>
               {saving ? "Saving..." : "Save Changes"}

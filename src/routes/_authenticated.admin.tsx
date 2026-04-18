@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, School, Users, GraduationCap, Settings, LogOut, Gift, UserPlus } from "lucide-react";
+import { LayoutDashboard, School, Users, GraduationCap, Settings, LogOut, Gift, UserPlus, UserCog } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,

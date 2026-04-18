@@ -234,6 +234,45 @@ function ParentDashboard() {
           </div>
         )}
       </div>
+
+      {pickerChild && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={() => setPickerChild(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-4 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-bold text-foreground">Message a Teacher</div>
+                <div className="text-xs text-muted-foreground">For {pickerChild.name}</div>
+              </div>
+              <button onClick={() => setPickerChild(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {pickerLoading ? (
+              <div className="text-center py-6 text-2xl animate-bounce">👩‍🏫</div>
+            ) : pickerTeachers.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No teachers assigned to this class yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {pickerTeachers.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => startConversation(t)}
+                    disabled={!t.user_id}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border bg-background p-3 text-left hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="text-2xl">👩‍🏫</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm text-foreground">{t.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{t.subject_name || "Teacher"}</div>
+                    </div>
+                    {!t.user_id && <span className="text-[10px] text-muted-foreground">No account</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -115,8 +115,8 @@ function Index() {
               <div className="absolute top-8 left-8 flex items-center gap-3 rounded-2xl bg-white/80 backdrop-blur px-3 py-2 shadow-lg animate-fade-in">
                 <div className="text-3xl">🧑‍🎓</div>
                 <div>
-                  <div className="text-xs font-black text-foreground">Alex</div>
-                  <div className="text-[10px] text-muted-foreground">Class 5B</div>
+                  <div className="text-xs font-black text-foreground">Maaz</div>
+                  <div className="text-[10px] text-muted-foreground">Class 7A</div>
                 </div>
               </div>
 
@@ -152,7 +152,7 @@ function Index() {
               {/* Teacher card */}
               <div className="absolute bottom-6 left-6 flex items-center gap-2 rounded-2xl bg-white/80 backdrop-blur px-3 py-2 shadow-lg">
                 <div className="text-2xl">👩‍🏫</div>
-                <div className="text-[10px] font-bold text-foreground">Ms. Lee scanned!</div>
+                <div className="text-[10px] font-bold text-foreground">Ms. Qurat ul Ain scanned!</div>
               </div>
             </div>
           </div>

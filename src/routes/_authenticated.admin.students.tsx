@@ -38,6 +38,8 @@ function AdminStudents() {
   const [editClassId, setEditClassId] = useState("");
   const [editSection, setEditSection] = useState("");
   const [editEmoji, setEditEmoji] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPassword, setEditPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 

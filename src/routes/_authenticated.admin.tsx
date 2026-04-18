@@ -18,6 +18,7 @@ function AdminLayout() {
     { to: "/admin/parents" as const, label: "Parents", icon: UserPlus },
     { to: "/admin/rewards" as const, label: "Rewards", icon: Gift },
     { to: "/admin/rules" as const, label: "Rules", icon: Settings },
+    { to: "/admin/profile" as const, label: "Profile", icon: UserCog },
   ];
 
   return (

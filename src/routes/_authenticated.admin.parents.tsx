@@ -198,6 +198,10 @@ function AdminParents() {
                 {students.map(s => <option key={s.id} value={s.id}>{s.name} (#{s.roll_number})</option>)}
               </select>
             </div>
+            <div className="border-t border-border pt-3">
+              <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password (leave blank to keep current)</Label>
+              <Input type="password" value={ePassword} onChange={e => setEPassword(e.target.value)} className="rounded-xl" placeholder="Min 6 characters" />
+            </div>
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <Button onClick={handleSaveEdit} className="rounded-xl w-full" disabled={!eName.trim() || !eEmail.trim() || saving}>
               {saving ? "Saving..." : "Save Changes"}

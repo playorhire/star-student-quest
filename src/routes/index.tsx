@@ -186,8 +186,8 @@ function Index() {
             {
               icon: Trophy,
               emoji: "🏆",
-              title: "Leaderboard",
-              desc: "Friendly class rankings keep kids motivated. Earn badges as you climb — Bronze, Silver, Gold and beyond.",
+              title: "Badges",
+              desc: "Earn badges as you climb — Bronze, Silver, Gold and beyond.",
               tint: "from-secondary/30 to-secondary/5",
               iconColor: "text-secondary-foreground",
             },

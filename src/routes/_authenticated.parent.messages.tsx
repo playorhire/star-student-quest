@@ -6,6 +6,10 @@ import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/parent/messages")({
   component: ParentMessages,
+  validateSearch: (search: Record<string, unknown>) => ({
+    with: typeof search.with === "string" ? search.with : undefined,
+    name: typeof search.name === "string" ? search.name : undefined,
+  }),
 });
 
 interface Conversation {

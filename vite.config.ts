@@ -13,7 +13,7 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: ["localhost", "exposure-undergo-tubular.ngrok-free.dev"],
     port: 8080
-  }
+  },
   plugins: [react()],
   build: {
     outDir: "dist",

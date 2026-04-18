@@ -32,12 +32,21 @@ interface Message {
 
 function ParentMessages() {
   const { user } = useAuth();
+  const search = Route.useSearch();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
+  const [selectedTeacherName, setSelectedTeacherName] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (search.with) {
+      setSelectedTeacher(search.with);
+      setSelectedTeacherName(search.name || "Teacher");
+    }
+  }, [search.with, search.name]);
 
   useEffect(() => {
     if (!user) return;

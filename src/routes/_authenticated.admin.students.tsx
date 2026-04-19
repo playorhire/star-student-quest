@@ -59,7 +59,7 @@ function AdminStudents() {
     setCreating(true);
     setError("");
     try {
-      const { data: student, error: insertErr } = await supabase.from("students").insert({ name: name.trim(), roll_number: roll.trim(), class_id: classId, section: section || "A" }).select("id").single();
+      const { data: student, error: insertErr } = await supabase.from("students").insert({ name: name.trim(), roll_number: roll.trim(), class_id: classId, section: section || "A" } as any).select("id").single();
       if (insertErr) throw insertErr;
 
       if (email.trim() && password.trim()) {
@@ -145,7 +145,7 @@ function AdminStudents() {
           if (n.trim() && r.trim() && c.trim()) {
             const cls = classes.find(cl => cl.name === c.trim());
             if (cls) {
-              await supabase.from("students").insert({ name: n.trim(), roll_number: r.trim(), class_id: cls.id, section: s.trim() });
+              await supabase.from("students").insert({ name: n.trim(), roll_number: r.trim(), class_id: cls.id, section: s.trim() } as any);
               count++;
             }
           }

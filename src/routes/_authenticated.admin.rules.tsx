@@ -16,6 +16,8 @@ interface RuleRow {
   id: string;
   passing_marks: number;
   multiplier: number;
+  min_marks: number;
+  max_marks: number;
   subject_id: string;
   subjects: { id: string; name: string; class_id: string; classes: { name: string } | null } | null;
 }
@@ -28,13 +30,15 @@ function AdminRules() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editPassing, setEditPassing] = useState("");
   const [editMultiplier, setEditMultiplier] = useState("");
+  const [editMin, setEditMin] = useState("");
+  const [editMax, setEditMax] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     const [r, c] = await Promise.all([
-      supabase.from("point_rules").select("id, passing_marks, multiplier, subject_id, subjects(id, name, class_id, classes(name))").order("subject_id"),
+      supabase.from("point_rules").select("id, passing_marks, multiplier, min_marks, max_marks, subject_id, subjects(id, name, class_id, classes(name))").order("subject_id"),
       supabase.from("classes").select("id, name").order("name"),
     ]);
     setRules(r.data as any || []);
@@ -45,15 +49,19 @@ function AdminRules() {
     setEditId(rule.id);
     setEditPassing(String(rule.passing_marks));
     setEditMultiplier(String(rule.multiplier));
+    setEditMin(String(rule.min_marks));
+    setEditMax(String(rule.max_marks));
   };
 
   async function saveEdit() {
     if (!editId) return;
-    const pm = parseInt(editPassing);
+    const pm = parseInt(editPassing, 10);
     const mul = parseFloat(editMultiplier);
-    if (!isNaN(pm) && !isNaN(mul) && pm >= 0 && mul > 0) {
-      await supabase.from("point_rules").update({ passing_marks: pm, multiplier: mul }).eq("id", editId);
-    }
+    const min = parseInt(editMin, 10);
+    const max = parseInt(editMax, 10);
+    if (isNaN(pm) || isNaN(mul) || isNaN(min) || isNaN(max)) return;
+    if (min < 0 || max <= 0 || min > max || pm < min || pm > max || mul <= 0) return;
+    await supabase.from("point_rules").update({ passing_marks: pm, multiplier: mul, min_marks: min, max_marks: max }).eq("id", editId);
     setEditId(null);
     load();
   }
@@ -103,6 +111,8 @@ function AdminRules() {
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label className="text-xs">Passing Marks</Label><Input type="number" value={editPassing} onChange={e => setEditPassing(e.target.value)} className="rounded-xl" min="0" max="100" /></div>
                       <div><Label className="text-xs">Multiplier</Label><Input type="number" value={editMultiplier} onChange={e => setEditMultiplier(e.target.value)} className="rounded-xl" min="0.1" step="0.1" /></div>
+                      <div><Label className="text-xs">Min Marks</Label><Input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} className="rounded-xl" min="0" max="100" /></div>
+                      <div><Label className="text-xs">Max Marks</Label><Input type="number" value={editMax} onChange={e => setEditMax(e.target.value)} className="rounded-xl" min="0" max="100" /></div>
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" className="rounded-xl" onClick={saveEdit}><Save className="h-3 w-3 mr-1" /> Save</Button>
@@ -128,7 +138,9 @@ function AdminRules() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">Tap to edit • Example: (80 − {rule.passing_marks}) × {rule.multiplier} = {((80 - rule.passing_marks) * Number(rule.multiplier)).toFixed(0)} pts</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      Tap to edit • Example: (80 − {rule.passing_marks}) × {rule.multiplier} = {((80 - rule.passing_marks) * Number(rule.multiplier)).toFixed(0)} pts • Range: {rule.min_marks}–{rule.max_marks}
+                    </div>
                   </button>
                 )}
               </CardContent>

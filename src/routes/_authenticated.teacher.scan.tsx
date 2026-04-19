@@ -79,7 +79,7 @@ function TeacherScan() {
 
     const { data: subs } = await supabase
       .from("subjects")
-      .select("id, name, point_rules(passing_marks, multiplier)")
+      .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
       .eq("class_id", studentData.class_id);
     setSubjectsForClass(subs || []);
 
@@ -115,7 +115,7 @@ function TeacherScan() {
   const getRule = () => {
     const sub = subjectsForClass.find((s) => s.id === selectedSubjectId);
     const r = sub?.point_rules;
-    return r ? { passing: Number(r.passing_marks), multiplier: Number(r.multiplier) } : null;
+    return r ? { passing: Number(r.passing_marks), multiplier: Number(r.multiplier), min: Number(r.min_marks), max: Number(r.max_marks) } : null;
   };
 
   const handleMarksChange = (val: string) => {
@@ -152,6 +152,10 @@ function TeacherScan() {
     const rule = getRule();
     if (!rule) {
       toast.error("This subject doesn't have a point rule configured yet");
+      return;
+    }
+    if (score < rule.min || score > rule.max) {
+      toast.error(`Marks must be between ${rule.min} and ${rule.max}`);
       return;
     }
 
@@ -283,123 +287,260 @@ function TeacherScan() {
   }, [step]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Assign Points</h1>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold text-foreground">Assign Points</h1>
+        <p className="text-muted-foreground">Scan QR codes or select students to award points</p>
+      </div>
 
       {step === "scanning" && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Select a student from your classes</p>
-              <Select onValueChange={(id) => {
-                const s = studentsForClasses.find((x) => x.id === id);
-                if (s) loadStudentData(s);
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
-                <SelectContent>
-                  {studentsForClasses.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.avatar_emoji} {s.name} (#{s.roll_number})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {studentsForClasses.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  You're not assigned to any class yet, or your assigned classes have no students. Ask the admin to link you to a class & subject in <span className="font-semibold">Admin → Teachers</span>.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Scan the student's QR code</p>
-              <div
-                id="html5qr-scanner"
-                ref={scannerRef}
-                className="rounded-2xl overflow-hidden bg-black/5 min-h-[320px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Grant camera access and hold the student's QR code in front of the camera. Scanning will automatically select the student.
-              </p>
-            </div>
-
-            <div className="relative flex items-center gap-2">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">OR</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Enter student code manually</p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. A1B2C3"
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  maxLength={12}
-                  className="tracking-widest font-mono uppercase"
-                />
-                <Button onClick={handleManualLookup} disabled={!manualCode.trim()}>Find</Button>
+        <div className="space-y-6">
+          <Card className="border-2 border-dashed border-primary/20">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12l3-3m-3 3l-3-3m-3 7h2.01M12 12v4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Ready to Scan</h3>
+                  <p className="text-sm text-muted-foreground">Choose how you'd like to find a student</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {student && step === "student-found" && (
-        <>
-          <Card className="border-2 border-primary/20">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="text-3xl">{student.avatar_emoji}</div>
-              <div className="flex-1">
-                <h2 className="font-bold text-card-foreground">{student.name}</h2>
-                <p className="text-xs text-muted-foreground">Total Points</p>
-              </div>
-              <div className="text-2xl font-black text-primary">{student.total_points}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4 space-y-3">
-              <div className="text-sm font-semibold text-card-foreground">{isEditing ? "Editing record" : "New record"}</div>
-
-              <Select value={selectedSubjectId} onValueChange={(v) => { setSelectedSubjectId(v); setCalculatedPoints(0); setMarks(""); }}>
-                <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
-                <SelectContent>
-                  {subjectsForClass.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>Marks</span>
-                {selectedSubjectId && (() => {
-                  const rule = getRule();
-                  return rule ? <span>Passing {rule.passing}, ×{rule.multiplier}</span> : <span className="text-amber-700">No rule configured</span>;
-                })()}
+            <CardContent className="p-6 space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <h4 className="font-medium">Select from your class</h4>
+                </div>
+                <Select onValueChange={(id) => {
+                  const s = studentsForClasses.find((x) => x.id === id);
+                  if (s) loadStudentData(s);
+                }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a student..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {studentsForClasses.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{s.avatar_emoji}</span>
+                          <span>{s.name}</span>
+                          <span className="text-muted-foreground">#{s.roll_number}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {studentsForClasses.length === 0 && (
+                  <div className="text-center py-4 space-y-2">
+                    <p className="text-sm text-muted-foreground">No students assigned to your classes yet.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Contact an admin to assign you to a class in <span className="font-semibold">Admin → Teachers</span>.
+                    </p>
+                  </div>
+                )}
               </div>
-              <Input
-                type="number"
-                placeholder="Marks"
-                value={marks}
-                onChange={(e) => handleMarksChange(e.target.value)}
-              />
 
-              {marks && (
-                <div className={`text-sm font-bold ${calculatedPoints > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                  {calculatedPoints > 0
-                    ? `+${calculatedPoints} points`
-                    : getRule()
-                      ? "No points (below passing)"
-                      : "No point rule for this subject"}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12l3-3m-3 3l-3-3m-3 7h2.01M12 12v4" />
+                  </svg>
+                  <h4 className="font-medium">Scan QR Code</h4>
+                </div>
+                <div className="space-y-3">
+                  <div
+                    id="html5qr-scanner"
+                    ref={scannerRef}
+                    className="rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[280px] border-2 border-dashed border-gray-300 dark:border-gray-600"
+                  />
+                  <p className="text-xs text-center text-muted-foreground">
+                    Position the QR code within the camera view. Make sure you have camera permissions enabled.
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <h4 className="font-medium">Enter Code Manually</h4>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. A1B2C3"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                    maxLength={12}
+                    className="tracking-widest font-mono uppercase text-center"
+                  />
+                  <Button onClick={handleManualLookup} disabled={!manualCode.trim()}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {student && step === "student-found" && (
+        <>
+          <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="text-4xl">{student.avatar_emoji}</div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-card-foreground">{student.name}</h2>
+                  <p className="text-sm text-muted-foreground">Roll #{student.roll_number} • Class {student.classes?.name}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-black text-primary">{student.total_points}</div>
+                  <p className="text-xs text-muted-foreground">Total Points</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="text-lg font-semibold">{isEditing ? "Edit Points Record" : "Award Points"}</h3>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Subject</label>
+                <Select value={selectedSubjectId} onValueChange={(v) => { setSelectedSubjectId(v); setCalculatedPoints(0); setMarks(""); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose subject..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectsForClass.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedSubjectId && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Marks Scored</label>
+                    {(() => {
+                      const rule = getRule();
+                      return rule ? (
+                        <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                          Range: {rule.min}–{rule.max} • Pass: {rule.passing} • ×{rule.multiplier}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 px-2 py-1 rounded">
+                          No rule configured
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <Input
+                    type="number"
+                    min={getRule()?.min ?? 0}
+                    max={getRule()?.max ?? 100}
+                    placeholder="Enter marks..."
+                    value={marks}
+                    onChange={(e) => handleMarksChange(e.target.value)}
+                    className="text-center text-lg font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Enter the marks this student scored for this subject
+                  </p>
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button onClick={handleConfirm} className="flex-1">
-                  {isEditing ? "Update" : "Assign"}
+              {marks && selectedSubjectId && (() => {
+                const rule = getRule();
+                const score = parseInt(marks, 10);
+                const outOfRange = rule && !isNaN(score) && (score < rule.min || score > rule.max);
+                return (
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Points Calculation</span>
+                      <div className={`text-lg font-bold ${calculatedPoints > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                        {calculatedPoints > 0 ? `+${calculatedPoints} points` : "No points"}
+                      </div>
+                    </div>
+                    {rule && (
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <div>Formula: (marks - passing) × multiplier</div>
+                        <div>({score} - {rule.passing}) × {rule.multiplier} = {calculatedPoints > 0 ? calculatedPoints : 0} points</div>
+                      </div>
+                    )}
+                    {outOfRange && (
+                      <div className="text-sm text-amber-700 bg-amber-50 dark:bg-amber-950 p-2 rounded border border-amber-200 dark:border-amber-800">
+                        ⚠️ Marks must be between {rule?.min} and {rule?.max}
+                      </div>
+                    )}
+                    {!rule && (
+                      <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-2 rounded border border-red-200 dark:border-red-800">
+                        ❌ No point rule configured for this subject
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleConfirm}
+                  className="flex-1"
+                  disabled={!selectedSubjectId || !marks || (() => {
+                    const rule = getRule();
+                    const score = parseInt(marks, 10);
+                    return rule ? (isNaN(score) || score < rule.min || score > rule.max) : false;
+                  })()}
+                >
+                  {isEditing ? "Update Record" : "Award Points"}
                 </Button>
                 {isEditing && (
-                  <Button variant="outline" onClick={() => { setIsEditing(false); setSelectedTransactionId(null); setMarks(""); setSelectedSubjectId(""); setCalculatedPoints(0); }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setSelectedTransactionId(null);
+                      setMarks("");
+                      setSelectedSubjectId("");
+                      setCalculatedPoints(0);
+                    }}
+                  >
                     Cancel
                   </Button>
                 )}
@@ -409,34 +550,96 @@ function TeacherScan() {
 
           {transactions.length > 0 && (
             <Card>
-              <CardContent className="p-4 space-y-2">
-                <div className="text-sm font-semibold text-card-foreground mb-2">Previous records</div>
-                {transactions.map((t) => (
-                  <div key={t.id} className={`flex items-center gap-2 p-2 rounded-lg border ${selectedTransactionId === t.id ? "border-primary bg-primary/5" : "border-border"}`}>
-                    <button onClick={() => handleTransactionSelect(t.id)} className="flex-1 text-left">
-                      <div className="text-sm font-medium text-card-foreground">{t.subjects?.name || "Subject"} • +{t.points_awarded} pts</div>
-                      <div className="text-xs text-muted-foreground">{t.marks_entered} marks • {new Date(t.created_at).toLocaleDateString()}</div>
-                    </button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold">Recent Records</h3>
+                </div>
+                <div className="space-y-2">
+                  {transactions.slice(0, 5).map((t) => (
+                    <div
+                      key={t.id}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selectedTransactionId === t.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                      onClick={() => handleTransactionSelect(t.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">{t.subjects?.name || "Subject"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {t.marks_entered} marks • {new Date(t.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-bold ${t.points_awarded > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                            +{t.points_awarded}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(t.id);
+                            }}
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
 
-          <Button variant="outline" onClick={handleReset} className="w-full">Pick another student</Button>
+          <Button variant="outline" onClick={handleReset} className="w-full">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+            </svg>
+            Choose Different Student
+          </Button>
         </>
       )}
 
       {step === "confirmed" && (
-        <Card>
-          <CardContent className="p-6 text-center space-y-3">
-            <div className="text-4xl">✅</div>
-            <h2 className="font-bold text-card-foreground">Points Saved</h2>
-            <Button onClick={handleReset} className="w-full">Next Student</Button>
-            <Button variant="outline" onClick={() => setStep("student-found")} className="w-full">Back to {student?.name}</Button>
+        <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <CardContent className="p-8 text-center space-y-6">
+            <div className="mx-auto w-20 h-20 bg-green-500 rounded-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-green-800 dark:text-green-200">Points Awarded!</h2>
+              <p className="text-green-700 dark:text-green-300">
+                {student?.name} has been awarded {calculatedPoints} points
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={handleReset} className="flex-1 bg-green-600 hover:bg-green-700">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12l3-3m-3 3l-3-3m-3 7h2.01M12 12v4" />
+                </svg>
+                Next Student
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setStep("student-found")}
+                className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                </svg>
+                Back to {student?.name}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}

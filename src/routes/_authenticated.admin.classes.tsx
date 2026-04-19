@@ -50,7 +50,13 @@ function AdminClasses() {
     const { data } = await supabase.from("subjects").insert({ name: newSubjectName.trim(), class_id: newSubjectClassId }).select().single();
     if (data) {
       // Also create a default point rule
-      await supabase.from("point_rules").insert({ subject_id: data.id, passing_marks: 35, multiplier: 1.0 });
+      await supabase.from("point_rules").insert({
+        subject_id: data.id,
+        passing_marks: 35,
+        multiplier: 1.0,
+        min_marks: 0,
+        max_marks: 100,
+      });
     }
     setNewSubjectName("");
     setNewSubjectClassId("");

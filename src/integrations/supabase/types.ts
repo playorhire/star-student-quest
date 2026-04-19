@@ -189,6 +189,8 @@ export type Database = {
           id: string
           multiplier: number
           passing_marks: number
+          min_marks: number
+          max_marks: number
           subject_id: string
         }
         Insert: {
@@ -196,6 +198,8 @@ export type Database = {
           id?: string
           multiplier?: number
           passing_marks?: number
+          min_marks?: number
+          max_marks?: number
           subject_id: string
         }
         Update: {
@@ -203,6 +207,8 @@ export type Database = {
           id?: string
           multiplier?: number
           passing_marks?: number
+          min_marks?: number
+          max_marks?: number
           subject_id?: string
         }
         Relationships: [

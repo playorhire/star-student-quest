@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
@@ -37,6 +38,9 @@ function TeacherScan() {
 
   const [studentsForClasses, setStudentsForClasses] = useState<any[]>([]);
   const [manualCode, setManualCode] = useState("");
+
+  const scannerRef = useRef<HTMLDivElement | null>(null);
+  const scannerInstanceRef = useRef<Html5QrcodeScanner | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
@@ -208,6 +212,57 @@ function TeacherScan() {
     loadStudentData(data);
   };
 
+  const handleQrScan = useCallback(async (decodedText: string) => {
+    const scannedCode = decodedText.trim().toUpperCase();
+    if (!scannedCode) return;
+
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("student_code", scannedCode)
+      .maybeSingle();
+
+    if (error || !data) {
+      toast.error("No student found for scanned QR code");
+      return;
+    }
+
+    if (scannerInstanceRef.current) {
+      scannerInstanceRef.current.clear().catch(() => undefined);
+      scannerInstanceRef.current = null;
+    }
+    loadStudentData(data);
+  }, [loadStudentData]);
+
+  useEffect(() => {
+    if (step !== "scanning") return;
+    if (!scannerRef.current || scannerInstanceRef.current) return;
+
+    const elementId = "html5qr-scanner";
+    const scanner = new Html5QrcodeScanner(elementId, {
+      fps: 10,
+      qrbox: 280,
+      rememberLastUsedCamera: true,
+    }, false);
+
+    scanner.render(handleQrScan, () => undefined);
+    scannerInstanceRef.current = scanner;
+
+    return () => {
+      if (scannerInstanceRef.current) {
+        scannerInstanceRef.current.clear().catch(() => undefined);
+        scannerInstanceRef.current = null;
+      }
+    };
+  }, [step, handleQrScan]);
+
+  useEffect(() => {
+    if (step !== "scanning" && scannerInstanceRef.current) {
+      scannerInstanceRef.current.clear().catch(() => undefined);
+      scannerInstanceRef.current = null;
+    }
+  }, [step]);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">Assign Points</h1>
@@ -233,6 +288,18 @@ function TeacherScan() {
                   You're not assigned to any class yet, or your assigned classes have no students. Ask the admin to link you to a class & subject in <span className="font-semibold">Admin → Teachers</span>.
                 </p>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Scan the student's QR code</p>
+              <div
+                id="html5qr-scanner"
+                ref={scannerRef}
+                className="rounded-2xl overflow-hidden bg-black/5 min-h-[320px]"
+              />
+              <p className="text-xs text-muted-foreground">
+                Grant camera access and hold the student's QR code in front of the camera. Scanning will automatically select the student.
+              </p>
             </div>
 
             <div className="relative flex items-center gap-2">

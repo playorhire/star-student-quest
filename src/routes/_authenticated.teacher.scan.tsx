@@ -180,6 +180,7 @@ function TeacherScan() {
       toast.success(`+${calculatedPoints} points awarded`);
     }
 
+    await loadStudentData(student);
     confetti();
     setStep("confirmed");
     setIsEditing(false);

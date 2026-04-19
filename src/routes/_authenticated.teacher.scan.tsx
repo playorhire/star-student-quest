@@ -114,7 +114,7 @@ function TeacherScan() {
 
   const getRule = () => {
     const sub = subjectsForClass.find((s) => s.id === selectedSubjectId);
-    const r = sub?.point_rules?.[0];
+    const r = sub?.point_rules;
     return r ? { passing: Number(r.passing_marks), multiplier: Number(r.multiplier) } : null;
   };
 

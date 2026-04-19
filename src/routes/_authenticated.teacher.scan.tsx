@@ -51,14 +51,22 @@ function TeacherScan() {
       if (!user) return;
       const { data: teacher } = await supabase
         .from("teachers")
-        .select("id, teacher_assignments(class_id)")
+        .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!teacher) return;
+      if (!teacher) {
+        setStudentsForClasses([]);
+        return;
+      }
       setTeacherId(teacher.id);
 
-      const classIds = (teacher.teacher_assignments ?? []).map((c: any) => c.class_id);
+      const { data: assignments } = await supabase
+        .from("teacher_assignments")
+        .select("class_id")
+        .eq("teacher_id", teacher.id);
+
+      const classIds = (assignments ?? []).map((a: any) => a.class_id);
       if (classIds.length === 0) {
         setStudentsForClasses([]);
         return;
@@ -292,6 +300,13 @@ function TeacherScan() {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Assign Points</h1>
         <p className="text-muted-foreground">Scan QR codes or select students to award points</p>
+        {step === "scanning" && (
+          <div className="text-sm text-muted-foreground">
+            {studentsForClasses.length > 0
+              ? `${studentsForClasses.length} student${studentsForClasses.length !== 1 ? "s" : ""} loaded from your assigned classes`
+              : "Loading students for your assigned classes..."}
+          </div>
+        )}
       </div>
 
       {step === "scanning" && (

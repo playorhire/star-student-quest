@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     const { error } = await supabase.auth.admin.updateUserById(userIdToUpdate, updates);
     if (error) throw error;
 
-    // Mirror email to profile tables when applicable
-    if (email && !selfUpdate) {
+    // Mirror email to profile tables when applicable (both admin-led and self-updates)
+    if (email) {
       await supabase.from("teachers").update({ email }).eq("user_id", userIdToUpdate);
       await supabase.from("parents").update({ email }).eq("user_id", userIdToUpdate);
     }

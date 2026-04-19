@@ -6,33 +6,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { CheckCircle, Bell, KeyRound, Mail } from "lucide-react";
+import { CheckCircle, KeyRound, Mail, User as UserIcon } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/parent/profile")({
-  component: ParentProfile,
+export const Route = createFileRoute("/_authenticated/teacher/profile")({
+  component: TeacherProfile,
 });
 
-function ParentProfile() {
+function TeacherProfile() {
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const [exists, setExists] = useState(false);
 
   useEffect(() => { if (user) load(); }, [user]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("parents").select("*").eq("user_id", user!.id).maybeSingle();
+    const { data } = await supabase.from("teachers").select("*").eq("user_id", user!.id).maybeSingle();
     if (data) {
-      setName(data.name); setEmail(data.email); setPhone(data.phone || "");
-      setExists(true);
+      setName(data.name);
+      setEmail(data.email);
     } else {
       setEmail(user!.email || "");
     }
@@ -46,19 +44,11 @@ function ParentProfile() {
     if (password && password.length < 6) { setErr("Password must be at least 6 characters"); return; }
     setSaving(true);
     try {
-      // Upsert profile row
-      if (exists) {
-        const { error: pErr } = await supabase.from("parents").update({
-          name: name.trim(), email: email.trim(), phone: phone.trim() || null,
-        }).eq("user_id", user!.id);
-        if (pErr) throw pErr;
-      } else {
-        const { error: pErr } = await supabase.from("parents").insert({
-          user_id: user!.id, name: name.trim(), email: email.trim(), phone: phone.trim() || null,
-        });
-        if (pErr) throw pErr;
-        setExists(true);
-      }
+      // Update teacher profile name
+      const { error: pErr } = await supabase.from("teachers")
+        .update({ name: name.trim(), email: email.trim() })
+        .eq("user_id", user!.id);
+      if (pErr) throw pErr;
 
       // Update auth email/password if changed
       const body: any = { selfUpdate: true };
@@ -85,26 +75,23 @@ function ParentProfile() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-foreground">My Profile</h1>
-        <p className="text-sm text-muted-foreground">Update your contact info and password</p>
+        <p className="text-sm text-muted-foreground">Update your name, email, and password</p>
       </div>
 
       <Card className="border-2 border-primary/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold flex items-center gap-2"><Bell className="h-4 w-4" /> Notification Contact</CardTitle>
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <UserIcon className="h-4 w-4 text-primary" /> Teacher Account
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
             <Label className="text-xs">Full Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" className="rounded-xl" />
+            <Input value={name} onChange={e => setName(e.target.value)} className="rounded-xl" />
           </div>
           <div>
             <Label className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" /> Email</Label>
-            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className="rounded-xl" />
-            <p className="text-[10px] text-muted-foreground mt-1">Used to receive points-earned notifications</p>
-          </div>
-          <div>
-            <Label className="text-xs">Phone</Label>
-            <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 0100" className="rounded-xl" />
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} className="rounded-xl" />
           </div>
           <div className="border-t border-border pt-3">
             <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">

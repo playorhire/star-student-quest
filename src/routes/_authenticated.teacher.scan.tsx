@@ -115,36 +115,55 @@ function TeacherScan() {
   const getRule = () => {
     const sub = subjectsForClass.find((s) => s.id === selectedSubjectId);
     const r = sub?.point_rules?.[0];
-    return r ? { passing: r.passing_marks, multiplier: Number(r.multiplier) } : null;
+    return r ? { passing: Number(r.passing_marks), multiplier: Number(r.multiplier) } : null;
   };
 
   const handleMarksChange = (val: string) => {
     setMarks(val);
-    const num = parseInt(val);
+    const num = parseInt(val, 10);
     const rule = getRule();
-    if (rule && !isNaN(num) && num >= rule.passing) {
-      setCalculatedPoints((num - rule.passing) * rule.multiplier);
+    if (rule && !isNaN(num)) {
+      const points = Math.floor((num - rule.passing) * rule.multiplier);
+      setCalculatedPoints(points > 0 ? points : 0);
     } else {
       setCalculatedPoints(0);
     }
   };
 
   const handleConfirm = async () => {
-    if (!student || !selectedSubjectId || !teacherId) {
+    if (!student) {
+      toast.error("Select a student first");
+      return;
+    }
+    if (!selectedSubjectId) {
       toast.error("Select a subject first");
       return;
     }
-    const rule = getRule();
-    if (!rule) { toast.error("No point rule for this subject"); return; }
+    if (!marks.trim()) {
+      toast.error("Enter the student's marks");
+      return;
+    }
+    const score = parseInt(marks, 10);
+    if (isNaN(score)) {
+      toast.error("Enter a valid numeric mark");
+      return;
+    }
 
+    const rule = getRule();
+    if (!rule) {
+      toast.error("This subject doesn't have a point rule configured yet");
+      return;
+    }
+
+    const points = Math.floor((score - rule.passing) * rule.multiplier);
     const payload = {
       student_id: student.id,
-      teacher_id: teacherId,
+      teacher_id: teacherId as string,
       subject_id: selectedSubjectId,
-      marks_entered: parseInt(marks),
+      marks_entered: score,
       passing_marks: rule.passing,
       multiplier: rule.multiplier,
-      points_awarded: calculatedPoints,
+      points_awarded: points > 0 ? points : 0,
     };
 
     if (isEditing && selectedTransactionId) {
@@ -342,7 +361,7 @@ function TeacherScan() {
             <CardContent className="p-4 space-y-3">
               <div className="text-sm font-semibold text-card-foreground">{isEditing ? "Editing record" : "New record"}</div>
 
-              <Select value={selectedSubjectId} onValueChange={(v) => setSelectedSubjectId(v)}>
+              <Select value={selectedSubjectId} onValueChange={(v) => { setSelectedSubjectId(v); setCalculatedPoints(0); setMarks(""); }}>
                 <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
                 <SelectContent>
                   {subjectsForClass.map((s) => (
@@ -351,6 +370,13 @@ function TeacherScan() {
                 </SelectContent>
               </Select>
 
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>Marks</span>
+                {selectedSubjectId && (() => {
+                  const rule = getRule();
+                  return rule ? <span>Passing {rule.passing}, ×{rule.multiplier}</span> : <span className="text-amber-700">No rule configured</span>;
+                })()}
+              </div>
               <Input
                 type="number"
                 placeholder="Marks"
@@ -360,7 +386,11 @@ function TeacherScan() {
 
               {marks && (
                 <div className={`text-sm font-bold ${calculatedPoints > 0 ? "text-primary" : "text-muted-foreground"}`}>
-                  {calculatedPoints > 0 ? `+${calculatedPoints} points` : "No points (below passing)"}
+                  {calculatedPoints > 0
+                    ? `+${calculatedPoints} points`
+                    : getRule()
+                      ? "No points (below passing)"
+                      : "No point rule for this subject"}
                 </div>
               )}
 

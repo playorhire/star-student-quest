@@ -24,9 +24,17 @@ interface RuleRow {
 
 interface ClassRow { id: string; name: string; }
 
+interface SubjectRow {
+  id: string;
+  name: string;
+  class_id: string;
+  classes: { name: string } | null;
+}
+
 function AdminRules() {
   const [rules, setRules] = useState<RuleRow[]>([]);
   const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [subjects, setSubjects] = useState<SubjectRow[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editPassing, setEditPassing] = useState("");
   const [editMultiplier, setEditMultiplier] = useState("");
@@ -37,12 +45,14 @@ function AdminRules() {
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const [r, c] = await Promise.all([
+    const [r, c, s] = await Promise.all([
       supabase.from("point_rules").select("id, passing_marks, multiplier, min_marks, max_marks, subject_id, subjects(id, name, class_id, classes(name))").order("subject_id"),
       supabase.from("classes").select("id, name").order("name"),
+      supabase.from("subjects").select("id, name, class_id, classes(name)").order("name"),
     ]);
     setRules(r.data as any || []);
     setClasses(c.data || []);
+    setSubjects(s.data as any || []);
   }
 
   const startEdit = (rule: RuleRow) => {
@@ -66,15 +76,42 @@ function AdminRules() {
     load();
   }
 
+  async function createDefaultRules() {
+    const subjectsWithoutRules = subjects.filter(s => !rules.some(r => r.subject_id === s.id));
+    if (subjectsWithoutRules.length === 0) return;
+
+    const defaultRules = subjectsWithoutRules.map(s => ({
+      subject_id: s.id,
+      passing_marks: 40,
+      multiplier: 1,
+      min_marks: 0,
+      max_marks: 100,
+    }));
+
+    const { error } = await supabase.from("point_rules").insert(defaultRules);
+    if (error) {
+      console.error("Error creating default rules:", error);
+      return;
+    }
+    load();
+  }
+
   const filtered = filterClassId
     ? rules.filter(r => r.subjects?.class_id === filterClassId)
     : rules;
+
+  const subjectsWithoutRules = subjects.filter(s => !rules.some(r => r.subject_id === s.id));
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-foreground">Point Rules</h1>
         <p className="text-sm text-muted-foreground">Configure passing marks and multipliers per subject</p>
+        {subjects.length > 0 && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            {rules.length} of {subjects.length} subjects have rules configured
+          </div>
+        )}
       </div>
 
       <Card className="border-2 border-primary/20 bg-primary/5">
@@ -147,7 +184,28 @@ function AdminRules() {
             </Card>
           );
         })}
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground">No rules yet. Add subjects in Classes & Subjects first.</p>}
+        {filtered.length === 0 && subjectsWithoutRules.length > 0 && (
+          <Card className="border-2 border-amber-200 bg-amber-50 dark:bg-amber-950">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
+                <BookOpen className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">Point Rules Needed</h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  {subjectsWithoutRules.length} subject{subjectsWithoutRules.length !== 1 ? 's' : ''} {subjectsWithoutRules.length === 1 ? 'needs' : 'need'} point rules configured.
+                </p>
+              </div>
+              <Button onClick={createDefaultRules} className="bg-amber-600 hover:bg-amber-700">
+                Create Default Rules
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {filtered.length === 0 && subjectsWithoutRules.length === 0 && subjects.length === 0 && (
+          <p className="text-sm text-muted-foreground">No rules yet. Add subjects in Classes & Subjects first.</p>
+        )}
       </div>
     </div>
   );

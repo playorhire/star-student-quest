@@ -358,6 +358,7 @@ export type Database = {
           qr_code: string
           roll_number: string
           section: string
+          student_code: string
           total_points: number
           user_id: string | null
         }
@@ -370,6 +371,7 @@ export type Database = {
           qr_code?: string
           roll_number: string
           section?: string
+          student_code: string
           total_points?: number
           user_id?: string | null
         }
@@ -382,6 +384,7 @@ export type Database = {
           qr_code?: string
           roll_number?: string
           section?: string
+          student_code?: string
           total_points?: number
           user_id?: string | null
         }
@@ -520,6 +523,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_student_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

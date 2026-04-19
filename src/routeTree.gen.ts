@@ -18,6 +18,7 @@ import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherRewardsRouteImport } from './routes/_authenticated.teacher.rewards'
+import { Route as AuthenticatedTeacherProfileRouteImport } from './routes/_authenticated.teacher.profile'
 import { Route as AuthenticatedTeacherHistoryRouteImport } from './routes/_authenticated.teacher.history'
 import { Route as AuthenticatedTeacherDashboardRouteImport } from './routes/_authenticated.teacher.dashboard'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
@@ -81,6 +82,12 @@ const AuthenticatedTeacherRewardsRoute =
   AuthenticatedTeacherRewardsRouteImport.update({
     id: '/rewards',
     path: '/rewards',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherProfileRoute =
+  AuthenticatedTeacherProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedTeacherHistoryRoute =
@@ -215,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
 }
@@ -243,6 +251,7 @@ export interface FileRoutesByTo {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
 }
@@ -273,6 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/_authenticated/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/_authenticated/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/_authenticated/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/_authenticated/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
 }
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/teacher/dashboard'
     | '/teacher/history'
+    | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
   fileRoutesByTo: FileRoutesByTo
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/teacher/dashboard'
     | '/teacher/history'
+    | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
   id:
@@ -360,6 +372,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/rewards'
     | '/_authenticated/teacher/dashboard'
     | '/_authenticated/teacher/history'
+    | '/_authenticated/teacher/profile'
     | '/_authenticated/teacher/rewards'
     | '/_authenticated/teacher/scan'
   fileRoutesById: FileRoutesById
@@ -433,6 +446,13 @@ declare module '@tanstack/react-router' {
       path: '/rewards'
       fullPath: '/teacher/rewards'
       preLoaderRoute: typeof AuthenticatedTeacherRewardsRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/profile': {
+      id: '/_authenticated/teacher/profile'
+      path: '/profile'
+      fullPath: '/teacher/profile'
+      preLoaderRoute: typeof AuthenticatedTeacherProfileRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/teacher/history': {
@@ -626,6 +646,7 @@ const AuthenticatedStudentRouteWithChildren =
 interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherDashboardRoute: typeof AuthenticatedTeacherDashboardRoute
   AuthenticatedTeacherHistoryRoute: typeof AuthenticatedTeacherHistoryRoute
+  AuthenticatedTeacherProfileRoute: typeof AuthenticatedTeacherProfileRoute
   AuthenticatedTeacherRewardsRoute: typeof AuthenticatedTeacherRewardsRoute
   AuthenticatedTeacherScanRoute: typeof AuthenticatedTeacherScanRoute
 }
@@ -633,6 +654,7 @@ interface AuthenticatedTeacherRouteChildren {
 const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherDashboardRoute: AuthenticatedTeacherDashboardRoute,
   AuthenticatedTeacherHistoryRoute: AuthenticatedTeacherHistoryRoute,
+  AuthenticatedTeacherProfileRoute: AuthenticatedTeacherProfileRoute,
   AuthenticatedTeacherRewardsRoute: AuthenticatedTeacherRewardsRoute,
   AuthenticatedTeacherScanRoute: AuthenticatedTeacherScanRoute,
 }

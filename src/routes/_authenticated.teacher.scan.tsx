@@ -190,6 +190,22 @@ function TeacherScan() {
     setCalculatedPoints(0);
     setIsEditing(false);
     setSelectedTransactionId(null);
+    setManualCode("");
+  };
+
+  const handleManualLookup = async () => {
+    const code = manualCode.trim().toUpperCase();
+    if (!code) return;
+    const { data, error } = await supabase
+      .from("students")
+      .select("*")
+      .eq("student_code", code)
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("No student found with that code");
+      return;
+    }
+    loadStudentData(data);
   };
 
   return (

@@ -36,6 +36,7 @@ function TeacherScan() {
   const [calculatedPoints, setCalculatedPoints] = useState(0);
 
   const [studentsForClasses, setStudentsForClasses] = useState<any[]>([]);
+  const [manualCode, setManualCode] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
@@ -197,22 +198,44 @@ function TeacherScan() {
 
       {step === "scanning" && (
         <Card>
-          <CardContent className="p-4 space-y-3">
-            <p className="text-sm text-muted-foreground">Select a student from your classes</p>
-            <Select onValueChange={(id) => {
-              const s = studentsForClasses.find((x) => x.id === id);
-              if (s) loadStudentData(s);
-            }}>
-              <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
-              <SelectContent>
-                {studentsForClasses.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.avatar_emoji} {s.name} (#{s.roll_number})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {studentsForClasses.length === 0 && (
-              <p className="text-xs text-muted-foreground">No students assigned to your classes yet.</p>
-            )}
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Select a student from your classes</p>
+              <Select onValueChange={(id) => {
+                const s = studentsForClasses.find((x) => x.id === id);
+                if (s) loadStudentData(s);
+              }}>
+                <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
+                <SelectContent>
+                  {studentsForClasses.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.avatar_emoji} {s.name} (#{s.roll_number})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {studentsForClasses.length === 0 && (
+                <p className="text-xs text-muted-foreground">No students assigned to your classes yet.</p>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-2">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">OR</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Enter student code manually (if QR can't be scanned)</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. A1B2C3"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                  maxLength={12}
+                  className="tracking-widest font-mono uppercase"
+                />
+                <Button onClick={handleManualLookup} disabled={!manualCode.trim()}>Find</Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

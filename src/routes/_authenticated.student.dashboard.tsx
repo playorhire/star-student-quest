@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/student/dashboard")({
   component: StudentDashboard,

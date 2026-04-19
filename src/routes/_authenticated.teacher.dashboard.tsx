@@ -25,7 +25,8 @@ function TeacherDashboard() {
     setStats({
       pointsToday: (todayTx.data || []).reduce((s, t) => s + t.points_awarded, 0),
       totalStudents: studentsCount.count || 0,
-      totalScans: totalTx.count || 0,
+totalScans: totalTx.count || 0,
+      // label kept as "totalScans" for backward compat; UI says "Records"
     });
     setRecentTxns(recent.data || []);
   }
@@ -39,7 +40,7 @@ function TeacherDashboard() {
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-2 border-primary/20"><CardContent className="p-4 text-center"><Zap className="mx-auto h-6 w-6 text-primary mb-1" /><div className="text-2xl font-black text-primary">{stats.pointsToday}</div><div className="text-[10px] text-muted-foreground font-semibold">Points Today</div></CardContent></Card>
         <Card className="border-2 border-secondary/20"><CardContent className="p-4 text-center"><Users className="mx-auto h-6 w-6 text-secondary mb-1" /><div className="text-2xl font-black text-secondary">{stats.totalStudents}</div><div className="text-[10px] text-muted-foreground font-semibold">Students</div></CardContent></Card>
-        <Card className="border-2 border-accent/20"><CardContent className="p-4 text-center"><TrendingUp className="mx-auto h-6 w-6 text-accent mb-1" /><div className="text-2xl font-black text-accent">{stats.totalScans}</div><div className="text-[10px] text-muted-foreground font-semibold">Total Scans</div></CardContent></Card>
+        <Card className="border-2 border-accent/20"><CardContent className="p-4 text-center"><TrendingUp className="mx-auto h-6 w-6 text-accent mb-1" /><div className="text-2xl font-black text-accent">{stats.totalScans}</div><div className="text-[10px] text-muted-foreground font-semibold">Total Records</div></CardContent></Card>
       </div>
       <div>
         <h2 className="text-lg font-bold text-foreground mb-3">Recent Activity</h2>

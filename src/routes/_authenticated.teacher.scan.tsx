@@ -229,7 +229,9 @@ function TeacherScan() {
                 </SelectContent>
               </Select>
               {studentsForClasses.length === 0 && (
-                <p className="text-xs text-muted-foreground">No students assigned to your classes yet.</p>
+                <p className="text-xs text-muted-foreground">
+                  You're not assigned to any class yet, or your assigned classes have no students. Ask the admin to link you to a class & subject in <span className="font-semibold">Admin → Teachers</span>.
+                </p>
               )}
             </div>
 
@@ -240,7 +242,7 @@ function TeacherScan() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Enter student code manually (if QR can't be scanned)</p>
+              <p className="text-sm text-muted-foreground">Enter student code manually</p>
               <div className="flex gap-2">
                 <Input
                   placeholder="e.g. A1B2C3"

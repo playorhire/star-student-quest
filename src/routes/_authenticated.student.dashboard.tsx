@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/student/dashboard")({
   component: StudentDashboard,
@@ -16,6 +17,21 @@ function StudentDashboard() {
   const [recentTxns, setRecentTxns] = useState<any[]>([]);
 
   useEffect(() => { if (user) load(); }, [user]);
+
+  // Realtime: live student total + new-points toast
+  useEffect(() => {
+    if (!student?.id || !user?.id) return;
+    const channel = supabase
+      .channel(`student-dash-${student.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "students", filter: `id=eq.${student.id}` },
+        (payload) => { if (payload.new) setStudent((s: any) => ({ ...s, ...payload.new })); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "point_transactions", filter: `student_id=eq.${student.id}` },
+        () => { load(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => { toast.success(payload.new.title, { description: payload.new.body }); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [student?.id, user?.id]);
 
   async function load() {
     const { data: s } = await supabase.from("students").select("*, classes(name)").eq("user_id", user!.id).single();

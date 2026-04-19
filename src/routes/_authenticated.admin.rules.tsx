@@ -41,6 +41,7 @@ function AdminRules() {
   const [editMin, setEditMin] = useState("");
   const [editMax, setEditMax] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -80,6 +81,7 @@ function AdminRules() {
     const subjectsWithoutRules = subjects.filter(s => !rules.some(r => r.subject_id === s.id));
     if (subjectsWithoutRules.length === 0) return;
 
+    setLoadingDefaults(true);
     const defaultRules = subjectsWithoutRules.map(s => ({
       subject_id: s.id,
       passing_marks: 40,
@@ -89,10 +91,14 @@ function AdminRules() {
     }));
 
     const { error } = await supabase.from("point_rules").insert(defaultRules);
+    setLoadingDefaults(false);
+
     if (error) {
+      alert(`Unable to create default rules: ${error.message}`);
       console.error("Error creating default rules:", error);
       return;
     }
+
     load();
   }
 
@@ -196,8 +202,8 @@ function AdminRules() {
                   {subjectsWithoutRules.length} subject{subjectsWithoutRules.length !== 1 ? 's' : ''} {subjectsWithoutRules.length === 1 ? 'needs' : 'need'} point rules configured.
                 </p>
               </div>
-              <Button onClick={createDefaultRules} className="bg-amber-600 hover:bg-amber-700">
-                Create Default Rules
+              <Button type="button" onClick={createDefaultRules} className="bg-amber-600 hover:bg-amber-700" disabled={loadingDefaults}>
+                {loadingDefaults ? "Creating rules…" : "Create Default Rules"}
               </Button>
             </CardContent>
           </Card>

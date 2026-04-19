@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
@@ -12,14 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import {
-  Camera,
-  CheckCircle,
-  XCircle,
-  RotateCcw,
-  Edit,
-  FileText,
-} from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import confetti from "canvas-confetti";
 
 export const Route = createFileRoute("/_authenticated/teacher/scan")({
@@ -27,14 +21,12 @@ export const Route = createFileRoute("/_authenticated/teacher/scan")({
 });
 
 type ScanStep = "scanning" | "student-found" | "confirmed";
-type Mode = "scan" | "manual";
 
 function TeacherScan() {
   const { user } = useAuth();
 
-  const [mode, setMode] = useState<Mode>("scan");
   const [step, setStep] = useState<ScanStep>("scanning");
-
+  const [teacherId, setTeacherId] = useState<string | null>(null);
   const [student, setStudent] = useState<any>(null);
   const [subjectsForClass, setSubjectsForClass] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -43,29 +35,29 @@ function TeacherScan() {
   const [marks, setMarks] = useState("");
   const [calculatedPoints, setCalculatedPoints] = useState(0);
 
-  const [manualQR, setManualQR] = useState("");
   const [studentsForClasses, setStudentsForClasses] = useState<any[]>([]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedTransactionId, setSelectedTransactionId] = useState<
-    string | null
-  >(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
-  const scannerRef = useRef<HTMLDivElement>(null);
-  const html5QrRef = useRef<any>(null);
-
-  // 🔹 Load teacher students
+  // Load teacher + their assigned class students
   useEffect(() => {
     const load = async () => {
+      if (!user) return;
       const { data: teacher } = await supabase
         .from("teachers")
-        .select("id, teacher_classes(class_id)")
-        .eq("user_id", user?.id ?? "")
-        .single();
+        .select("id, teacher_assignments(class_id)")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (!teacher) return;
+      setTeacherId(teacher.id);
 
-      const classIds = teacher.teacher_classes.map((c: any) => c.class_id);
+      const classIds = (teacher.teacher_assignments ?? []).map((c: any) => c.class_id);
+      if (classIds.length === 0) {
+        setStudentsForClasses([]);
+        return;
+      }
 
       const { data: students } = await supabase
         .from("students")
@@ -74,82 +66,75 @@ function TeacherScan() {
 
       setStudentsForClasses(students || []);
     };
-
     load();
   }, [user]);
 
-  // 🔹 Load student + subjects + transactions
-  const loadStudentData = async (studentData: any) => {
+  const loadStudentData = useCallback(async (studentData: any) => {
     setStudent(studentData);
 
     const { data: subs } = await supabase
       .from("subjects")
       .select("id, name, point_rules(passing_marks, multiplier)")
       .eq("class_id", studentData.class_id);
-
     setSubjectsForClass(subs || []);
 
     const { data: tx } = await supabase
       .from("point_transactions")
-      .select("*")
+      .select("*, subjects(name)")
       .eq("student_id", studentData.id)
       .order("created_at", { ascending: false });
-
     setTransactions(tx || []);
     setStep("student-found");
-  };
-
-  // 🔹 QR handler
-  const handleQRResult = useCallback(async (decodedText: string) => {
-    const { data } = await supabase
-      .from("students")
-      .select("*")
-      .eq("qr_code", decodedText)
-      .single();
-
-    if (data) loadStudentData(data);
   }, []);
 
-  // 🔹 Marks calculation
+  // Realtime: refresh student total + transactions when they change
+  useEffect(() => {
+    if (!student?.id) return;
+    const channel = supabase
+      .channel(`scan-student-${student.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `id=eq.${student.id}` },
+        (payload) => { if (payload.new) setStudent((s: any) => ({ ...s, ...payload.new })); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "point_transactions", filter: `student_id=eq.${student.id}` },
+        async () => {
+          const { data: tx } = await supabase
+            .from("point_transactions")
+            .select("*, subjects(name)")
+            .eq("student_id", student.id)
+            .order("created_at", { ascending: false });
+          setTransactions(tx || []);
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [student?.id]);
+
   const getRule = () => {
     const sub = subjectsForClass.find((s) => s.id === selectedSubjectId);
     const r = sub?.point_rules?.[0];
-    return r
-      ? {
-          passing: r.passing_marks,
-          multiplier: Number(r.multiplier),
-        }
-      : null;
+    return r ? { passing: r.passing_marks, multiplier: Number(r.multiplier) } : null;
   };
 
   const handleMarksChange = (val: string) => {
     setMarks(val);
     const num = parseInt(val);
     const rule = getRule();
-
-    if (rule && num >= rule.passing) {
+    if (rule && !isNaN(num) && num >= rule.passing) {
       setCalculatedPoints((num - rule.passing) * rule.multiplier);
     } else {
       setCalculatedPoints(0);
     }
   };
 
-  // 🔥 Assign / Update
   const handleConfirm = async () => {
-    if (!student || !selectedSubjectId) return;
-
+    if (!student || !selectedSubjectId || !teacherId) {
+      toast.error("Select a subject first");
+      return;
+    }
     const rule = getRule();
-    if (!rule) return;
-
-    const { data: teacher } = await supabase
-      .from("teachers")
-      .select("id")
-      .eq("user_id", user?.id ?? "")
-      .single();
+    if (!rule) { toast.error("No point rule for this subject"); return; }
 
     const payload = {
       student_id: student.id,
-      teacher_id: teacher.id,
+      teacher_id: teacherId,
       subject_id: selectedSubjectId,
       marks_entered: parseInt(marks),
       passing_marks: rule.passing,
@@ -158,12 +143,13 @@ function TeacherScan() {
     };
 
     if (isEditing && selectedTransactionId) {
-      await supabase
-        .from("point_transactions")
-        .update(payload)
-        .eq("id", selectedTransactionId);
+      const { error } = await supabase.from("point_transactions").update(payload).eq("id", selectedTransactionId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Points updated");
     } else {
-      await supabase.from("point_transactions").insert(payload);
+      const { error } = await supabase.from("point_transactions").insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success(`+${calculatedPoints} points awarded`);
     }
 
     confetti();
@@ -171,11 +157,23 @@ function TeacherScan() {
     setIsEditing(false);
   };
 
-  // 🔹 Select old transaction
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this points record? Student total will be adjusted.")) return;
+    const { error } = await supabase.from("point_transactions").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Record deleted");
+    if (selectedTransactionId === id) {
+      setSelectedTransactionId(null);
+      setIsEditing(false);
+      setMarks("");
+      setSelectedSubjectId("");
+      setCalculatedPoints(0);
+    }
+  };
+
   const handleTransactionSelect = (id: string) => {
     const tx = transactions.find((t) => t.id === id);
     if (!tx) return;
-
     setSelectedTransactionId(id);
     setSelectedSubjectId(tx.subject_id);
     setMarks(String(tx.marks_entered));
@@ -193,115 +191,116 @@ function TeacherScan() {
     setSelectedTransactionId(null);
   };
 
-  const selectedRule = getRule();
-
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Assign Points</h1>
+      <h1 className="text-2xl font-bold text-foreground">Assign Points</h1>
 
-      {/* Mode Switch */}
-      <Button
-        onClick={() => {
-          setMode(mode === "scan" ? "manual" : "scan");
-          handleReset();
-        }}
-      >
-        {mode === "scan" ? "Manual Mode" : "Scan Mode"}
-      </Button>
-
-      {/* Manual Select */}
-      {mode === "manual" && step === "scanning" && (
-        <Select onValueChange={(id) => {
-          const s = studentsForClasses.find((x) => x.id === id);
-          if (s) loadStudentData(s);
-        }}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select Student" />
-          </SelectTrigger>
-          <SelectContent>
-            {studentsForClasses.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      {/* Student */}
-      {student && step === "student-found" && (
-        <>
-          <Card>
-            <CardContent>
-              <h2>{student.name}</h2>
-              <p>Total: {student.total_points}</p>
-            </CardContent>
-          </Card>
-
-          {/* Previous Transactions */}
-          {transactions.length > 0 && (
-            <Select onValueChange={handleTransactionSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Edit previous record" />
-              </SelectTrigger>
+      {step === "scanning" && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm text-muted-foreground">Select a student from your classes</p>
+            <Select onValueChange={(id) => {
+              const s = studentsForClasses.find((x) => x.id === id);
+              if (s) loadStudentData(s);
+            }}>
+              <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
               <SelectContent>
-                {transactions.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.points_awarded} pts (Marks {t.marks_entered})
-                  </SelectItem>
+                {studentsForClasses.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.avatar_emoji} {s.name} (#{s.roll_number})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
+            {studentsForClasses.length === 0 && (
+              <p className="text-xs text-muted-foreground">No students assigned to your classes yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Subject */}
-          <Select
-            value={selectedSubjectId}
-            onValueChange={(v) => setSelectedSubjectId(v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Subject" />
-            </SelectTrigger>
-            <SelectContent>
-              {subjectsForClass.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {student && step === "student-found" && (
+        <>
+          <Card className="border-2 border-primary/20">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="text-3xl">{student.avatar_emoji}</div>
+              <div className="flex-1">
+                <h2 className="font-bold text-card-foreground">{student.name}</h2>
+                <p className="text-xs text-muted-foreground">Total Points</p>
+              </div>
+              <div className="text-2xl font-black text-primary">{student.total_points}</div>
+            </CardContent>
+          </Card>
 
-          {/* Marks */}
-          <Input
-            type="number"
-            value={marks}
-            onChange={(e) => handleMarksChange(e.target.value)}
-          />
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="text-sm font-semibold text-card-foreground">{isEditing ? "Editing record" : "New record"}</div>
 
-          {/* Points */}
-          {marks && (
-            <div>
-              {calculatedPoints > 0 ? (
-                <div>+{calculatedPoints} points</div>
-              ) : (
-                <div>No points</div>
+              <Select value={selectedSubjectId} onValueChange={(v) => setSelectedSubjectId(v)}>
+                <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                <SelectContent>
+                  {subjectsForClass.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Input
+                type="number"
+                placeholder="Marks"
+                value={marks}
+                onChange={(e) => handleMarksChange(e.target.value)}
+              />
+
+              {marks && (
+                <div className={`text-sm font-bold ${calculatedPoints > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                  {calculatedPoints > 0 ? `+${calculatedPoints} points` : "No points (below passing)"}
+                </div>
               )}
-            </div>
+
+              <div className="flex gap-2">
+                <Button onClick={handleConfirm} className="flex-1">
+                  {isEditing ? "Update" : "Assign"}
+                </Button>
+                {isEditing && (
+                  <Button variant="outline" onClick={() => { setIsEditing(false); setSelectedTransactionId(null); setMarks(""); setSelectedSubjectId(""); setCalculatedPoints(0); }}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {transactions.length > 0 && (
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="text-sm font-semibold text-card-foreground mb-2">Previous records</div>
+                {transactions.map((t) => (
+                  <div key={t.id} className={`flex items-center gap-2 p-2 rounded-lg border ${selectedTransactionId === t.id ? "border-primary bg-primary/5" : "border-border"}`}>
+                    <button onClick={() => handleTransactionSelect(t.id)} className="flex-1 text-left">
+                      <div className="text-sm font-medium text-card-foreground">{t.subjects?.name || "Subject"} • +{t.points_awarded} pts</div>
+                      <div className="text-xs text-muted-foreground">{t.marks_entered} marks • {new Date(t.created_at).toLocaleDateString()}</div>
+                    </button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)} className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
 
-          <Button onClick={handleConfirm}>
-            {isEditing ? "Update Points" : "Assign Points"}
-          </Button>
-
-          <Button onClick={handleReset}>Reset</Button>
+          <Button variant="outline" onClick={handleReset} className="w-full">Pick another student</Button>
         </>
       )}
 
       {step === "confirmed" && (
-        <div>
-          <h2>✅ Points Saved</h2>
-          <Button onClick={handleReset}>Next</Button>
-        </div>
+        <Card>
+          <CardContent className="p-6 text-center space-y-3">
+            <div className="text-4xl">✅</div>
+            <h2 className="font-bold text-card-foreground">Points Saved</h2>
+            <Button onClick={handleReset} className="w-full">Next Student</Button>
+            <Button variant="outline" onClick={() => setStep("student-found")} className="w-full">Back to {student?.name}</Button>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

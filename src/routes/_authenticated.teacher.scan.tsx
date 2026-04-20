@@ -204,10 +204,22 @@ function TeacherScan() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!student) return;
     if (!confirm("Delete this points record? Student total will be adjusted.")) return;
+    const deletedTx = transactions.find((tx) => tx.id === id);
     const { error } = await supabase.from("point_transactions").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Record deleted");
+
+    if (deletedTx) {
+      const pointsRemoved = Number(deletedTx.points_awarded ?? 0);
+      setStudent((current: any) => current ? { ...current, total_points: Number(current.total_points ?? 0) - pointsRemoved } : current);
+      setTransactions((current: any[]) => current.filter((tx) => tx.id !== id));
+    }
+
     if (selectedTransactionId === id) {
       setSelectedTransactionId(null);
       setIsEditing(false);

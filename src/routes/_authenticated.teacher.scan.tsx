@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/teacher/scan")({
   component: TeacherScan,
 });
 
-type ScanStep = "scanning" | "student-found" | "confirmed";
+type ScanStep = "scanning" | "scan-confirm" | "student-found" | "confirmed";
 
 function TeacherScan() {
   const { user } = useAuth();
@@ -38,9 +39,15 @@ function TeacherScan() {
 
   const [studentsForClasses, setStudentsForClasses] = useState<any[]>([]);
   const [manualCode, setManualCode] = useState("");
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [isScannerLoading, setIsScannerLoading] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const scannerRef = useRef<HTMLDivElement | null>(null);
+  const scannerInstanceRef = useRef<Html5Qrcode | null>(null);
+  const scanLockRef = useRef(false);
 
   const extractLookupTokens = useCallback((value: string) => {
     const raw = value.trim();
@@ -354,6 +361,8 @@ function TeacherScan() {
     setIsEditing(false);
     setSelectedTransactionId(null);
     setManualCode("");
+    setScannerError(null);
+    scanLockRef.current = false;
   };
 
   const handleManualLookup = async () => {
@@ -370,14 +379,139 @@ function TeacherScan() {
       toast.error("No student found with that code");
       return;
     }
-    loadStudentData(data);
+    await loadStudentData(data);
   };
+
+  const playScanBeep = useCallback(() => {
+    try {
+      const audioCtx = new AudioContext();
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(900, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.14);
+      oscillator.onended = () => {
+        audioCtx.close().catch(() => undefined);
+      };
+    } catch {
+      // Audio may be blocked by browser until user interaction.
+    }
+  }, []);
+
+  const stopScanner = useCallback(async () => {
+    if (!scannerInstanceRef.current) return;
+    try {
+      await scannerInstanceRef.current.stop();
+    } catch {
+      // ignore
+    }
+    try {
+      scannerInstanceRef.current.clear();
+    } catch {
+      // ignore
+    }
+    if (scannerRef.current) scannerRef.current.innerHTML = "";
+    scannerInstanceRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (step !== "scanning") return;
+    if (!scannerRef.current) return;
+
+    const scanner = new Html5Qrcode("html5qr-scanner", { verbose: false });
+    scannerInstanceRef.current = scanner;
+    let active = true;
+    scanLockRef.current = false;
+
+    const initScanner = async () => {
+      setScannerError(null);
+      setIsScannerLoading(true);
+      try {
+        const cameras = await Html5Qrcode.getCameras().catch(() => []);
+        if (!active) return;
+
+        const preferred = cameras.find((camera) =>
+          /rear|back|environment/i.test(camera.label || "")
+        );
+
+        const cameraConfig = preferred
+          ? { deviceId: { exact: preferred.id } }
+          : { facingMode: { ideal: "environment" } };
+
+        await scanner.start(
+          cameraConfig,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.2,
+            disableFlip: false,
+          },
+          async (decodedText) => {
+            if (scanLockRef.current) return;
+            scanLockRef.current = true;
+
+            const scannedCode = decodedText.trim();
+            if (!scannedCode) {
+              scanLockRef.current = false;
+              return;
+            }
+
+            let studentRow: any = null;
+            try {
+              studentRow = await findStudentFromCode(scannedCode);
+            } catch (error: any) {
+              scanLockRef.current = false;
+              toast.error(error?.message || "Unable to verify scanned code");
+              return;
+            }
+
+            if (!studentRow) {
+              scanLockRef.current = false;
+              toast.error("No student found for scanned QR code");
+              return;
+            }
+
+            playScanBeep();
+            setScanSuccess(true);
+            window.setTimeout(() => setScanSuccess(false), 1000);
+
+            await stopScanner();
+            setStudent(studentRow);
+            setStep("scan-confirm");
+          },
+          () => undefined
+        );
+        setIsScannerLoading(false);
+      } catch (error: any) {
+        if (!active) return;
+        setScannerError(error?.message || "Please allow camera permissions.");
+        setIsScannerLoading(false);
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      active = false;
+      scanLockRef.current = false;
+      void stopScanner();
+    };
+  }, [step, findStudentFromCode, playScanBeep, stopScanner]);
+
+  useEffect(() => {
+    if (step === "scanning") return;
+    void stopScanner();
+  }, [step, stopScanner]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Assign Points</h1>
-        <p className="text-muted-foreground">Select students to award points</p>
+        <p className="text-muted-foreground">Scan QR codes or select students to award points</p>
         {step === "scanning" && (
           <div className="text-sm text-muted-foreground">
             {studentsForClasses.length > 0
@@ -455,6 +589,43 @@ function TeacherScan() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12l3-3m-3 3l-3-3m-3 7h2.01M12 12v4" />
+                  </svg>
+                  <h4 className="font-medium">Scan Student QR</h4>
+                </div>
+
+                <div className="space-y-3">
+                  <div
+                    id="html5qr-scanner"
+                    ref={scannerRef}
+                    className={`rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[280px] border-2 border-dashed ${scanSuccess ? "border-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/30 animate-pulse" : "border-gray-300 dark:border-gray-600"}`}
+                  />
+                  <div className="space-y-2 text-center">
+                    {isScannerLoading ? (
+                      <p className="text-sm text-muted-foreground">Starting camera... please allow access.</p>
+                    ) : scannerError ? (
+                      <p className="text-sm text-rose-500">{scannerError}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Position the student QR code inside the frame. Scan runs automatically.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   <h4 className="font-medium">Enter Code Manually</h4>
@@ -477,6 +648,55 @@ function TeacherScan() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {student && step === "scan-confirm" && (
+        <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="p-6 space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Avatar>
+                  {student.photo_url ? (
+                    <AvatarImage src={student.photo_url} alt={student.name} />
+                  ) : (
+                    <AvatarFallback>{student.avatar_emoji || "🎓"}</AvatarFallback>
+                  )}
+                </Avatar>
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Scan Confirmed</p>
+                  <h2 className="text-2xl font-bold text-card-foreground">{student.name}</h2>
+                  <p className="text-sm text-muted-foreground">#{student.roll_number}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-black text-primary">{student.total_points ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Current Points</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                className="flex-1"
+                onClick={async () => {
+                  if (!student) return;
+                  await loadStudentData(student);
+                }}
+              >
+                Confirm and Assign Points
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStudent(null);
+                  setStep("scanning");
+                  scanLockRef.current = false;
+                }}
+              >
+                Scan Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {student && step === "student-found" && (

@@ -383,20 +383,21 @@ function TeacherScan() {
         }));
         setCameraOptions(formatted);
 
-        const preferredCamera = selectedCameraId
-          ? formatted.find((camera) => camera.id === selectedCameraId)
-          : formatted.find((camera) => {
-              const label = camera.label.toLowerCase();
-              return cameraFacingMode === "environment"
-                ? /rear|back|environment/.test(label)
-                : /front|user/.test(label);
-            }) || formatted[0];
+        // Always prefer the first back/rear/environment camera if multiple exist
+        let preferredCamera = null;
+        if (selectedCameraId) {
+          preferredCamera = formatted.find((camera) => camera.id === selectedCameraId);
+        } else {
+          // Find all back/rear/environment cameras
+          const backCameras = formatted.filter((camera) =>
+            /rear|back|environment/.test(camera.label.toLowerCase())
+          );
+          preferredCamera = backCameras.length > 0 ? backCameras[0] : formatted[0];
+        }
 
-        const cameraConfig = selectedCameraId
-          ? { deviceId: { exact: selectedCameraId } }
-          : preferredCamera
-            ? { deviceId: { exact: preferredCamera.id } }
-            : { facingMode: { ideal: cameraFacingMode } };
+        const cameraConfig = preferredCamera
+          ? { deviceId: { exact: preferredCamera.id } }
+          : { facingMode: { ideal: cameraFacingMode } };
 
         if (!selectedCameraId && preferredCamera?.id) {
           setSelectedCameraId(preferredCamera.id);

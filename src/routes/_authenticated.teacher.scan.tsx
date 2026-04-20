@@ -478,10 +478,10 @@ function TeacherScan() {
             playScanBeep();
             setScanSuccess(true);
             window.setTimeout(() => setScanSuccess(false), 1000);
-
-            await stopScanner();
             setStudent(studentRow);
             setStep("scan-confirm");
+            // On some mobile browsers scanner.stop() may lag/hang; switch UI first.
+            void stopScanner();
           },
           () => undefined
         );

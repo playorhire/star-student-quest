@@ -443,14 +443,14 @@ function TeacherScan() {
           playScanBeep();
           setScanSuccess(true);
           setTimeout(() => setScanSuccess(false), 1200);
-            setScannerError(null); // Clear error after successful start
+          setScannerError(null); // Clear error after successful start
           if (scannerInstanceRef.current) {
             await scannerInstanceRef.current.stop().catch(() => undefined);
-            scannerInstanceRef.current.clear();
+            Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
             scannerInstanceRef.current = null;
           }
-          setStudent(studentRow);
-          setStep("student-found");
+          // Call loadStudentData to populate subjects, transactions, and update UI step
+          await loadStudentData(studentRow);
         }, () => undefined);
         setIsScannerLoading(false);
       } catch (error: any) {
@@ -473,7 +473,7 @@ function TeacherScan() {
         scannerRef.current.innerHTML = "";
       }
     };
-  }, [step, selectedCameraId, cameraFacingMode]);
+  }, [step, selectedCameraId, cameraFacingMode, loadStudentData, playScanBeep]);
 
   useEffect(() => {
     if (step !== "scanning") {

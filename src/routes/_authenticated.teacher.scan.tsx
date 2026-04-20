@@ -348,11 +348,7 @@ function TeacherScan() {
     // Always clear previous scanner and DOM
     scanLockRef.current = false;
     if (scannerInstanceRef.current) {
-      // Only call .catch() if clear() returns a Promise
-      const clearResult = scannerInstanceRef.current.clear();
-      if (clearResult instanceof Promise) {
-        clearResult.catch(() => undefined);
-      }
+      Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
       scannerInstanceRef.current = null;
     }
     if (scannerRef.current) {
@@ -470,11 +466,7 @@ function TeacherScan() {
       active = false;
       scanLockRef.current = false;
       if (scannerInstanceRef.current) {
-        // Only call .catch() if clear() returns a Promise
-        const clearResult = scannerInstanceRef.current.clear();
-        if (clearResult instanceof Promise) {
-          clearResult.catch(() => undefined);
-        }
+        Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
         scannerInstanceRef.current = null;
       }
       if (scannerRef.current) {

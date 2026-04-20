@@ -405,66 +405,89 @@ function TeacherScan() {
           aspectRatio: 1.2,
           disableFlip: false,
         }, async (decodedText) => {
-          // Always reset scan lock for new scan
-          if (scanLockRef.current) return;
-          scanLockRef.current = true;
-          const scannedCode = decodedText.trim().toUpperCase();
-          if (!scannedCode) {
-            scanLockRef.current = false;
-            return;
-          }
-          // Try qr_code first, then student_code
-          let studentRow = null;
           try {
-            const { data } = await supabase
-              .from("students")
-              .select("*")
-              .eq("qr_code", scannedCode)
-              .maybeSingle();
-            studentRow = data;
-          } catch (e) {
-            console.error("Error fetching by qr_code:", e);
-          }
-          if (!studentRow) {
+            // Always reset scan lock for new scan
+            if (scanLockRef.current) return;
+            scanLockRef.current = true;
+            const scannedCode = decodedText.trim().toUpperCase();
+            console.log("🔍 Scanned QR code:", scannedCode);
+            if (!scannedCode) {
+              scanLockRef.current = false;
+              return;
+            }
+            // Try qr_code first, then student_code
+            let studentRow = null;
             try {
               const { data } = await supabase
                 .from("students")
                 .select("*")
-                .eq("student_code", scannedCode)
+                .eq("qr_code", scannedCode)
                 .maybeSingle();
-              studentRow = data;
+              if (data) {
+                console.log("✅ Found student by qr_code:", data);
+                studentRow = data;
+              }
             } catch (e) {
-              console.error("Error fetching by student_code:", e);
+              console.error("❌ Error fetching by qr_code:", e);
             }
-          }
-          if (!studentRow) {
+            if (!studentRow) {
+              try {
+                const { data } = await supabase
+                  .from("students")
+                  .select("*")
+                  .eq("student_code", scannedCode)
+                  .maybeSingle();
+                if (data) {
+                  console.log("✅ Found student by student_code:", data);
+                  studentRow = data;
+                }
+              } catch (e) {
+                console.error("❌ Error fetching by student_code:", e);
+              }
+            }
+            if (!studentRow) {
+              scanLockRef.current = false;
+              console.error("❌ No student found");
+              toast.error("No student found for scanned QR code");
+              return;
+            }
+            console.log("🎵 Playing beep...");
+            playScanBeep();
+            setScanSuccess(true);
+            setTimeout(() => setScanSuccess(false), 1200);
+            setScannerError(null);
+            if (scannerInstanceRef.current) {
+              await scannerInstanceRef.current.stop().catch(() => undefined);
+              Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
+              scannerInstanceRef.current = null;
+            }
+            // Load subjects and transactions in parallel
+            console.log("📚 Fetching subjects and transactions...");
+            const [subsResult, txResult] = await Promise.all([
+              supabase
+                .from("subjects")
+                .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
+                .eq("class_id", studentRow.class_id),
+              supabase
+                .from("point_transactions")
+                .select("*, subjects(name)")
+                .eq("student_id", studentRow.id)
+                .order("created_at", { ascending: false })
+            ]);
+            const subs = subsResult.data || [];
+            const tx = txResult.data || [];
+            console.log("✅ Subjects:", subs.length, "Transactions:", tx.length);
+            // Update all state at once
+            console.log("🔄 Updating student state...");
+            setStudent(studentRow);
+            setSubjectsForClass(subs);
+            setTransactions(tx);
+            console.log("✅ Setting step to student-found");
+            setStep("student-found");
+          } catch (err) {
+            console.error("❌ Unexpected error in scan callback:", err);
             scanLockRef.current = false;
-            toast.error("No student found for scanned QR code");
-            return;
           }
-          playScanBeep();
-          setScanSuccess(true);
-          setTimeout(() => setScanSuccess(false), 1200);
-          setScannerError(null);
-          if (scannerInstanceRef.current) {
-            await scannerInstanceRef.current.stop().catch(() => undefined);
-            Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
-            scannerInstanceRef.current = null;
-          }
-          // Load subjects and transactions, then update step
-          setStudent(studentRow);
-          const { data: subs } = await supabase
-            .from("subjects")
-            .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
-            .eq("class_id", studentRow.class_id);
-          setSubjectsForClass(subs || []);
-          const { data: tx } = await supabase
-            .from("point_transactions")
-            .select("*, subjects(name)")
-            .eq("student_id", studentRow.id)
-            .order("created_at", { ascending: false });
-          setTransactions(tx || []);
-          setStep("student-found");
         }, () => undefined);
         setIsScannerLoading(false);
       } catch (error: any) {

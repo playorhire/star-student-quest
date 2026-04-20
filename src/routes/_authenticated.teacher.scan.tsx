@@ -265,6 +265,11 @@ function TeacherScan() {
     }
 
     const points = Math.floor((score - rule.passing) * rule.multiplier);
+    const awardedPoints = points > 0 ? points : 0;
+    if (awardedPoints < 1) {
+      toast.error("Points must be at least 1 to award");
+      return;
+    }
     let activeTeacherId: string | null = null;
     try {
       activeTeacherId = await getActiveTeacherId();
@@ -285,7 +290,7 @@ function TeacherScan() {
       marks_entered: score,
       passing_marks: rule.passing,
       multiplier: rule.multiplier,
-      points_awarded: points > 0 ? points : 0,
+      points_awarded: awardedPoints,
     };
 
     if (isEditing && selectedTransactionId) {
@@ -295,7 +300,7 @@ function TeacherScan() {
     } else {
       const { error } = await supabase.from("point_transactions").insert(payload);
       if (error) { toast.error(error.message); return; }
-      toast.success(`+${points > 0 ? points : 0} points awarded`);
+      toast.success(`+${awardedPoints} points awarded`);
     }
 
     await loadStudentData(student);
@@ -595,7 +600,9 @@ function TeacherScan() {
                   disabled={!selectedSubjectId || !marks || (() => {
                     const rule = getRule();
                     const score = parseInt(marks, 10);
-                    return rule ? (isNaN(score) || score < rule.min || score > rule.max) : false;
+                    if (!rule) return false;
+                    if (isNaN(score) || score < rule.min || score > rule.max) return true;
+                    return Math.floor((score - rule.passing) * rule.multiplier) < 1;
                   })()}
                 >
                   {isEditing ? "Update Record" : "Award Points"}

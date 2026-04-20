@@ -225,6 +225,28 @@ function TeacherScan() {
     }
   };
 
+  const getActiveTeacherId = useCallback(async () => {
+    if (teacherId) return teacherId;
+    if (!user?.id) return null;
+
+    const { data: teacher, error } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (teacher?.id) {
+      setTeacherId(teacher.id);
+      return teacher.id;
+    }
+
+    return null;
+  }, [teacherId, user?.id]);
+
   const handleConfirm = async () => {
     if (!student) {
       toast.error("Select a student first");
@@ -255,9 +277,22 @@ function TeacherScan() {
     }
 
     const points = Math.floor((score - rule.passing) * rule.multiplier);
+    let activeTeacherId: string | null = null;
+    try {
+      activeTeacherId = await getActiveTeacherId();
+    } catch (error: any) {
+      toast.error(error?.message || "Unable to verify teacher profile");
+      return;
+    }
+
+    if (!activeTeacherId) {
+      toast.error("Teacher profile not found. Please re-login and try again.");
+      return;
+    }
+
     const payload = {
       student_id: student.id,
-      teacher_id: teacherId as string,
+      teacher_id: activeTeacherId,
       subject_id: selectedSubjectId,
       marks_entered: score,
       passing_marks: rule.passing,
@@ -272,7 +307,7 @@ function TeacherScan() {
     } else {
       const { error } = await supabase.from("point_transactions").insert(payload);
       if (error) { toast.error(error.message); return; }
-      toast.success(`+${calculatedPoints} points awarded`);
+      toast.success(`+${points > 0 ? points : 0} points awarded`);
     }
 
     await loadStudentData(student);

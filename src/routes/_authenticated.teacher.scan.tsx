@@ -54,6 +54,84 @@ function TeacherScan() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
+  const extractLookupTokens = useCallback((value: string) => {
+    const raw = value.trim();
+    if (!raw) return [];
+
+    const tokens = new Set<string>([raw]);
+
+    // Some QR generators encode URL-safe payloads.
+    try {
+      const decoded = decodeURIComponent(raw);
+      if (decoded) tokens.add(decoded.trim());
+    } catch {
+      // ignore malformed URI payload
+    }
+
+    // Support QR payloads like URLs where code is in path/query.
+    const looksLikeUrl = /^https?:\/\//i.test(raw);
+    if (looksLikeUrl) {
+      try {
+        const url = new URL(raw);
+        const queryCode =
+          url.searchParams.get("code") ||
+          url.searchParams.get("student_code") ||
+          url.searchParams.get("qr_code");
+        if (queryCode) tokens.add(queryCode.trim());
+
+        const segments = url.pathname.split("/").filter(Boolean);
+        const last = segments[segments.length - 1];
+        if (last) tokens.add(last.trim());
+      } catch {
+        // ignore invalid URL
+      }
+    }
+
+    // Support JSON payload QR values.
+    if (raw.startsWith("{") && raw.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        const possibleCode =
+          parsed.qr_code || parsed.student_code || parsed.code || parsed.studentCode || parsed.qrCode;
+        if (typeof possibleCode === "string" && possibleCode.trim()) {
+          tokens.add(possibleCode.trim());
+        }
+      } catch {
+        // ignore non-JSON content
+      }
+    }
+
+    return Array.from(tokens).filter(Boolean);
+  }, []);
+
+  const findStudentFromCode = useCallback(async (input: string) => {
+    const candidates = extractLookupTokens(input);
+    if (candidates.length === 0) return null;
+
+    const { data: qrMatches, error: qrError } = await supabase
+      .from("students")
+      .select("*")
+      .in("qr_code", candidates)
+      .limit(1);
+
+    if (!qrError && qrMatches && qrMatches.length > 0) {
+      return qrMatches[0];
+    }
+
+    const upperCandidates = Array.from(new Set(candidates.map((value) => value.toUpperCase())));
+    const { data: codeMatches, error: codeError } = await supabase
+      .from("students")
+      .select("*")
+      .in("student_code", upperCandidates)
+      .limit(1);
+
+    if (codeError) {
+      throw codeError;
+    }
+
+    return codeMatches?.[0] ?? null;
+  }, [extractLookupTokens]);
+
   // Load teacher + their assigned class students
   useEffect(() => {
     const load = async () => {
@@ -252,14 +330,16 @@ function TeacherScan() {
   };
 
   const handleManualLookup = async () => {
-    const code = manualCode.trim().toUpperCase();
+    const code = manualCode.trim();
     if (!code) return;
-    const { data, error } = await supabase
-      .from("students")
-      .select("*")
-      .eq("student_code", code)
-      .maybeSingle();
-    if (error || !data) {
+    let data = null;
+    try {
+      data = await findStudentFromCode(code);
+    } catch (error: any) {
+      toast.error(error?.message || "Unable to fetch student details");
+      return;
+    }
+    if (!data) {
       toast.error("No student found with that code");
       return;
     }
@@ -285,55 +365,6 @@ function TeacherScan() {
       // Audio API may be blocked in some browsers, ignore.
     }
   }, []);
-
-  const handleQrScan = useCallback(async (decodedText: string) => {
-    const scannedCode = decodedText.trim().toUpperCase();
-    if (!scannedCode) return;
-
-    const { data, error } = await supabase
-      .from("students")
-      .select("*")
-      .or(`student_code.eq.${scannedCode},qr_code.eq.${scannedCode}`)
-      .maybeSingle();
-
-    if (scanLockRef.current) return;
-    scanLockRef.current = true;
-
-    const { data: qrData, error: qrError } = await supabase
-      .from("students")
-      .select("*")
-      .eq("qr_code", scannedCode)
-      .maybeSingle();
-
-    if (qrError) {
-      scanLockRef.current = false;
-      toast.error("Unable to verify scanned QR code");
-      return;
-    }
-
-    const studentRow = qrData || (await supabase
-      .from("students")
-      .select("*")
-      .eq("student_code", scannedCode)
-      .maybeSingle()).data;
-
-    if (!studentRow) {
-      scanLockRef.current = false;
-      toast.error("No student found for scanned QR code");
-      return;
-    }
-
-    playScanBeep();
-    setScanSuccess(true);
-    window.setTimeout(() => setScanSuccess(false), 1200);
-
-    if (scannerInstanceRef.current) {
-      await scannerInstanceRef.current.stop().catch(() => undefined);
-      scannerInstanceRef.current.clear();
-      scannerInstanceRef.current = null;
-    }
-    loadStudentData(studentRow);
-  }, [loadStudentData, playScanBeep]);
 
   const stopScanner = useCallback(async () => {
     if (!scannerInstanceRef.current) return;
@@ -421,41 +452,17 @@ function TeacherScan() {
             // Always reset scan lock for new scan
             if (scanLockRef.current) return;
             scanLockRef.current = true;
-            const scannedCode = decodedText.trim().toUpperCase();
+            const scannedCode = decodedText.trim();
             console.log("🔍 Scanned QR code:", scannedCode);
             if (!scannedCode) {
               scanLockRef.current = false;
               return;
             }
-            // Try qr_code first, then student_code
             let studentRow = null;
             try {
-              const { data } = await supabase
-                .from("students")
-                .select("*")
-                .eq("qr_code", scannedCode)
-                .maybeSingle();
-              if (data) {
-                console.log("✅ Found student by qr_code:", data);
-                studentRow = data;
-              }
+              studentRow = await findStudentFromCode(scannedCode);
             } catch (e) {
-              console.error("❌ Error fetching by qr_code:", e);
-            }
-            if (!studentRow) {
-              try {
-                const { data } = await supabase
-                  .from("students")
-                  .select("*")
-                  .eq("student_code", scannedCode)
-                  .maybeSingle();
-                if (data) {
-                  console.log("✅ Found student by student_code:", data);
-                  studentRow = data;
-                }
-              } catch (e) {
-                console.error("❌ Error fetching by student_code:", e);
-              }
+              console.error("❌ Error fetching student by scan value:", e);
             }
             if (!studentRow) {
               scanLockRef.current = false;
@@ -473,29 +480,8 @@ function TeacherScan() {
               Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
               scannerInstanceRef.current = null;
             }
-            // Load subjects and transactions in parallel
-            console.log("📚 Fetching subjects and transactions...");
-            const [subsResult, txResult] = await Promise.all([
-              supabase
-                .from("subjects")
-                .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
-                .eq("class_id", studentRow.class_id),
-              supabase
-                .from("point_transactions")
-                .select("*, subjects(name)")
-                .eq("student_id", studentRow.id)
-                .order("created_at", { ascending: false })
-            ]);
-            const subs = subsResult.data || [];
-            const tx = txResult.data || [];
-            console.log("✅ Subjects:", subs.length, "Transactions:", tx.length);
-            // Update all state at once
-            console.log("🔄 Updating student state...");
-            setStudent(studentRow);
-            setSubjectsForClass(subs);
-            setTransactions(tx);
+            await loadStudentData(studentRow);
             console.log("✅ Setting step to student-found");
-            setStep("student-found");
           } catch (err) {
             console.error("❌ Unexpected error in scan callback:", err);
             scanLockRef.current = false;
@@ -522,7 +508,7 @@ function TeacherScan() {
         scannerRef.current.innerHTML = "";
       }
     };
-  }, [step, selectedCameraId, cameraFacingMode]);
+  }, [step, selectedCameraId, cameraFacingMode, findStudentFromCode, loadStudentData, playScanBeep]);
 
   useEffect(() => {
     if (step !== "scanning") {

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
@@ -39,8 +39,13 @@ function TeacherScan() {
   const [studentsForClasses, setStudentsForClasses] = useState<any[]>([]);
   const [manualCode, setManualCode] = useState("");
 
+  const [cameraOptions, setCameraOptions] = useState<any[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [isScannerLoading, setIsScannerLoading] = useState(false);
+
   const scannerRef = useRef<HTMLDivElement | null>(null);
-  const scannerInstanceRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerInstanceRef = useRef<Html5Qrcode | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
@@ -260,40 +265,86 @@ function TeacherScan() {
     }
 
     if (scannerInstanceRef.current) {
-      scannerInstanceRef.current.clear().catch(() => undefined);
+      await scannerInstanceRef.current.stop().catch(() => undefined);
+      scannerInstanceRef.current.clear();
       scannerInstanceRef.current = null;
     }
     loadStudentData(data);
   }, [loadStudentData]);
 
+  const stopScanner = useCallback(async () => {
+    if (!scannerInstanceRef.current) return;
+    try {
+      await scannerInstanceRef.current.stop();
+    } catch {
+      // ignore
+    }
+    try {
+      scannerInstanceRef.current.clear();
+    } catch {
+      // ignore
+    }
+    scannerInstanceRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (step !== "scanning") return;
-    if (!scannerRef.current || scannerInstanceRef.current) return;
+    if (!scannerRef.current) return;
 
     const elementId = "html5qr-scanner";
-    const scanner = new Html5QrcodeScanner(elementId, {
-      fps: 10,
-      qrbox: 280,
-      rememberLastUsedCamera: true,
-    }, false);
-
-    scanner.render(handleQrScan, () => undefined);
+    const scanner = new Html5Qrcode(elementId, { verbose: false });
     scannerInstanceRef.current = scanner;
+    let active = true;
 
-    return () => {
-      if (scannerInstanceRef.current) {
-        scannerInstanceRef.current.clear().catch(() => undefined);
-        scannerInstanceRef.current = null;
+    const initScanner = async () => {
+      setScannerError(null);
+      setIsScannerLoading(true);
+
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (!active) return;
+
+        const formatted = cameras.map((camera) => ({
+          id: camera.id,
+          label: camera.label || `Camera ${camera.id}`,
+        }));
+        setCameraOptions(formatted);
+
+        const backCamera = formatted.find((camera) => /rear|back|environment/i.test(camera.label));
+        const startDeviceId = selectedCameraId || backCamera?.id || formatted[0]?.id;
+        const cameraConfig = startDeviceId || { facingMode: { exact: "environment" } };
+
+        if (startDeviceId && !selectedCameraId) {
+          setSelectedCameraId(startDeviceId);
+        }
+
+        await scanner.start(cameraConfig, {
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.2,
+          disableFlip: false,
+        }, handleQrScan, () => undefined);
+        setIsScannerLoading(false);
+      } catch (error: any) {
+        if (!active) return;
+        setScannerError(error?.message || "Unable to access camera. Please allow camera permissions or try a different device.");
+        setIsScannerLoading(false);
       }
     };
-  }, [step, handleQrScan]);
+
+    initScanner();
+
+    return () => {
+      active = false;
+      stopScanner();
+    };
+  }, [step, handleQrScan, selectedCameraId, stopScanner]);
 
   useEffect(() => {
-    if (step !== "scanning" && scannerInstanceRef.current) {
-      scannerInstanceRef.current.clear().catch(() => undefined);
-      scannerInstanceRef.current = null;
+    if (step !== "scanning") {
+      stopScanner();
     }
-  }, [step]);
+  }, [step, stopScanner]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -379,17 +430,49 @@ function TeacherScan() {
                   <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12l3-3m-3 3l-3-3m-3 7h2.01M12 12v4" />
                   </svg>
-                  <h4 className="font-medium">Scan QR Code</h4>
+                  <h4 className="font-medium">Scan Student QR</h4>
                 </div>
+
+                {cameraOptions.length > 1 && (
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Select camera</p>
+                      <Select value={selectedCameraId} onValueChange={(value) => setSelectedCameraId(value)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose camera..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cameraOptions.map((camera) => (
+                            <SelectItem key={camera.id} value={camera.id}>{camera.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="outline" onClick={() => setSelectedCameraId("")}>Auto</Button>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div
                     id="html5qr-scanner"
                     ref={scannerRef}
-                    className="rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[280px] border-2 border-dashed border-gray-300 dark:border-gray-600"
+                    className="rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[320px] border-2 border-dashed border-gray-300 dark:border-gray-600"
                   />
-                  <p className="text-xs text-center text-muted-foreground">
-                    Position the QR code within the camera view. Make sure you have camera permissions enabled.
-                  </p>
+
+                  <div className="space-y-2 text-center">
+                    {isScannerLoading ? (
+                      <p className="text-sm text-muted-foreground">Starting camera... please allow access.</p>
+                    ) : scannerError ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-rose-500">{scannerError}</p>
+                        <Button variant="outline" onClick={() => setSelectedCameraId("")}>Retry Camera</Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Position the student QR code within the camera view. Scan will happen automatically.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -348,10 +348,16 @@ function TeacherScan() {
     // Always clear previous scanner and DOM
     scanLockRef.current = false;
     if (scannerInstanceRef.current) {
-      scannerInstanceRef.current.clear().catch(() => undefined);
+      // Only call .catch() if clear() returns a Promise
+      const clearResult = scannerInstanceRef.current.clear();
+      if (clearResult instanceof Promise) {
+        clearResult.catch(() => undefined);
+      }
       scannerInstanceRef.current = null;
     }
-    scannerRef.current.innerHTML = "";
+    if (scannerRef.current) {
+      scannerRef.current.innerHTML = "";
+    }
 
     const elementId = "html5qr-scanner";
     const scanner = new Html5Qrcode(elementId, { verbose: false });
@@ -462,7 +468,11 @@ function TeacherScan() {
       active = false;
       scanLockRef.current = false;
       if (scannerInstanceRef.current) {
-        scannerInstanceRef.current.clear().catch(() => undefined);
+        // Only call .catch() if clear() returns a Promise
+        const clearResult = scannerInstanceRef.current.clear();
+        if (clearResult instanceof Promise) {
+          clearResult.catch(() => undefined);
+        }
         scannerInstanceRef.current = null;
       }
       if (scannerRef.current) {

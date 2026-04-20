@@ -345,10 +345,15 @@ function TeacherScan() {
     if (step !== "scanning") return;
     if (!scannerRef.current) return;
 
-    const elementId = "html5qr-scanner";
-    if (scannerRef.current) {
-      scannerRef.current.innerHTML = "";
+    // Always clear previous scanner and DOM
+    scanLockRef.current = false;
+    if (scannerInstanceRef.current) {
+      scannerInstanceRef.current.clear().catch(() => undefined);
+      scannerInstanceRef.current = null;
     }
+    scannerRef.current.innerHTML = "";
+
+    const elementId = "html5qr-scanner";
     const scanner = new Html5Qrcode(elementId, { verbose: false });
     scannerInstanceRef.current = scanner;
     let active = true;
@@ -396,7 +401,53 @@ function TeacherScan() {
           qrbox: { width: 250, height: 250 },
           aspectRatio: 1.2,
           disableFlip: false,
-        }, handleQrScan, () => undefined);
+        }, async (decodedText) => {
+          // Always reset scan lock for new scan
+          if (scanLockRef.current) return;
+          scanLockRef.current = true;
+          const scannedCode = decodedText.trim().toUpperCase();
+          if (!scannedCode) {
+            scanLockRef.current = false;
+            return;
+          }
+          // Try qr_code first, then student_code
+          let studentRow = null;
+          let qrError = null;
+          try {
+            const { data, error } = await supabase
+              .from("students")
+              .select("*")
+              .eq("qr_code", scannedCode)
+              .maybeSingle();
+            studentRow = data;
+            qrError = error;
+          } catch (e) {}
+          if (!studentRow) {
+            try {
+              const { data } = await supabase
+                .from("students")
+                .select("*")
+                .eq("student_code", scannedCode)
+                .maybeSingle();
+              studentRow = data;
+            } catch (e) {}
+          }
+          if (!studentRow) {
+            scanLockRef.current = false;
+            toast.error("No student found for scanned QR code");
+            return;
+          }
+          playScanBeep();
+          setScanSuccess(true);
+          setTimeout(() => setScanSuccess(false), 1200);
+          if (scannerInstanceRef.current) {
+            await scannerInstanceRef.current.stop().catch(() => undefined);
+            scannerInstanceRef.current.clear();
+            scannerInstanceRef.current = null;
+          }
+          setStudent(studentRow);
+          setStep("student-found");
+        }, () => undefined);
         setIsScannerLoading(false);
       } catch (error: any) {
         if (!active) return;
@@ -409,9 +460,16 @@ function TeacherScan() {
 
     return () => {
       active = false;
-      stopScanner();
+      scanLockRef.current = false;
+      if (scannerInstanceRef.current) {
+        scannerInstanceRef.current.clear().catch(() => undefined);
+        scannerInstanceRef.current = null;
+      }
+      if (scannerRef.current) {
+        scannerRef.current.innerHTML = "";
+      }
     };
-  }, [step, handleQrScan, selectedCameraId, cameraFacingMode, stopScanner]);
+  }, [step, selectedCameraId, cameraFacingMode]);
 
   useEffect(() => {
     if (step !== "scanning") {

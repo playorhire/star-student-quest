@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -41,8 +42,10 @@ function TeacherScan() {
 
   const [cameraOptions, setCameraOptions] = useState<any[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [cameraFacingMode, setCameraFacingMode] = useState<"environment" | "user">("environment");
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [isScannerLoading, setIsScannerLoading] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
 
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const scannerInstanceRef = useRef<Html5Qrcode | null>(null);
@@ -249,6 +252,26 @@ function TeacherScan() {
     loadStudentData(data);
   };
 
+  const playScanBeep = useCallback(() => {
+    try {
+      const audioCtx = new AudioContext();
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(900, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.14);
+      oscillator.onended = () => {
+        audioCtx.close().catch(() => undefined);
+      };
+    } catch {
+      // Audio API may be blocked in some browsers, ignore.
+    }
+  }, []);
+
   const handleQrScan = useCallback(async (decodedText: string) => {
     const scannedCode = decodedText.trim().toUpperCase();
     if (!scannedCode) return;
@@ -264,13 +287,17 @@ function TeacherScan() {
       return;
     }
 
+    playScanBeep();
+    setScanSuccess(true);
+    window.setTimeout(() => setScanSuccess(false), 1200);
+
     if (scannerInstanceRef.current) {
       await scannerInstanceRef.current.stop().catch(() => undefined);
       scannerInstanceRef.current.clear();
       scannerInstanceRef.current = null;
     }
     loadStudentData(data);
-  }, [loadStudentData]);
+  }, [loadStudentData, playScanBeep]);
 
   const stopScanner = useCallback(async () => {
     if (!scannerInstanceRef.current) return;
@@ -310,12 +337,13 @@ function TeacherScan() {
         }));
         setCameraOptions(formatted);
 
-        const backCamera = formatted.find((camera) => /rear|back|environment/i.test(camera.label));
-        const startDeviceId = selectedCameraId || backCamera?.id || formatted[0]?.id;
-        const cameraConfig = startDeviceId || { facingMode: { exact: "environment" } };
+        const activeDeviceId = selectedCameraId || formatted.find((camera) => /rear|back|environment/i.test(camera.label && camera.label.toLowerCase()))?.id || "";
+        const cameraConfig = activeDeviceId
+          ? activeDeviceId
+          : { facingMode: { exact: cameraFacingMode } };
 
-        if (startDeviceId && !selectedCameraId) {
-          setSelectedCameraId(startDeviceId);
+        if (!selectedCameraId) {
+          setSelectedCameraId(activeDeviceId);
         }
 
         await scanner.start(cameraConfig, {
@@ -338,7 +366,7 @@ function TeacherScan() {
       active = false;
       stopScanner();
     };
-  }, [step, handleQrScan, selectedCameraId, stopScanner]);
+  }, [step, handleQrScan, selectedCameraId, cameraFacingMode, stopScanner]);
 
   useEffect(() => {
     if (step !== "scanning") {
@@ -433,31 +461,63 @@ function TeacherScan() {
                   <h4 className="font-medium">Scan Student QR</h4>
                 </div>
 
-                {cameraOptions.length > 1 && (
-                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Select camera</p>
-                      <Select value={selectedCameraId} onValueChange={(value) => setSelectedCameraId(value)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose camera..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cameraOptions.map((camera) => (
-                            <SelectItem key={camera.id} value={camera.id}>{camera.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2 items-end">
+                    {cameraOptions.length > 1 ? (
+                      <div className="min-w-[220px] space-y-2">
+                        <p className="text-sm font-medium">Select camera</p>
+                        <Select value={selectedCameraId} onValueChange={(value) => setSelectedCameraId(value)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Choose camera..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cameraOptions.map((camera) => (
+                              <SelectItem key={camera.id} value={camera.id}>{camera.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : null}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant={cameraFacingMode === "environment" ? "secondary" : "outline"}
+                        onClick={() => {
+                          setCameraFacingMode("environment");
+                          setSelectedCameraId("");
+                        }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant={cameraFacingMode === "user" ? "secondary" : "outline"}
+                        onClick={() => {
+                          setCameraFacingMode("user");
+                          setSelectedCameraId("");
+                        }}
+                      >
+                        Front
+                      </Button>
                     </div>
-                    <Button variant="outline" onClick={() => setSelectedCameraId("")}>Auto</Button>
                   </div>
-                )}
 
                 <div className="space-y-3">
-                  <div
-                    id="html5qr-scanner"
-                    ref={scannerRef}
-                    className="rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[320px] border-2 border-dashed border-gray-300 dark:border-gray-600"
-                  />
+                  <div className="relative">
+                    <div
+                      id="html5qr-scanner"
+                      ref={scannerRef}
+                      className={`rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-[320px] border-2 border-dashed ${scanSuccess ? "border-emerald-400 bg-emerald-50/60 dark:bg-emerald-900/30 animate-pulse" : "border-gray-300 dark:border-gray-600"}`}
+                    />
+                    {scanSuccess && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div className="rounded-full bg-emerald-500/10 p-4 shadow-lg">
+                          <svg className="h-16 w-16 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="space-y-2 text-center">
                     {isScannerLoading ? (
@@ -516,13 +576,22 @@ function TeacherScan() {
         <>
           <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">{student.avatar_emoji}</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-card-foreground">{student.name}</h2>
-                  <p className="text-sm text-muted-foreground">Roll #{student.roll_number} • Class {student.classes?.name}</p>
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-4">
+                  <Avatar className={scanSuccess ? "ring-4 ring-emerald-300" : ""}>
+                    {student.photo_url ? (
+                      <AvatarImage src={student.photo_url} alt={student.name} />
+                    ) : (
+                      <AvatarFallback>{student.avatar_emoji || "🎓"}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Student scanned</p>
+                    <h2 className="text-2xl font-bold text-card-foreground">{student.name}</h2>
+                    <p className="text-sm text-muted-foreground">#{student.roll_number} • Class {student.classes?.name}</p>
+                  </div>
                 </div>
-                <div className="text-right">
+                <div className="ml-auto text-right">
                   <div className="text-3xl font-black text-primary">{student.total_points}</div>
                   <p className="text-xs text-muted-foreground">Total Points</p>
                 </div>

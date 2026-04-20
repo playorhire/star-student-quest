@@ -500,6 +500,7 @@ function TeacherScan() {
                       </Button>
                     </div>
                   </div>
+                </div>
 
                 <div className="space-y-3">
                   <div className="relative">

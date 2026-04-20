@@ -415,16 +415,16 @@ function TeacherScan() {
           }
           // Try qr_code first, then student_code
           let studentRow = null;
-          let qrError = null;
           try {
-            const { data, error } = await supabase
+            const { data } = await supabase
               .from("students")
               .select("*")
               .eq("qr_code", scannedCode)
               .maybeSingle();
             studentRow = data;
-            qrError = error;
-          } catch (e) {}
+          } catch (e) {
+            console.error("Error fetching by qr_code:", e);
+          }
           if (!studentRow) {
             try {
               const { data } = await supabase
@@ -433,7 +433,9 @@ function TeacherScan() {
                 .eq("student_code", scannedCode)
                 .maybeSingle();
               studentRow = data;
-            } catch (e) {}
+            } catch (e) {
+              console.error("Error fetching by student_code:", e);
+            }
           }
           if (!studentRow) {
             scanLockRef.current = false;
@@ -443,14 +445,26 @@ function TeacherScan() {
           playScanBeep();
           setScanSuccess(true);
           setTimeout(() => setScanSuccess(false), 1200);
-          setScannerError(null); // Clear error after successful start
+          setScannerError(null);
           if (scannerInstanceRef.current) {
             await scannerInstanceRef.current.stop().catch(() => undefined);
             Promise.resolve(scannerInstanceRef.current.clear()).catch(() => undefined);
             scannerInstanceRef.current = null;
           }
-          // Call loadStudentData to populate subjects, transactions, and update UI step
-          await loadStudentData(studentRow);
+          // Load subjects and transactions, then update step
+          setStudent(studentRow);
+          const { data: subs } = await supabase
+            .from("subjects")
+            .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
+            .eq("class_id", studentRow.class_id);
+          setSubjectsForClass(subs || []);
+          const { data: tx } = await supabase
+            .from("point_transactions")
+            .select("*, subjects(name)")
+            .eq("student_id", studentRow.id)
+            .order("created_at", { ascending: false });
+          setTransactions(tx || []);
+          setStep("student-found");
         }, () => undefined);
         setIsScannerLoading(false);
       } catch (error: any) {
@@ -473,7 +487,7 @@ function TeacherScan() {
         scannerRef.current.innerHTML = "";
       }
     };
-  }, [step, selectedCameraId, cameraFacingMode, loadStudentData, playScanBeep]);
+  }, [step, selectedCameraId, cameraFacingMode]);
 
   useEffect(() => {
     if (step !== "scanning") {

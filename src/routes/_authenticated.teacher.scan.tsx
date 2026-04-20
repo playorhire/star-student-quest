@@ -279,7 +279,7 @@ function TeacherScan() {
     const { data, error } = await supabase
       .from("students")
       .select("*")
-      .eq("student_code", scannedCode)
+      .or(`student_code.eq.${scannedCode},qr_code.eq.${scannedCode}`)
       .maybeSingle();
 
     if (error || !data) {
@@ -328,7 +328,12 @@ function TeacherScan() {
       setIsScannerLoading(true);
 
       try {
-        const cameras = await Html5Qrcode.getCameras();
+        let cameras: Array<{ id: string; label?: string }> = [];
+        try {
+          cameras = await Html5Qrcode.getCameras();
+        } catch {
+          cameras = [];
+        }
         if (!active) return;
 
         const formatted = cameras.map((camera) => ({
@@ -337,18 +342,28 @@ function TeacherScan() {
         }));
         setCameraOptions(formatted);
 
-        const activeDeviceId = selectedCameraId || formatted.find((camera) => /rear|back|environment/i.test(camera.label && camera.label.toLowerCase()))?.id || "";
-        const cameraConfig = activeDeviceId
-          ? activeDeviceId
-          : { facingMode: { exact: cameraFacingMode } };
+        const preferredCamera = selectedCameraId
+          ? formatted.find((camera) => camera.id === selectedCameraId)
+          : formatted.find((camera) => {
+              const label = camera.label.toLowerCase();
+              return cameraFacingMode === "environment"
+                ? /rear|back|environment/.test(label)
+                : /front|user/.test(label);
+            }) || formatted[0];
 
-        if (!selectedCameraId) {
-          setSelectedCameraId(activeDeviceId);
+        const cameraConfig = selectedCameraId
+          ? { deviceId: { exact: selectedCameraId } }
+          : preferredCamera
+            ? { deviceId: { exact: preferredCamera.id } }
+            : { facingMode: { ideal: cameraFacingMode } };
+
+        if (!selectedCameraId && preferredCamera?.id) {
+          setSelectedCameraId(preferredCamera.id);
         }
 
         await scanner.start(cameraConfig, {
           fps: 10,
-          qrbox: { width: 300, height: 300 },
+          qrbox: { width: 250, height: 250 },
           aspectRatio: 1.2,
           disableFlip: false,
         }, handleQrScan, () => undefined);

@@ -49,6 +49,7 @@ function TeacherScan() {
 
   const scannerRef = useRef<HTMLDivElement | null>(null);
   const scannerInstanceRef = useRef<Html5Qrcode | null>(null);
+  const scanLockRef = useRef(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
@@ -235,6 +236,7 @@ function TeacherScan() {
     setIsEditing(false);
     setSelectedTransactionId(null);
     setManualCode("");
+    scanLockRef.current = false;
   };
 
   const handleManualLookup = async () => {
@@ -282,7 +284,29 @@ function TeacherScan() {
       .or(`student_code.eq.${scannedCode},qr_code.eq.${scannedCode}`)
       .maybeSingle();
 
-    if (error || !data) {
+    if (scanLockRef.current) return;
+    scanLockRef.current = true;
+
+    const { data: qrData, error: qrError } = await supabase
+      .from("students")
+      .select("*")
+      .eq("qr_code", scannedCode)
+      .maybeSingle();
+
+    if (qrError) {
+      scanLockRef.current = false;
+      toast.error("Unable to verify scanned QR code");
+      return;
+    }
+
+    const studentRow = qrData || (await supabase
+      .from("students")
+      .select("*")
+      .eq("student_code", scannedCode)
+      .maybeSingle()).data;
+
+    if (!studentRow) {
+      scanLockRef.current = false;
       toast.error("No student found for scanned QR code");
       return;
     }
@@ -296,7 +320,7 @@ function TeacherScan() {
       scannerInstanceRef.current.clear();
       scannerInstanceRef.current = null;
     }
-    loadStudentData(data);
+    loadStudentData(studentRow);
   }, [loadStudentData, playScanBeep]);
 
   const stopScanner = useCallback(async () => {
@@ -311,6 +335,9 @@ function TeacherScan() {
     } catch {
       // ignore
     }
+    if (scannerRef.current) {
+      scannerRef.current.innerHTML = "";
+    }
     scannerInstanceRef.current = null;
   }, []);
 
@@ -319,6 +346,9 @@ function TeacherScan() {
     if (!scannerRef.current) return;
 
     const elementId = "html5qr-scanner";
+    if (scannerRef.current) {
+      scannerRef.current.innerHTML = "";
+    }
     const scanner = new Html5Qrcode(elementId, { verbose: false });
     scannerInstanceRef.current = scanner;
     let active = true;

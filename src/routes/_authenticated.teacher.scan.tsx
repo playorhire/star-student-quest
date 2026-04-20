@@ -577,7 +577,8 @@ function TeacherScan() {
 
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2 items-end">
-                    {cameraOptions.length > 1 ? (
+                    {/* Camera selection dropdown: only show if more than one camera and not auto-selecting back camera */}
+                    {cameraOptions.length > 1 && cameraFacingMode !== "environment" ? (
                       <div className="min-w-[220px] space-y-2">
                         <p className="text-sm font-medium">Select camera</p>
                         <Select value={selectedCameraId} onValueChange={(value) => setSelectedCameraId(value)}>
@@ -593,6 +594,13 @@ function TeacherScan() {
                       </div>
                     ) : null}
 
+                    {/* Show info if only one camera or auto-selected back camera */}
+                    {cameraOptions.length === 1 || cameraFacingMode === "environment" ? (
+                      <div className="text-xs text-muted-foreground min-w-[220px] py-2">
+                        Using main back camera
+                      </div>
+                    ) : null}
+
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant={cameraFacingMode === "environment" ? "secondary" : "outline"}
@@ -600,6 +608,7 @@ function TeacherScan() {
                           setCameraFacingMode("environment");
                           setSelectedCameraId("");
                         }}
+                        disabled={cameraOptions.length === 1}
                       >
                         Back
                       </Button>
@@ -609,6 +618,7 @@ function TeacherScan() {
                           setCameraFacingMode("user");
                           setSelectedCameraId("");
                         }}
+                        disabled={cameraOptions.length === 1}
                       >
                         Front
                       </Button>

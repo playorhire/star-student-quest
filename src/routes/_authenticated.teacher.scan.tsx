@@ -447,6 +447,7 @@ function TeacherScan() {
           playScanBeep();
           setScanSuccess(true);
           setTimeout(() => setScanSuccess(false), 1200);
+            setScannerError(null); // Clear error after successful start
           if (scannerInstanceRef.current) {
             await scannerInstanceRef.current.stop().catch(() => undefined);
             scannerInstanceRef.current.clear();

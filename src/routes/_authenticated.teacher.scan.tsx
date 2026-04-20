@@ -455,7 +455,7 @@ function TeacherScan() {
         setIsScannerLoading(false);
       } catch (error: any) {
         if (!active) return;
-        setScannerError(error?.message || "Unable to access camera. Please allow camera permissions or try a different device.");
+        setScannerError(error?.message || "Please allow camera permissions or try a different device.");
         setIsScannerLoading(false);
       }
     };

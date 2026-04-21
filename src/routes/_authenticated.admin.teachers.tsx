@@ -60,6 +60,28 @@ function AdminTeachers() {
 
   useEffect(() => { load(); }, []);
 
+  async function getFunctionErrorMessage(error: any, fallback: string) {
+    if (!error) return fallback;
+    const context = (error as { context?: { json?: () => Promise<any>; text?: () => Promise<string> } }).context;
+    if (context?.json) {
+      try {
+        const body = await context.json();
+        if (body?.error) return String(body.error);
+      } catch {
+        // ignore parsing failures
+      }
+    }
+    if (context?.text) {
+      try {
+        const text = await context.text();
+        if (text) return text;
+      } catch {
+        // ignore parsing failures
+      }
+    }
+    return error.message || fallback;
+  }
+
   async function load() {
     const [teacherRes, classRes, subjectRes] = await Promise.all([
       supabase.from("teachers").select("id, name, email, user_id, teacher_assignments(id, class_id, subject_id, classes(name), subjects(name))").order("name"),
@@ -121,7 +143,9 @@ function AdminTeachers() {
         if (editEmail.trim() !== editTeacher.email) body.email = editEmail.trim();
         if (editPassword) body.password = editPassword;
         const res = await supabase.functions.invoke("admin-update-user", { body });
-        if (res.error) throw new Error(res.error.message);
+        if (res.error) {
+          throw new Error(await getFunctionErrorMessage(res.error, "Failed to update login details"));
+        }
         if (res.data?.error) throw new Error(res.data.error);
       }
       setEditTeacher(null);

@@ -23,6 +23,28 @@ function TeacherProfile() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
+  async function getFunctionErrorMessage(error: any, fallback: string) {
+    if (!error) return fallback;
+    const context = (error as { context?: { json?: () => Promise<any>; text?: () => Promise<string> } }).context;
+    if (context?.json) {
+      try {
+        const body = await context.json();
+        if (body?.error) return String(body.error);
+      } catch {
+        // ignore parsing failures
+      }
+    }
+    if (context?.text) {
+      try {
+        const text = await context.text();
+        if (text) return text;
+      } catch {
+        // ignore parsing failures
+      }
+    }
+    return error.message || fallback;
+  }
+
   useEffect(() => { if (user) load(); }, [user]);
 
   async function load() {
@@ -56,7 +78,9 @@ function TeacherProfile() {
       if (password) body.password = password;
       if (body.email || body.password) {
         const res = await supabase.functions.invoke("admin-update-user", { body });
-        if (res.error) throw new Error(res.error.message);
+        if (res.error) {
+          throw new Error(await getFunctionErrorMessage(res.error, "Failed to update account"));
+        }
         if (res.data?.error) throw new Error(res.data.error);
       }
 

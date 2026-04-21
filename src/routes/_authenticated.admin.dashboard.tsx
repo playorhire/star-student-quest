@@ -45,7 +45,7 @@ function AdminDashboard() {
     { label: "Classes", value: stats.classes, icon: School, color: "primary" },
     { label: "Teachers", value: stats.teachers, icon: Users, color: "secondary" },
     { label: "Students", value: stats.students, icon: GraduationCap, color: "accent" },
-    { label: "Subjects", value: stats.subjects, icon: BookOpen, color: "primary" },
+    { label: "Act/Quiz", value: stats.subjects, icon: BookOpen, color: "primary" },
     { label: "Points Given", value: stats.totalPoints, icon: Zap, color: "secondary" },
   ];
 

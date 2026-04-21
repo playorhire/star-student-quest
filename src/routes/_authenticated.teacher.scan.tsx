@@ -248,7 +248,7 @@ function TeacherScan() {
       return;
     }
     if (!selectedSubjectId) {
-      toast.error("Select a subject first");
+      toast.error("Select an activity/quiz first");
       return;
     }
     if (!marks.trim()) {
@@ -263,7 +263,7 @@ function TeacherScan() {
 
     const rule = getRule();
     if (!rule) {
-      toast.error("This subject doesn't have a point rule configured yet");
+      toast.error("This activity/quiz doesn't have a point rule configured yet");
       return;
     }
     if (score < rule.min || score > rule.max) {
@@ -736,10 +736,10 @@ function TeacherScan() {
               </div>
 
               <div className="space-y-3">
-                <label className="text-sm font-medium">Subject</label>
+                <label className="text-sm font-medium">Activity/Quiz</label>
                 <Select value={selectedSubjectId} onValueChange={(v) => { setSelectedSubjectId(v); setCalculatedPoints(0); setMarks(""); }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose subject..." />
+                    <SelectValue placeholder="Choose activity/quiz..." />
                   </SelectTrigger>
                   <SelectContent>
                     {subjectsForClass.map((s) => (
@@ -776,7 +776,7 @@ function TeacherScan() {
                     className="text-center text-lg font-mono"
                   />
                   <p className="text-xs text-muted-foreground text-center">
-                    Enter the marks this student scored for this subject
+                    Enter the marks this student scored for this activity/quiz
                   </p>
                 </div>
               )}
@@ -806,7 +806,7 @@ function TeacherScan() {
                     )}
                     {!rule && (
                       <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-2 rounded border border-red-200 dark:border-red-800">
-                        ❌ No point rule configured for this subject
+                        ❌ No point rule configured for this activity/quiz
                       </div>
                     )}
                   </div>
@@ -867,7 +867,7 @@ function TeacherScan() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{t.subjects?.name || "Subject"}</div>
+                          <div className="font-medium text-sm">{t.subjects?.name || "Activity/Quiz"}</div>
                           <div className="text-xs text-muted-foreground">
                             {t.marks_entered} marks • {new Date(t.created_at).toLocaleDateString()}
                           </div>

@@ -273,7 +273,7 @@ function AdminTeachers() {
                     <div className="mt-3 rounded-2xl border border-yellow-300/70 bg-yellow-50 px-3 py-2 text-sm text-amber-900">
                       <div className="font-medium">No class assignments yet.</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-amber-900/80">Teachers need at least one assigned class and subject to assign points.</span>
+                        <span className="text-xs text-amber-900/80">Teachers need at least one assigned class and activity/quiz to assign points.</span>
                         <Button size="sm" onClick={() => openAssign(t)} className="rounded-xl">
                           Assign class
                         </Button>
@@ -283,7 +283,7 @@ function AdminTeachers() {
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       {t.teacher_assignments?.map(assign => (
                         <span key={assign.id} className="rounded-full border border-border bg-muted/20 px-2 py-1 text-[10px]">
-                          {assign.classes?.name || "Class"} • {assign.subjects?.name || "Subject"}
+                          {assign.classes?.name || "Class"} • {assign.subjects?.name || "Activity/Quiz"}
                         </span>
                       ))}
                     </div>
@@ -328,7 +328,7 @@ function AdminTeachers() {
         <DialogContent>
           <DialogHeader><DialogTitle>Assign Class</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Assign a class and subject for {assignTeacher?.name}.</p>
+            <p className="text-sm text-muted-foreground">Assign a class and activity/quiz for {assignTeacher?.name}.</p>
             <div>
               <Label className="text-xs">Class</Label>
               <select value={assignClassId} onChange={e => { setAssignClassId(e.target.value); setAssignSubjectId(""); }} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
@@ -337,9 +337,9 @@ function AdminTeachers() {
               </select>
             </div>
             <div>
-              <Label className="text-xs">Subject</Label>
+              <Label className="text-xs">Activity/Quiz</Label>
               <select value={assignSubjectId} onChange={e => setAssignSubjectId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm" disabled={!assignClassId}>
-                <option value="">Select subject</option>
+                <option value="">Select activity/quiz</option>
                 {subjects.filter(s => s.class_id === assignClassId).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

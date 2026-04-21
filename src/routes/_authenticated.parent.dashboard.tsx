@@ -263,7 +263,7 @@ function ParentDashboard() {
                     <div className="text-2xl">👩‍🏫</div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-sm text-foreground">{t.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">{t.subject_name || "Teacher"}</div>
+                      <div className="text-xs text-muted-foreground truncate">{t.subject_name || "Activity/Quiz"}</div>
                     </div>
                     {!t.user_id && <span className="text-[10px] text-muted-foreground">No account</span>}
                   </button>

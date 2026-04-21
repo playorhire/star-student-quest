@@ -71,7 +71,7 @@ function AdminClasses() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-foreground">Classes & Subjects</h1>
+        <h1 className="text-2xl font-black text-foreground">Classes & Activities/Quizzes</h1>
         <p className="text-sm text-muted-foreground">Manage school structure</p>
       </div>
 
@@ -120,12 +120,12 @@ function AdminClasses() {
       </div>
 
       <Card className="border-2 border-secondary/20">
-        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Subject</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base font-bold">Add Activity/Quiz</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Subject Name</Label>
-              <Input placeholder="e.g. Physics" value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)} className="rounded-xl" />
+              <Label className="text-xs">Activity/Quiz Name</Label>
+              <Input placeholder="e.g. Quiz 1" value={newSubjectName} onChange={e => setNewSubjectName(e.target.value)} className="rounded-xl" />
             </div>
             <div>
               <Label className="text-xs">For Class</Label>
@@ -136,7 +136,7 @@ function AdminClasses() {
             </div>
           </div>
           <Button onClick={handleAddSubject} variant="secondary" className="rounded-xl" disabled={!newSubjectName.trim() || !newSubjectClassId}>
-            <Plus className="h-4 w-4 mr-1" /> Add Subject
+            <Plus className="h-4 w-4 mr-1" /> Add Activity/Quiz
           </Button>
         </CardContent>
       </Card>

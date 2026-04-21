@@ -179,7 +179,7 @@ function Index() {
               icon: Zap,
               emoji: "⚡",
               title: "Points System",
-              desc: "Teachers award points instantly for great work, kindness, and effort. Auto-calculated by subject rules.",
+              desc: "Teachers award points instantly for great work, kindness, and effort. Auto-calculated by activity/quiz rules.",
               tint: "from-primary/20 to-primary/5",
               iconColor: "text-primary",
             },

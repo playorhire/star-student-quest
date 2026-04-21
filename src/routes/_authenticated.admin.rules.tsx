@@ -112,10 +112,10 @@ function AdminRules() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-foreground">Point Rules</h1>
-        <p className="text-sm text-muted-foreground">Configure passing marks and multipliers per subject</p>
+        <p className="text-sm text-muted-foreground">Configure passing marks and multipliers per activity/quiz</p>
         {subjects.length > 0 && (
           <div className="mt-2 text-xs text-muted-foreground">
-            {rules.length} of {subjects.length} subjects have rules configured
+            {rules.length} of {subjects.length} activities/quizzes have rules configured
           </div>
         )}
       </div>
@@ -199,7 +199,7 @@ function AdminRules() {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">Point Rules Needed</h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  {subjectsWithoutRules.length} subject{subjectsWithoutRules.length !== 1 ? 's' : ''} {subjectsWithoutRules.length === 1 ? 'needs' : 'need'} point rules configured.
+                  {subjectsWithoutRules.length} activity/quiz{subjectsWithoutRules.length !== 1 ? 'es' : ''} {subjectsWithoutRules.length === 1 ? 'needs' : 'need'} point rules configured.
                 </p>
               </div>
               <Button type="button" onClick={createDefaultRules} className="bg-amber-600 hover:bg-amber-700" disabled={loadingDefaults}>
@@ -210,7 +210,7 @@ function AdminRules() {
         )}
 
         {filtered.length === 0 && subjectsWithoutRules.length === 0 && subjects.length === 0 && (
-          <p className="text-sm text-muted-foreground">No rules yet. Add subjects in Classes & Subjects first.</p>
+          <p className="text-sm text-muted-foreground">No rules yet. Add activities/quizzes in Classes first.</p>
         )}
       </div>
     </div>

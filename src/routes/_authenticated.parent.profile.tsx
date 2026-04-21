@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PasswordRequirements } from "@/components/password-requirements";
 import { useAuth } from "../lib/auth-context";
+import { getPasswordValidation } from "@/lib/password-validation";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -24,6 +26,7 @@ function ParentProfile() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [exists, setExists] = useState(false);
+  const passwordValidation = getPasswordValidation(password);
 
   async function getFunctionErrorMessage(error: any, fallback: string) {
     if (!error) return fallback;
@@ -65,7 +68,7 @@ function ParentProfile() {
     setErr(""); setMsg("");
     if (!name.trim() || !email.trim()) { setErr("Name and email are required"); return; }
     if (password && password !== confirm) { setErr("Passwords do not match"); return; }
-    if (password && password.length < 6) { setErr("Password must be at least 6 characters"); return; }
+    if (password && !passwordValidation.isValid) { setErr("Password does not meet the required criteria"); return; }
     setSaving(true);
     try {
       // Upsert profile row
@@ -138,6 +141,12 @@ function ParentProfile() {
               <div>
                 <Label className="text-xs">New Password</Label>
                 <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className="rounded-xl" />
+                <PasswordRequirements password={password} />
+                {password && !passwordValidation.isValid && (
+                  <p className="mt-2 text-xs text-destructive">
+                    Password does not meet the required criteria.
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Confirm Password</Label>
@@ -147,7 +156,7 @@ function ParentProfile() {
           </div>
           {err && <p className="text-sm text-destructive">{err}</p>}
           {msg && <p className="text-sm text-green-600 flex items-center gap-1"><CheckCircle className="h-4 w-4" /> {msg}</p>}
-          <Button onClick={handleSave} className="rounded-xl w-full" disabled={saving}>
+          <Button onClick={handleSave} className="rounded-xl w-full" disabled={saving || (Boolean(password) && !passwordValidation.isValid)}>
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </CardContent>

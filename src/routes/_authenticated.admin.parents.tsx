@@ -27,6 +27,8 @@ function AdminParents() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [selectedStudentToAdd, setSelectedStudentToAdd] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,6 +37,8 @@ function AdminParents() {
   const [eEmail, setEEmail] = useState("");
   const [ePhone, setEPhone] = useState("");
   const [eStudentIds, setEStudentIds] = useState<string[]>([]);
+  const [editStudentSearch, setEditStudentSearch] = useState("");
+  const [selectedEditStudentToAdd, setSelectedEditStudentToAdd] = useState("");
   const [ePassword, setEPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
@@ -89,7 +93,7 @@ function AdminParents() {
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(res.data.error);
-      setName(""); setEmail(""); setPhone(""); setPassword(""); setStudentIds([]);
+      setName(""); setEmail(""); setPhone(""); setPassword(""); setStudentIds([]); setStudentSearch(""); setSelectedStudentToAdd("");
       load();
     } catch (err: any) {
       setError(err.message);
@@ -114,8 +118,31 @@ function AdminParents() {
       .filter((l) => l.parent_user_id === p.user_id)
       .map((l) => l.student_id);
     setEStudentIds(existingIds);
+    setEditStudentSearch("");
+    setSelectedEditStudentToAdd("");
     setEditError("");
   }
+
+  const filteredStudentsForAdd = students.filter((s) => {
+    if (!studentSearch.trim()) return true;
+    const q = studentSearch.trim().toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.roll_number.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredStudentsForEdit = students.filter((s) => {
+    if (!editStudentSearch.trim()) return true;
+    const q = editStudentSearch.trim().toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.roll_number.toLowerCase().includes(q)
+    );
+  });
+
+  const selectedStudentsForAdd = students.filter((s) => studentIds.includes(s.id));
+  const selectedStudentsForEdit = students.filter((s) => eStudentIds.includes(s.id));
 
   async function handleSaveEdit() {
     if (!editParent) return;
@@ -179,22 +206,58 @@ function AdminParents() {
           </div>
           <div>
             <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Link Children (optional)</Label>
-            <div className="max-h-40 overflow-auto rounded-xl border border-input p-2 space-y-1">
-              {students.map((s) => (
-                <label key={s.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={studentIds.includes(s.id)}
-                    onChange={(e) =>
-                      setStudentIds((prev) =>
-                        e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
-                      )
-                    }
-                  />
-                  <span>{s.name} (#{s.roll_number})</span>
-                </label>
-              ))}
-              {students.length === 0 && <p className="text-xs text-muted-foreground">No students available.</p>}
+            <div className="space-y-2">
+              <Input
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search by student name or roll number"
+                className="rounded-xl"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={selectedStudentToAdd}
+                  onChange={(e) => setSelectedStudentToAdd(e.target.value)}
+                  className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm"
+                >
+                  <option value="">Select student</option>
+                  {filteredStudentsForAdd.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} (#{s.roll_number})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!selectedStudentToAdd) return;
+                    setStudentIds((prev) =>
+                      prev.includes(selectedStudentToAdd) ? prev : [...prev, selectedStudentToAdd]
+                    );
+                    setSelectedStudentToAdd("");
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              <div className="rounded-xl border border-input p-2 space-y-1 min-h-12">
+                {selectedStudentsForAdd.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No children linked yet.</p>
+                ) : (
+                  selectedStudentsForAdd.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-2 py-1 text-sm">
+                      <span>{s.name} (#{s.roll_number})</span>
+                      <button
+                        type="button"
+                        className="text-xs text-destructive"
+                        onClick={() => setStudentIds((prev) => prev.filter((id) => id !== s.id))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -239,22 +302,58 @@ function AdminParents() {
             <div><Label className="text-xs">Phone</Label><Input value={ePhone} onChange={e => setEPhone(e.target.value)} className="rounded-xl" /></div>
             <div>
               <Label className="text-xs">Linked Children</Label>
-              <div className="max-h-40 overflow-auto rounded-xl border border-input p-2 space-y-1">
-                {students.map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={eStudentIds.includes(s.id)}
-                      onChange={(e) =>
-                        setEStudentIds((prev) =>
-                          e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
-                        )
-                      }
-                    />
-                    <span>{s.name} (#{s.roll_number})</span>
-                  </label>
-                ))}
-                {students.length === 0 && <p className="text-xs text-muted-foreground">No students available.</p>}
+              <div className="space-y-2">
+                <Input
+                  value={editStudentSearch}
+                  onChange={(e) => setEditStudentSearch(e.target.value)}
+                  placeholder="Search by student name or roll number"
+                  className="rounded-xl"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={selectedEditStudentToAdd}
+                    onChange={(e) => setSelectedEditStudentToAdd(e.target.value)}
+                    className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm"
+                  >
+                    <option value="">Select student</option>
+                    {filteredStudentsForEdit.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} (#{s.roll_number})
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (!selectedEditStudentToAdd) return;
+                      setEStudentIds((prev) =>
+                        prev.includes(selectedEditStudentToAdd) ? prev : [...prev, selectedEditStudentToAdd]
+                      );
+                      setSelectedEditStudentToAdd("");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                <div className="rounded-xl border border-input p-2 space-y-1 min-h-12">
+                  {selectedStudentsForEdit.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No children linked yet.</p>
+                  ) : (
+                    selectedStudentsForEdit.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between rounded-lg bg-muted/40 px-2 py-1 text-sm">
+                        <span>{s.name} (#{s.roll_number})</span>
+                        <button
+                          type="button"
+                          className="text-xs text-destructive"
+                          onClick={() => setEStudentIds((prev) => prev.filter((id) => id !== s.id))}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
             <div className="border-t border-border pt-3">

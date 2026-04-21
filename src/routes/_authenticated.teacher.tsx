@@ -1,6 +1,8 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, Award, History, Gift, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Award, History, Gift, User, LogOut, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/teacher")({
   component: TeacherLayout,
@@ -9,14 +11,46 @@ export const Route = createFileRoute("/_authenticated/teacher")({
 function TeacherLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const navItems = [
     { to: "/teacher/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
     { to: "/teacher/scan" as const, label: "Assign", icon: Award },
+    { to: "/teacher/messages" as any, label: "Messages", icon: MessageSquare },
     { to: "/teacher/history" as const, label: "History", icon: History },
     { to: "/teacher/rewards" as const, label: "Rewards", icon: Gift },
     { to: "/teacher/profile" as const, label: "Profile", icon: User },
   ];
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadUnreadCount = async () => {
+      const { count } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        .eq("read", false);
+      setUnreadMessages(count || 0);
+    };
+
+    void loadUnreadCount();
+
+    const channel = supabase
+      .channel(`teacher-unread-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${user.id}` },
+        () => {
+          void loadUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,7 +77,14 @@ function TeacherLayout() {
             const isActive = location.pathname === to;
             return (
               <Link key={to} to={to} className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                <Icon className="h-5 w-5" />
+                <div className="relative">
+                  <Icon className="h-5 w-5" />
+                  {label === "Messages" && unreadMessages > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-4 text-center">
+                      {unreadMessages > 99 ? "99+" : unreadMessages}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-semibold">{label}</span>
               </Link>
             );

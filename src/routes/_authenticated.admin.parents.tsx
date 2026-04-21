@@ -26,7 +26,7 @@ function AdminParents() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [studentId, setStudentId] = useState("");
+  const [studentIds, setStudentIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,7 +34,7 @@ function AdminParents() {
   const [eName, setEName] = useState("");
   const [eEmail, setEEmail] = useState("");
   const [ePhone, setEPhone] = useState("");
-  const [eStudentId, setEStudentId] = useState("");
+  const [eStudentIds, setEStudentIds] = useState<string[]>([]);
   const [ePassword, setEPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
@@ -80,11 +80,16 @@ function AdminParents() {
     setError("");
     try {
       const res = await supabase.functions.invoke("create-user", {
-        body: { email: email.trim(), password, role: "parent", meta: { name: name.trim(), phone: phone.trim() || null, studentId: studentId || null } },
+        body: {
+          email: email.trim(),
+          password,
+          role: "parent",
+          meta: { name: name.trim(), phone: phone.trim() || null, studentIds },
+        },
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(res.data.error);
-      setName(""); setEmail(""); setPhone(""); setPassword(""); setStudentId("");
+      setName(""); setEmail(""); setPhone(""); setPassword(""); setStudentIds([]);
       load();
     } catch (err: any) {
       setError(err.message);
@@ -105,8 +110,10 @@ function AdminParents() {
     setEEmail(p.email);
     setEPhone(p.phone || "");
     setEPassword("");
-    const existing = links.find(l => l.parent_user_id === p.user_id);
-    setEStudentId(existing?.student_id || "");
+    const existingIds = links
+      .filter((l) => l.parent_user_id === p.user_id)
+      .map((l) => l.student_id);
+    setEStudentIds(existingIds);
     setEditError("");
   }
 
@@ -123,10 +130,12 @@ function AdminParents() {
         name: eName.trim(), email: eEmail.trim(), phone: ePhone.trim() || null,
       }).eq("id", editParent.id);
       if (error) throw error;
-      // update link: remove existing then insert new (simple approach)
+      // update links: remove existing then insert selected children
       await supabase.from("parent_student_links").delete().eq("parent_user_id", editParent.user_id);
-      if (eStudentId) {
-        await supabase.from("parent_student_links").insert({ parent_user_id: editParent.user_id, student_id: eStudentId });
+      if (eStudentIds.length > 0) {
+        await supabase.from("parent_student_links").insert(
+          eStudentIds.map((id) => ({ parent_user_id: editParent.user_id, student_id: id }))
+        );
       }
 
       if (ePassword || eEmail.trim() !== editParent.email) {
@@ -169,11 +178,24 @@ function AdminParents() {
             </div>
           </div>
           <div>
-            <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Link to Child (optional)</Label>
-            <select value={studentId} onChange={e => setStudentId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
-              <option value="">— None —</option>
-              {students.map(s => <option key={s.id} value={s.id}>{s.name} (#{s.roll_number})</option>)}
-            </select>
+            <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Link Children (optional)</Label>
+            <div className="max-h-40 overflow-auto rounded-xl border border-input p-2 space-y-1">
+              {students.map((s) => (
+                <label key={s.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={studentIds.includes(s.id)}
+                    onChange={(e) =>
+                      setStudentIds((prev) =>
+                        e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                      )
+                    }
+                  />
+                  <span>{s.name} (#{s.roll_number})</span>
+                </label>
+              ))}
+              {students.length === 0 && <p className="text-xs text-muted-foreground">No students available.</p>}
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button onClick={handleAdd} className="rounded-xl" disabled={!name.trim() || !email.trim() || !password.trim() || creating}>
@@ -216,11 +238,24 @@ function AdminParents() {
             <div><Label className="text-xs">Email</Label><Input value={eEmail} onChange={e => setEEmail(e.target.value)} className="rounded-xl" /></div>
             <div><Label className="text-xs">Phone</Label><Input value={ePhone} onChange={e => setEPhone(e.target.value)} className="rounded-xl" /></div>
             <div>
-              <Label className="text-xs">Linked Child</Label>
-              <select value={eStudentId} onChange={e => setEStudentId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
-                <option value="">— None —</option>
-                {students.map(s => <option key={s.id} value={s.id}>{s.name} (#{s.roll_number})</option>)}
-              </select>
+              <Label className="text-xs">Linked Children</Label>
+              <div className="max-h-40 overflow-auto rounded-xl border border-input p-2 space-y-1">
+                {students.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={eStudentIds.includes(s.id)}
+                      onChange={(e) =>
+                        setEStudentIds((prev) =>
+                          e.target.checked ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                        )
+                      }
+                    />
+                    <span>{s.name} (#{s.roll_number})</span>
+                  </label>
+                ))}
+                {students.length === 0 && <p className="text-xs text-muted-foreground">No students available.</p>}
+              </div>
             </div>
             <div className="border-t border-border pt-3">
               <Label className="text-xs flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password (leave blank to keep current)</Label>

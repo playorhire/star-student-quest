@@ -46,11 +46,19 @@ Deno.serve(async (req) => {
         email,
         phone: meta?.phone || null,
       });
-      if (meta?.studentId) {
-        await supabase.from("parent_student_links").insert({
-          parent_user_id: userId,
-          student_id: meta.studentId,
-        });
+      const studentIds = Array.isArray(meta?.studentIds)
+        ? meta.studentIds
+        : meta?.studentId
+          ? [meta.studentId]
+          : [];
+      const uniqueStudentIds = [...new Set(studentIds.filter(Boolean))];
+      if (uniqueStudentIds.length > 0) {
+        await supabase.from("parent_student_links").insert(
+          uniqueStudentIds.map((studentId: string) => ({
+            parent_user_id: userId,
+            student_id: studentId,
+          }))
+        );
       }
     }
 

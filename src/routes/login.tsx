@@ -98,7 +98,7 @@ function LoginPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-xs text-muted-foreground">
+        <p className="mt-6 text-xs text-muted-foreground">Question ! 0331-897-2780 <br />
           Admin creates accounts for teachers, students, and parents
         </p>
       </div>

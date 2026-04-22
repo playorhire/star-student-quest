@@ -261,7 +261,7 @@ function Index() {
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-white/40 bg-white/30 backdrop-blur py-6 text-center text-xs text-muted-foreground">
+      <footer className="relative z-10 border-t border-white/40 bg-white/30 backdrop-blur py-6 text-center text-xs text-muted-foreground">Question ! 0331-897-2780 <br />
         Made with 💜 for curious kids • © {new Date().getFullYear()} StarPoints
       </footer>
     </div>

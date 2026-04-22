@@ -19,6 +19,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherRewardsRouteImport } from './routes/_authenticated.teacher.rewards'
 import { Route as AuthenticatedTeacherProfileRouteImport } from './routes/_authenticated.teacher.profile'
+import { Route as AuthenticatedTeacherMessagesRouteImport } from './routes/_authenticated.teacher.messages'
 import { Route as AuthenticatedTeacherHistoryRouteImport } from './routes/_authenticated.teacher.history'
 import { Route as AuthenticatedTeacherDashboardRouteImport } from './routes/_authenticated.teacher.dashboard'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAdminProfileRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminParentsRouteImport } from './routes/_authenticated.admin.parents'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated.admin.dashboard'
 import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated.admin.classes'
+import { Route as AuthenticatedAdminBadgesRouteImport } from './routes/_authenticated.admin.badges'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -88,6 +90,12 @@ const AuthenticatedTeacherProfileRoute =
   AuthenticatedTeacherProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherMessagesRoute =
+  AuthenticatedTeacherMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedTeacherHistoryRoute =
@@ -196,6 +204,12 @@ const AuthenticatedAdminClassesRoute =
     path: '/classes',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBadgesRoute =
+  AuthenticatedAdminBadgesRouteImport.update({
+    id: '/badges',
+    path: '/badges',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -204,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/parent': typeof AuthenticatedParentRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/parents': typeof AuthenticatedAdminParentsRoute
@@ -222,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -233,6 +249,7 @@ export interface FileRoutesByTo {
   '/parent': typeof AuthenticatedParentRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/admin/parents': typeof AuthenticatedAdminParentsRoute
@@ -251,6 +268,7 @@ export interface FileRoutesByTo {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -264,6 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/_authenticated/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/_authenticated/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/admin/parents': typeof AuthenticatedAdminParentsRoute
@@ -282,6 +301,7 @@ export interface FileRoutesById {
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/_authenticated/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/_authenticated/teacher/history': typeof AuthenticatedTeacherHistoryRoute
+  '/_authenticated/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
   '/_authenticated/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/_authenticated/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -295,6 +315,7 @@ export interface FileRouteTypes {
     | '/parent'
     | '/student'
     | '/teacher'
+    | '/admin/badges'
     | '/admin/classes'
     | '/admin/dashboard'
     | '/admin/parents'
@@ -313,6 +334,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/teacher/dashboard'
     | '/teacher/history'
+    | '/teacher/messages'
     | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
@@ -324,6 +346,7 @@ export interface FileRouteTypes {
     | '/parent'
     | '/student'
     | '/teacher'
+    | '/admin/badges'
     | '/admin/classes'
     | '/admin/dashboard'
     | '/admin/parents'
@@ -342,6 +365,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/teacher/dashboard'
     | '/teacher/history'
+    | '/teacher/messages'
     | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
@@ -354,6 +378,7 @@ export interface FileRouteTypes {
     | '/_authenticated/parent'
     | '/_authenticated/student'
     | '/_authenticated/teacher'
+    | '/_authenticated/admin/badges'
     | '/_authenticated/admin/classes'
     | '/_authenticated/admin/dashboard'
     | '/_authenticated/admin/parents'
@@ -372,6 +397,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/rewards'
     | '/_authenticated/teacher/dashboard'
     | '/_authenticated/teacher/history'
+    | '/_authenticated/teacher/messages'
     | '/_authenticated/teacher/profile'
     | '/_authenticated/teacher/rewards'
     | '/_authenticated/teacher/scan'
@@ -453,6 +479,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/teacher/profile'
       preLoaderRoute: typeof AuthenticatedTeacherProfileRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/messages': {
+      id: '/_authenticated/teacher/messages'
+      path: '/messages'
+      fullPath: '/teacher/messages'
+      preLoaderRoute: typeof AuthenticatedTeacherMessagesRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/teacher/history': {
@@ -581,10 +614,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminClassesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/badges': {
+      id: '/_authenticated/admin/badges'
+      path: '/badges'
+      fullPath: '/admin/badges'
+      preLoaderRoute: typeof AuthenticatedAdminBadgesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminBadgesRoute: typeof AuthenticatedAdminBadgesRoute
   AuthenticatedAdminClassesRoute: typeof AuthenticatedAdminClassesRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminParentsRoute: typeof AuthenticatedAdminParentsRoute
@@ -596,6 +637,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminBadgesRoute: AuthenticatedAdminBadgesRoute,
   AuthenticatedAdminClassesRoute: AuthenticatedAdminClassesRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminParentsRoute: AuthenticatedAdminParentsRoute,
@@ -646,6 +688,7 @@ const AuthenticatedStudentRouteWithChildren =
 interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherDashboardRoute: typeof AuthenticatedTeacherDashboardRoute
   AuthenticatedTeacherHistoryRoute: typeof AuthenticatedTeacherHistoryRoute
+  AuthenticatedTeacherMessagesRoute: typeof AuthenticatedTeacherMessagesRoute
   AuthenticatedTeacherProfileRoute: typeof AuthenticatedTeacherProfileRoute
   AuthenticatedTeacherRewardsRoute: typeof AuthenticatedTeacherRewardsRoute
   AuthenticatedTeacherScanRoute: typeof AuthenticatedTeacherScanRoute
@@ -654,6 +697,7 @@ interface AuthenticatedTeacherRouteChildren {
 const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherDashboardRoute: AuthenticatedTeacherDashboardRoute,
   AuthenticatedTeacherHistoryRoute: AuthenticatedTeacherHistoryRoute,
+  AuthenticatedTeacherMessagesRoute: AuthenticatedTeacherMessagesRoute,
   AuthenticatedTeacherProfileRoute: AuthenticatedTeacherProfileRoute,
   AuthenticatedTeacherRewardsRoute: AuthenticatedTeacherRewardsRoute,
   AuthenticatedTeacherScanRoute: AuthenticatedTeacherScanRoute,

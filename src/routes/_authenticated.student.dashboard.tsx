@@ -34,7 +34,7 @@ function StudentDashboard() {
   }, [student?.id, user?.id]);
 
   async function load() {
-    const { data: s } = await supabase.from("students").select("*, classes(name)").eq("user_id", user!.id).single();
+    const { data: s } = await (supabase as any).from("students").select("*, classes(name), lifetime_points").eq("user_id", user!.id).single();
     if (!s) return;
     setStudent(s);
 
@@ -48,9 +48,10 @@ function StudentDashboard() {
 
   if (!student) return <div className="flex justify-center py-12"><div className="text-2xl animate-bounce">🎓</div></div>;
 
-  const earnedBadges = badges.filter(b => student.total_points >= b.required_points);
-  const nextBadge = badges.find(b => student.total_points < b.required_points);
-  const progress = nextBadge ? Math.min(100, (student.total_points / nextBadge.required_points) * 100) : 100;
+  const earnedBadges = badges.filter(b => (student.lifetime_points ?? student.total_points) >= b.required_points);
+  const nextBadge = badges.find(b => (student.lifetime_points ?? student.total_points) < b.required_points);
+  const badgePoints = student.lifetime_points ?? student.total_points;
+  const progress = nextBadge ? Math.min(100, (badgePoints / nextBadge.required_points) * 100) : 100;
 
   return (
     <div className="space-y-6">
@@ -69,7 +70,7 @@ function StudentDashboard() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold text-foreground">Next: {nextBadge.emoji} {nextBadge.name}</span>
-              <span className="text-xs text-muted-foreground">{student.total_points}/{nextBadge.required_points}</span>
+              <span className="text-xs text-muted-foreground">{badgePoints}/{nextBadge.required_points}</span>
             </div>
             <Progress value={progress} className="h-3" />
           </CardContent>

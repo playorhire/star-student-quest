@@ -46,7 +46,7 @@ UPDATE public.user_roles SET tenant_role = 'parent' WHERE role = 'parent';
 ALTER TABLE public.students      ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
 ALTER TABLE public.students      ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL;
 ALTER TABLE public.teachers      ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
-ALTER TABLE public.teachers      ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
+ALTER TABLE public.teachers      ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL;
 ALTER TABLE public.rewards       ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;
 ALTER TABLE public.rewards       ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL;
 ALTER TABLE public.classes       ADD COLUMN IF NOT EXISTS school_id UUID REFERENCES public.schools(id) ON DELETE SET NULL;

@@ -14,6 +14,7 @@ function SchoolAdminRewards() {
   const { user } = useAuth();
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.schoolId) loadRewards();
@@ -21,13 +22,18 @@ function SchoolAdminRewards() {
 
   async function loadRewards() {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    setError(null);
+    const { data, error: err } = await (supabase as any)
       .from("rewards")
       .select("id, name, emoji, point_cost, stock, description")
       .eq("school_id", user!.schoolId)
       .order("point_cost");
-    if (error) toast.error(error.message);
-    else setRewards(data || []);
+    if (err) {
+      setError(`${err.message} (${err.code})`);
+      toast.error(err.message);
+    } else {
+      setRewards(data || []);
+    }
     setLoading(false);
   }
 
@@ -42,6 +48,12 @@ function SchoolAdminRewards() {
         <h1 className="text-2xl font-black">Rewards</h1>
         <p className="text-sm text-muted-foreground">Rewards catalog for your school</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>

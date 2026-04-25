@@ -14,6 +14,7 @@ function SchoolAdminStudents() {
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.schoolId) loadStudents();
@@ -21,13 +22,18 @@ function SchoolAdminStudents() {
 
   async function loadStudents() {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    setError(null);
+    const { data, error: err } = await (supabase as any)
       .from("students")
       .select("id, name, email, roll_number, total_points, classes(name), avatar_emoji")
       .eq("school_id", user!.schoolId)
       .order("name");
-    if (error) toast.error(error.message);
-    else setStudents(data || []);
+    if (err) {
+      setError(`${err.message} (${err.code})`);
+      toast.error(err.message);
+    } else {
+      setStudents(data || []);
+    }
     setLoading(false);
   }
 
@@ -42,6 +48,12 @@ function SchoolAdminStudents() {
         <h1 className="text-2xl font-black">Students</h1>
         <p className="text-sm text-muted-foreground">All students in your school</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>

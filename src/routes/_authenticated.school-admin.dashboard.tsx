@@ -12,18 +12,26 @@ export const Route = createFileRoute("/_authenticated/school-admin/dashboard" as
 function SchoolAdminDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ branches: 0, teachers: 0, students: 0, rewards: 0 });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.schoolId) loadStats();
   }, [user]);
 
   async function loadStats() {
+    setError(null);
     const [b, t, s, r] = await Promise.all([
       (supabase as any).from("branches").select("id", { count: "exact", head: true }).eq("school_id", user!.schoolId),
       (supabase as any).from("teachers").select("id", { count: "exact", head: true }).eq("school_id", user!.schoolId),
       (supabase as any).from("students").select("id", { count: "exact", head: true }).eq("school_id", user!.schoolId),
       (supabase as any).from("rewards").select("id", { count: "exact", head: true }).eq("school_id", user!.schoolId),
     ]);
+    const errors = [];
+    if (b.error) errors.push(`branches: ${b.error.message}`);
+    if (t.error) errors.push(`teachers: ${t.error.message}`);
+    if (s.error) errors.push(`students: ${s.error.message}`);
+    if (r.error) errors.push(`rewards: ${r.error.message}`);
+    if (errors.length) setError(errors.join("; "));
     setStats({
       branches: b.count || 0,
       teachers: t.count || 0,
@@ -38,6 +46,13 @@ function SchoolAdminDashboard() {
         <h1 className="text-2xl font-black">School Admin Dashboard</h1>
         <p className="text-sm text-muted-foreground">Manage your school</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+          <strong>Database Error:</strong> {error}
+          <div className="mt-1 text-xs opacity-80">Run the SQL migration to add school_id/branch_id columns to all tables.</div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

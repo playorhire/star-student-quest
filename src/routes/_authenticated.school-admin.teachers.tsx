@@ -14,6 +14,7 @@ function SchoolAdminTeachers() {
   const { user } = useAuth();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.schoolId) loadTeachers();
@@ -21,13 +22,18 @@ function SchoolAdminTeachers() {
 
   async function loadTeachers() {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    setError(null);
+    const { data, error: err } = await (supabase as any)
       .from("teachers")
       .select("id, name, email, avatar_emoji")
       .eq("school_id", user!.schoolId)
       .order("name");
-    if (error) toast.error(error.message);
-    else setTeachers(data || []);
+    if (err) {
+      setError(`${err.message} (${err.code})`);
+      toast.error(err.message);
+    } else {
+      setTeachers(data || []);
+    }
     setLoading(false);
   }
 
@@ -42,6 +48,15 @@ function SchoolAdminTeachers() {
         <h1 className="text-2xl font-black">Teachers</h1>
         <p className="text-sm text-muted-foreground">All teachers in your school</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+          <strong>Error:</strong> {error}
+          <div className="mt-1 text-xs opacity-80">
+            {error.includes("400") && "The 'school_id' column is likely missing from the 'teachers' table. Run the SQL fix in Supabase SQL Editor."}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>

@@ -42,20 +42,50 @@ function SchoolAdminsManagement() {
     if (password.length < 6) { toast.error("Password must be 6+ chars"); return; }
     setSubmitting(true);
 
+    // 1. Create auth user via signUp (auto-confirm if email verification is off)
     const { data: authData, error: authErr } = await supabase.auth.signUp({ email: email.trim(), password });
-    if (authErr || !authData.user) {
+
+    let targetUserId = authData?.user?.id;
+
+    // If signUp returns no user (e.g. already registered), try to fetch the existing user by signing in
+    if (!targetUserId && authErr?.message?.toLowerCase().includes("already registered")) {
+      toast.error("A user with this email already exists. Please use a new email.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!targetUserId) {
       toast.error(authErr?.message || "Failed to create user");
       setSubmitting(false);
       return;
     }
 
+    // 2. Assign role: legacy 'admin' + new tenant_role 'school_admin'
     const { error: roleErr } = await (supabase as any).from("user_roles").insert({
-      user_id: authData.user.id, role: "admin", tenant_role: "school_admin",
-      school_id: schoolId, is_primary: true,
+      user_id: targetUserId,
+      role: "admin",           // <-- legacy role for backwards compatibility
+      tenant_role: "school_admin",
+      school_id: schoolId,
+      is_primary: true,
     });
 
-    if (roleErr) toast.error(roleErr.message);
-    else { toast.success("School Admin created"); setShowForm(false); setEmail(""); setPassword(""); setSchoolId(""); loadData(); }
+    if (roleErr) {
+      // If role already exists, update it instead
+      if (roleErr.message?.includes("duplicate") || roleErr.code === "23505") {
+        const { error: updateErr } = await (supabase as any)
+          .from("user_roles")
+          .update({ role: "admin", tenant_role: "school_admin", school_id: schoolId, is_primary: true })
+          .eq("user_id", targetUserId);
+        if (updateErr) toast.error(updateErr.message);
+        else toast.success("School Admin role assigned to existing user");
+      } else {
+        toast.error(roleErr.message);
+      }
+    } else {
+      toast.success("School Admin created with role=admin");
+    }
+
+    setShowForm(false); setEmail(""); setPassword(""); setSchoolId(""); loadData();
     setSubmitting(false);
   }
 

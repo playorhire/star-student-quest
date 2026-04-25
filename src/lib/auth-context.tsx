@@ -2,12 +2,14 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
-export type Role = "admin" | "teacher" | "student" | "parent";
+export type TenantRole = "super_admin" | "school_admin" | "branch_admin" | "teacher" | "student" | "parent" | "admin";
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
   email: string;
-  role: Role;
+  role: TenantRole;
+  schoolId: string | null;
+  branchId: string | null;
 }
 
 interface AuthState {
@@ -22,21 +24,33 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-async function fetchUserRole(userId: string): Promise<Role | null> {
-  const { data } = await supabase
+async function fetchUserRole(userId: string): Promise<AuthUser | null> {
+  const { data } = await (supabase as any)
     .from("user_roles")
-    .select("role")
+    .select("tenant_role, school_id, branch_id")
     .eq("user_id", userId)
+    .eq("is_primary", true)
     .limit(1)
     .single();
-  return data?.role as Role | null;
+
+  if (!data) return null;
+
+  return {
+    id: userId,
+    email: "",
+    role: (data.tenant_role || "student") as TenantRole,
+    schoolId: data.school_id,
+    branchId: data.branch_id,
+  };
 }
 
-function buildAuthUser(supaUser: User, role: Role): AuthUser {
+function buildAuthUser(supaUser: User, roleData: AuthUser | null): AuthUser {
   return {
     id: supaUser.id,
     email: supaUser.email || "",
-    role,
+    role: roleData?.role || "student",
+    schoolId: roleData?.schoolId || null,
+    branchId: roleData?.branchId || null,
   };
 }
 
@@ -50,9 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        const role = await fetchUserRole(session.user.id);
-        if (role) {
-          setUser(buildAuthUser(session.user, role));
+        const roleData = await fetchUserRole(session.user.id);
+        if (roleData) {
+          setUser(buildAuthUser(session.user, roleData));
         }
       }
       setLoading(false);
@@ -64,9 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         if (session?.user) {
           // Fire and forget — don't block the listener
-          fetchUserRole(session.user.id).then((role) => {
-            if (role) {
-              setUser(buildAuthUser(session.user!, role));
+          fetchUserRole(session.user.id).then((roleData) => {
+            if (roleData) {
+              setUser(buildAuthUser(session.user!, roleData));
             } else {
               setUser(null);
             }

@@ -10,6 +10,18 @@ function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
+  const allowedRoles = ["admin", "school_admin", "super_admin"];
+  if (!user || !allowedRoles.includes(user.role)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-bold">Access Denied</h1>
+          <p className="text-muted-foreground">Admin access only.</p>
+        </div>
+      </div>
+    );
+  }
+
   const navItems = [
     { to: "/admin/dashboard" as const, label: "Home", icon: LayoutDashboard },
     { to: "/admin/classes" as const, label: "Classes", icon: School },

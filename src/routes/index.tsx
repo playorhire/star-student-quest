@@ -23,7 +23,9 @@ function Index() {
   useEffect(() => {
     if (loading) return;
     if (isAuthenticated && user) {
-      if (user.role === "admin") navigate({ to: "/admin/dashboard" });
+      if (user.role === "super_admin") navigate({ to: "/super-admin/dashboard" as any });
+      else if (user.role === "school_admin" || user.role === "admin") navigate({ to: "/school-admin/dashboard" as any });
+      else if (user.role === "branch_admin") navigate({ to: "/branch-admin/dashboard" as any });
       else if (user.role === "teacher") navigate({ to: "/teacher/dashboard" });
       else if (user.role === "parent") navigate({ to: "/parent/dashboard" });
       else navigate({ to: "/student/dashboard" });

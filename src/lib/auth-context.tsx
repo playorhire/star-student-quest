@@ -25,22 +25,37 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 async function fetchUserRole(userId: string): Promise<AuthUser | null> {
-  const { data } = await (supabase as any)
+  // Try new tenant-aware columns first
+  let result = await (supabase as any)
     .from("user_roles")
-    .select("tenant_role, school_id, branch_id")
+    .select("tenant_role, school_id, branch_id, role")
     .eq("user_id", userId)
     .eq("is_primary", true)
     .limit(1)
     .single();
 
-  if (!data) return null;
+  // If 406 or error (columns don't exist yet), fall back to legacy role column
+  if (result.error) {
+    console.warn("Tenant columns missing, falling back to legacy role:", result.error.message);
+    result = await (supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .limit(1)
+      .single();
+  }
+
+  if (!result.data) return null;
+
+  const data = result.data;
+  const tenantRole = data.tenant_role || data.role || "student";
 
   return {
     id: userId,
     email: "",
-    role: (data.tenant_role || "student") as TenantRole,
-    schoolId: data.school_id,
-    branchId: data.branch_id,
+    role: (tenantRole as TenantRole),
+    schoolId: data.school_id || null,
+    branchId: data.branch_id || null,
   };
 }
 

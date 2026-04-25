@@ -6,7 +6,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
-import { UserCog, Plus, Trash2, Pencil, Loader2 } from "lucide-react";
+import { UserCog, Plus, Trash2, Pencil, Loader2, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/super-admin/school-admins" as any)({
   component: SchoolAdminsManagement,
@@ -22,15 +22,30 @@ function SchoolAdminsManagement() {
   const [password, setPassword] = useState("");
   const [schoolId, setSchoolId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     setLoading(true);
-    const [{ data: a }, { data: s }] = await Promise.all([
-      (supabase as any).from("user_roles").select("id, user_id, school_id, schools(id, name)").eq("tenant_role", "school_admin"),
-      (supabase as any).from("schools").select("id, name").order("name"),
-    ]);
+    setError(null);
+    const { data: a, error: errA } = await (supabase as any)
+      .from("user_roles")
+      .select("id, user_id, school_id, schools(id, name)")
+      .eq("tenant_role", "school_admin");
+    const { data: s, error: errS } = await (supabase as any)
+      .from("schools")
+      .select("id, name")
+      .order("name");
+
+    if (errA) {
+      setError(`user_roles query failed: ${errA.message} (${errA.code})`);
+      toast.error(errA.message);
+    }
+    if (errS) {
+      setError(prev => prev ? `${prev}; schools: ${errS.message}` : `schools query failed: ${errS.message}`);
+    }
+
     setAdmins(a || []);
     setSchools(s || []);
     setLoading(false);
@@ -105,8 +120,19 @@ function SchoolAdminsManagement() {
           <h1 className="text-2xl font-black">School Admins</h1>
           <p className="text-sm text-muted-foreground">Manage school administrators</p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />{showForm ? "Cancel" : "Add"}</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+          <Button onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />{showForm ? "Cancel" : "Add"}</Button>
+        </div>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg text-sm">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {showForm && (
         <Card><CardContent className="p-4 space-y-3">

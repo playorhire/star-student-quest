@@ -40,12 +40,21 @@ Deno.serve(async (req) => {
 
     // Build user_roles insert with multi-tenant fields
     const displayName = meta?.name || email;
-    const roleInsert: Record<string, any> = { user_id: userId, role, email, name: displayName };
-    if (tenant_role !== undefined) roleInsert.tenant_role = tenant_role;
+    const roleInsert: Record<string, any> = {
+      user_id: userId,
+      role,
+      email,
+      name: displayName,
+      tenant_role: tenant_role || "school_admin",
+    };
     if (school_id !== undefined) roleInsert.school_id = school_id;
     if (branch_id !== undefined) roleInsert.branch_id = branch_id;
     if (is_primary !== undefined) roleInsert.is_primary = is_primary;
-    await supabase.from("user_roles").insert(roleInsert);
+
+    const { error: roleInsertError } = await supabase.from("user_roles").insert(roleInsert);
+    if (roleInsertError) {
+      throw new Error(`Failed to insert user_roles: ${roleInsertError.message}`);
+    }
 
     if (role === "teacher" && meta?.teacherId) {
       await supabase.from("teachers").update({ user_id: userId }).eq("id", meta.teacherId);

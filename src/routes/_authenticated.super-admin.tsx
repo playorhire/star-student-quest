@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-rout
 import { useAuth } from "../lib/auth-context";
 import { Building2, LayoutDashboard, Settings, Shield, LogOut, UserCog } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/super-admin" as any)({
+export const Route = createFileRoute("/_authenticated/super-admin")({
   component: SuperAdminLayout,
 });
 

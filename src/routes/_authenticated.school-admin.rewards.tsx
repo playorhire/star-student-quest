@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
-export const Route = createFileRoute("/_authenticated/school-admin/rewards" as any)({
+export const Route = createFileRoute("/_authenticated/school-admin/rewards")({
   component: SchoolAdminRewards,
 });
 

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-rout
 import { useAuth } from "../lib/auth-context";
 import { Building2, LayoutDashboard, GraduationCap, Gift, Users, LogOut } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/school-admin" as any)({
+export const Route = createFileRoute("/_authenticated/school-admin")({
   component: SchoolAdminLayout,
 });
 

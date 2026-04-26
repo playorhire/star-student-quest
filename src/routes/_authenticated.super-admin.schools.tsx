@@ -8,7 +8,7 @@ import { Input } from "../components/ui/input";
 import { Building2, Plus, Trash2, Pencil, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/super-admin/schools" as any)({
+export const Route = createFileRoute("/_authenticated/super-admin/schools")({
   component: SchoolsManagement,
 });
 

@@ -5,7 +5,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Users, GraduationCap, Building2, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/school-admin/dashboard" as any)({
+export const Route = createFileRoute("/_authenticated/school-admin/dashboard")({
   component: SchoolAdminDashboard,
 });
 

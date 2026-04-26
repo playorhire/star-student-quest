@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/branch-admin/students" as any)({
+export const Route = createFileRoute("/_authenticated/branch-admin/students")({
   component: BranchAdminStudents,
 });
 

@@ -3,7 +3,7 @@ import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Shield } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/super-admin/settings" as any)({
+export const Route = createFileRoute("/_authenticated/super-admin/settings")({
   component: SuperAdminSettings,
 });
 

@@ -8,7 +8,7 @@ import { Input } from "../components/ui/input";
 import { Building2, Plus, Trash2, Pencil, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/school-admin/branches" as any)({
+export const Route = createFileRoute("/_authenticated/school-admin/branches")({
   component: BranchesManagement,
 });
 

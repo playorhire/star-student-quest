@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Building2, Users, School, GraduationCap } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/super-admin/dashboard" as any)({
+export const Route = createFileRoute("/_authenticated/super-admin/dashboard")({
   component: SuperAdminDashboard,
 });
 

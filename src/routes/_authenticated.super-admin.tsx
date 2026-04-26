@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/super-admin" as any)({
 
 function SuperAdminLayout() {
   const { user, logout } = useAuth();
-  const { pathname } = useLocation();
+  const location = useLocation();
 
   if (!user || user.role !== "super_admin") {
     return (
@@ -25,47 +25,42 @@ function SuperAdminLayout() {
   const navItems = [
     { to: "/super-admin/dashboard" as any, label: "Dashboard", icon: LayoutDashboard },
     { to: "/super-admin/schools" as any, label: "Schools", icon: Building2 },
-    { to: "/super-admin/school-admins" as any, label: "School Admins", icon: UserCog },
+    { to: "/super-admin/school-admins" as any, label: "Admins", icon: UserCog },
     { to: "/super-admin/settings" as any, label: "Settings", icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-muted/50 border-r p-4">
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <Shield className="h-6 w-6 text-primary" />
-          <span className="font-black">Super Admin</span>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="font-bold text-foreground">Super Admin</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <button onClick={() => logout()} className="text-muted-foreground hover:text-destructive transition-colors">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.to;
+      </header>
+      <main className="mx-auto max-w-lg px-4 pb-20 pt-4">
+        <Outlet />
+      </main>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-lg items-center justify-around py-2">
+          {navItems.map(({ to, label, icon: Icon }) => {
+            const isActive = location.pathname === to;
             return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                  isActive
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
+              <Link key={to} to={to} className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-semibold">{label}</span>
               </Link>
             );
           })}
-        </nav>
-        <button
-          onClick={() => logout()}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted w-full mt-auto"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
-      </aside>
-      <main className="flex-1 p-6">
-        <Outlet />
-      </main>
+        </div>
+      </nav>
     </div>
   );
 }

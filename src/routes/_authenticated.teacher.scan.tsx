@@ -298,14 +298,15 @@ function TeacherScan() {
       passing_marks: rule.passing,
       multiplier: rule.multiplier,
       points_awarded: awardedPoints,
+      school_id: student.school_id || null,
     };
 
     if (isEditing && selectedTransactionId) {
-      const { error } = await supabase.from("point_transactions").update(payload).eq("id", selectedTransactionId);
+      const { error } = await (supabase as any).from("point_transactions").update(payload).eq("id", selectedTransactionId);
       if (error) { toast.error(error.message); return; }
       toast.success("Points updated");
     } else {
-      const { error } = await supabase.from("point_transactions").insert(payload);
+      const { error } = await (supabase as any).from("point_transactions").insert(payload);
       if (error) { toast.error(error.message); return; }
       toast.success(`+${awardedPoints} points awarded`);
     }

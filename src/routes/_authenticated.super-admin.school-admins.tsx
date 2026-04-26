@@ -16,6 +16,7 @@ function SchoolAdminsManagement() {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showSqlMode, setShowSqlMode] = useState(false);
@@ -33,11 +34,12 @@ function SchoolAdminsManagement() {
     setDebugInfo("");
 
     try {
-      const [schoolsRes, rolesRes] = await Promise.all([
+      const [schoolsRes, rolesRes, usersRes] = await Promise.all([
         (supabase as any).from("schools").select("id, name").order("name"),
         (supabase as any)
           .from("user_roles")
           .select("id, user_id, school_id, tenant_role, role, schools(id, name)"),
+        supabase.functions.invoke("list-users", { body: {} }),
       ]);
 
       if (schoolsRes.error) {
@@ -46,6 +48,18 @@ function SchoolAdminsManagement() {
       } else {
         setSchools(schoolsRes.data || []);
         setDebugInfo(prev => prev + `Schools loaded: ${schoolsRes.data?.length || 0} rows\n`);
+      }
+
+      // Map user emails
+      const emailMap: Record<string, string> = {};
+      if (!usersRes.error && usersRes.data?.users) {
+        for (const u of usersRes.data.users) {
+          if (u.id && u.email) emailMap[u.id] = u.email;
+        }
+        setUserEmails(emailMap);
+        setDebugInfo(prev => prev + `Emails loaded: ${usersRes.data.users.length}\n`);
+      } else if (usersRes.error) {
+        setDebugInfo(prev => prev + `Emails error: ${usersRes.error.message}\n`);
       }
 
       if (rolesRes.error) {
@@ -58,8 +72,13 @@ function SchoolAdminsManagement() {
           r.tenant_role === "school_admin" ||
           (r.role === "admin" && !r.tenant_role)
         );
-        setAdmins(filtered);
-        setDebugInfo(prev => prev + `School admins loaded: ${filtered.length} rows (from ${all.length} total)\n`);
+        // attach email to each admin
+        const withEmail = filtered.map((r: any) => ({
+          ...r,
+          email: emailMap[r.user_id] || null,
+        }));
+        setAdmins(withEmail);
+        setDebugInfo(prev => prev + `School admins loaded: ${withEmail.length} rows (from ${all.length} total)\n`);
       }
     } catch (err: any) {
       setError(`Unexpected error: ${err.message}`);
@@ -258,7 +277,7 @@ VALUES (
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
                   <div>
                     <div className="font-semibold">{a.schools?.name || "Not assigned"}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{a.user_id?.slice(0, 12)}...</div>
+                    <div className="text-xs text-muted-foreground">{a.email || a.user_id?.slice(0, 12) + "..."}</div>
                     <div className="text-[10px] text-muted-foreground">
                       role: {a.role} • tenant: {a.tenant_role}
                     </div>

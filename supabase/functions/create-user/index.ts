@@ -18,13 +18,13 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await supabase.auth.getUser(token);
     if (!caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Allow admins (role='admin' covers old admin, school_admin, super_admin) or explicit super_admin
+    // Allow admins (role='admin' covers old admin, school_admin, super_admin)
     const { data: roleCheck } = await supabase
       .from("user_roles")
-      .select("role,tenant_role")
+      .select("role")
       .eq("user_id", caller.id)
-      .or("role.eq.admin,tenant_role.eq.super_admin")
-      .maybeSingle();
+      .eq("role", "admin")
+      .single();
     if (!roleCheck) return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const { email, password, role, tenant_role, school_id, branch_id, is_primary, meta } = await req.json();

@@ -95,7 +95,24 @@ function SchoolAdminsManagement() {
     });
 
     if (res.error) {
-      const msg = res.error.message || "Edge function failed";
+      let msg = res.error.message || "Edge function failed";
+      // Try to read the actual error body from the edge function response
+      const ctx = (res.error as any).context;
+      if (ctx?.text) {
+        try {
+          const text = await ctx.text();
+          if (text) {
+            try {
+              const parsed = JSON.parse(text);
+              if (parsed?.error) msg = String(parsed.error);
+            } catch {
+              msg = text;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
       setDebugInfo(prev => prev + `Edge function ERROR: ${msg}\n`);
       toast.error(`Create failed: ${msg}`);
       setSubmitting(false);

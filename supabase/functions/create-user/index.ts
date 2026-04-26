@@ -19,13 +19,26 @@ Deno.serve(async (req) => {
     if (!caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     // Allow admins (role='admin' covers old admin, school_admin, super_admin)
+    // Also allow school admins to create branch admins within their school
     const { data: roleCheck } = await supabase
       .from("user_roles")
-      .select("role")
+      .select("role, tenant_role, school_id")
       .eq("user_id", caller.id)
-      .eq("role", "admin")
       .single();
-    if (!roleCheck) return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    
+    if (!roleCheck) return new Response(JSON.stringify({ error: "User role not found" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    
+    const isAdmin = roleCheck.role === "admin";
+    const isSchoolAdmin = roleCheck.tenant_role === "school_admin";
+    
+    if (!isAdmin && !isSchoolAdmin) {
+      return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    
+    // School admins can only create users within their school
+    if (isSchoolAdmin && school_id !== roleCheck.school_id) {
+      return new Response(JSON.stringify({ error: "School admins can only create users within their school" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { email, password, role, tenant_role, school_id, branch_id, is_primary, meta } = await req.json();
 

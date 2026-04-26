@@ -54,11 +54,18 @@ function StudentQR() {
       roundRect(ctx, 0, 0, cardW, cardH, r);
       ctx.stroke();
 
+      // StarPoints logo
+      ctx.fillStyle = "#111827";
+      ctx.font = `bold ${18 * scale}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("StarPoints✨", cardW / 2, 28 * scale);
+
       // Avatar emoji
       ctx.font = `${64 * scale}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(student.avatar_emoji || "👤", cardW / 2, 60 * scale);
+      ctx.fillText(student.avatar_emoji || "👤", cardW / 2, 72 * scale);
 
       // Name
       ctx.fillStyle = "#111827";

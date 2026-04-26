@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { Building2, LayoutDashboard, GraduationCap, Gift, Users, LogOut } from "lucide-react";
+import { Building2, LayoutDashboard, GraduationCap, Gift, Users, UserCog, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/school-admin")({
   component: SchoolAdminLayout,
@@ -24,6 +24,7 @@ function SchoolAdminLayout() {
   const navItems = [
     { to: "/school-admin/dashboard" as any, label: "Dashboard", icon: LayoutDashboard },
     { to: "/school-admin/branches" as any, label: "Branches", icon: Building2 },
+    { to: "/school-admin/branch-admins" as any, label: "Branch Admins", icon: UserCog },
     { to: "/school-admin/teachers" as any, label: "Teachers", icon: Users },
     { to: "/school-admin/students" as any, label: "Students", icon: GraduationCap },
     { to: "/school-admin/rewards" as any, label: "Rewards", icon: Gift },

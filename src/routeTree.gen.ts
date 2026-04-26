@@ -40,6 +40,7 @@ import { Route as AuthenticatedSchoolAdminStudentsRouteImport } from './routes/_
 import { Route as AuthenticatedSchoolAdminRewardsRouteImport } from './routes/_authenticated.school-admin.rewards'
 import { Route as AuthenticatedSchoolAdminDashboardRouteImport } from './routes/_authenticated.school-admin.dashboard'
 import { Route as AuthenticatedSchoolAdminBranchesRouteImport } from './routes/_authenticated.school-admin.branches'
+import { Route as AuthenticatedSchoolAdminBranchAdminsRouteImport } from './routes/_authenticated.school-admin.branch-admins'
 import { Route as AuthenticatedParentProfileRouteImport } from './routes/_authenticated.parent.profile'
 import { Route as AuthenticatedParentNotificationsRouteImport } from './routes/_authenticated.parent.notifications'
 import { Route as AuthenticatedParentMessagesRouteImport } from './routes/_authenticated.parent.messages'
@@ -48,6 +49,8 @@ import { Route as AuthenticatedBranchAdminTeachersRouteImport } from './routes/_
 import { Route as AuthenticatedBranchAdminStudentsRouteImport } from './routes/_authenticated.branch-admin.students'
 import { Route as AuthenticatedBranchAdminRewardsRouteImport } from './routes/_authenticated.branch-admin.rewards'
 import { Route as AuthenticatedBranchAdminDashboardRouteImport } from './routes/_authenticated.branch-admin.dashboard'
+import { Route as AuthenticatedBranchAdminClassesRouteImport } from './routes/_authenticated.branch-admin.classes'
+import { Route as AuthenticatedBranchAdminBadgesRouteImport } from './routes/_authenticated.branch-admin.badges'
 import { Route as AuthenticatedAdminTeachersRouteImport } from './routes/_authenticated.admin.teachers'
 import { Route as AuthenticatedAdminStudentsRouteImport } from './routes/_authenticated.admin.students'
 import { Route as AuthenticatedAdminRulesRouteImport } from './routes/_authenticated.admin.rules'
@@ -234,6 +237,12 @@ const AuthenticatedSchoolAdminBranchesRoute =
     path: '/branches',
     getParentRoute: () => AuthenticatedSchoolAdminRoute,
   } as any)
+const AuthenticatedSchoolAdminBranchAdminsRoute =
+  AuthenticatedSchoolAdminBranchAdminsRouteImport.update({
+    id: '/branch-admins',
+    path: '/branch-admins',
+    getParentRoute: () => AuthenticatedSchoolAdminRoute,
+  } as any)
 const AuthenticatedParentProfileRoute =
   AuthenticatedParentProfileRouteImport.update({
     id: '/profile',
@@ -280,6 +289,18 @@ const AuthenticatedBranchAdminDashboardRoute =
   AuthenticatedBranchAdminDashboardRouteImport.update({
     id: '/dashboard',
     path: '/dashboard',
+    getParentRoute: () => AuthenticatedBranchAdminRoute,
+  } as any)
+const AuthenticatedBranchAdminClassesRoute =
+  AuthenticatedBranchAdminClassesRouteImport.update({
+    id: '/classes',
+    path: '/classes',
+    getParentRoute: () => AuthenticatedBranchAdminRoute,
+  } as any)
+const AuthenticatedBranchAdminBadgesRoute =
+  AuthenticatedBranchAdminBadgesRouteImport.update({
+    id: '/badges',
+    path: '/badges',
     getParentRoute: () => AuthenticatedBranchAdminRoute,
   } as any)
 const AuthenticatedAdminTeachersRoute =
@@ -355,6 +376,8 @@ export interface FileRoutesByFullPath {
   '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/branch-admin/badges': typeof AuthenticatedBranchAdminBadgesRoute
+  '/branch-admin/classes': typeof AuthenticatedBranchAdminClassesRoute
   '/branch-admin/dashboard': typeof AuthenticatedBranchAdminDashboardRoute
   '/branch-admin/rewards': typeof AuthenticatedBranchAdminRewardsRoute
   '/branch-admin/students': typeof AuthenticatedBranchAdminStudentsRoute
@@ -363,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/parent/messages': typeof AuthenticatedParentMessagesRoute
   '/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/parent/profile': typeof AuthenticatedParentProfileRoute
+  '/school-admin/branch-admins': typeof AuthenticatedSchoolAdminBranchAdminsRoute
   '/school-admin/branches': typeof AuthenticatedSchoolAdminBranchesRoute
   '/school-admin/dashboard': typeof AuthenticatedSchoolAdminDashboardRoute
   '/school-admin/rewards': typeof AuthenticatedSchoolAdminRewardsRoute
@@ -404,6 +428,8 @@ export interface FileRoutesByTo {
   '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/branch-admin/badges': typeof AuthenticatedBranchAdminBadgesRoute
+  '/branch-admin/classes': typeof AuthenticatedBranchAdminClassesRoute
   '/branch-admin/dashboard': typeof AuthenticatedBranchAdminDashboardRoute
   '/branch-admin/rewards': typeof AuthenticatedBranchAdminRewardsRoute
   '/branch-admin/students': typeof AuthenticatedBranchAdminStudentsRoute
@@ -412,6 +438,7 @@ export interface FileRoutesByTo {
   '/parent/messages': typeof AuthenticatedParentMessagesRoute
   '/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/parent/profile': typeof AuthenticatedParentProfileRoute
+  '/school-admin/branch-admins': typeof AuthenticatedSchoolAdminBranchAdminsRoute
   '/school-admin/branches': typeof AuthenticatedSchoolAdminBranchesRoute
   '/school-admin/dashboard': typeof AuthenticatedSchoolAdminDashboardRoute
   '/school-admin/rewards': typeof AuthenticatedSchoolAdminRewardsRoute
@@ -455,6 +482,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/_authenticated/admin/students': typeof AuthenticatedAdminStudentsRoute
   '/_authenticated/admin/teachers': typeof AuthenticatedAdminTeachersRoute
+  '/_authenticated/branch-admin/badges': typeof AuthenticatedBranchAdminBadgesRoute
+  '/_authenticated/branch-admin/classes': typeof AuthenticatedBranchAdminClassesRoute
   '/_authenticated/branch-admin/dashboard': typeof AuthenticatedBranchAdminDashboardRoute
   '/_authenticated/branch-admin/rewards': typeof AuthenticatedBranchAdminRewardsRoute
   '/_authenticated/branch-admin/students': typeof AuthenticatedBranchAdminStudentsRoute
@@ -463,6 +492,7 @@ export interface FileRoutesById {
   '/_authenticated/parent/messages': typeof AuthenticatedParentMessagesRoute
   '/_authenticated/parent/notifications': typeof AuthenticatedParentNotificationsRoute
   '/_authenticated/parent/profile': typeof AuthenticatedParentProfileRoute
+  '/_authenticated/school-admin/branch-admins': typeof AuthenticatedSchoolAdminBranchAdminsRoute
   '/_authenticated/school-admin/branches': typeof AuthenticatedSchoolAdminBranchesRoute
   '/_authenticated/school-admin/dashboard': typeof AuthenticatedSchoolAdminDashboardRoute
   '/_authenticated/school-admin/rewards': typeof AuthenticatedSchoolAdminRewardsRoute
@@ -506,6 +536,8 @@ export interface FileRouteTypes {
     | '/admin/rules'
     | '/admin/students'
     | '/admin/teachers'
+    | '/branch-admin/badges'
+    | '/branch-admin/classes'
     | '/branch-admin/dashboard'
     | '/branch-admin/rewards'
     | '/branch-admin/students'
@@ -514,6 +546,7 @@ export interface FileRouteTypes {
     | '/parent/messages'
     | '/parent/notifications'
     | '/parent/profile'
+    | '/school-admin/branch-admins'
     | '/school-admin/branches'
     | '/school-admin/dashboard'
     | '/school-admin/rewards'
@@ -555,6 +588,8 @@ export interface FileRouteTypes {
     | '/admin/rules'
     | '/admin/students'
     | '/admin/teachers'
+    | '/branch-admin/badges'
+    | '/branch-admin/classes'
     | '/branch-admin/dashboard'
     | '/branch-admin/rewards'
     | '/branch-admin/students'
@@ -563,6 +598,7 @@ export interface FileRouteTypes {
     | '/parent/messages'
     | '/parent/notifications'
     | '/parent/profile'
+    | '/school-admin/branch-admins'
     | '/school-admin/branches'
     | '/school-admin/dashboard'
     | '/school-admin/rewards'
@@ -605,6 +641,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rules'
     | '/_authenticated/admin/students'
     | '/_authenticated/admin/teachers'
+    | '/_authenticated/branch-admin/badges'
+    | '/_authenticated/branch-admin/classes'
     | '/_authenticated/branch-admin/dashboard'
     | '/_authenticated/branch-admin/rewards'
     | '/_authenticated/branch-admin/students'
@@ -613,6 +651,7 @@ export interface FileRouteTypes {
     | '/_authenticated/parent/messages'
     | '/_authenticated/parent/notifications'
     | '/_authenticated/parent/profile'
+    | '/_authenticated/school-admin/branch-admins'
     | '/_authenticated/school-admin/branches'
     | '/_authenticated/school-admin/dashboard'
     | '/_authenticated/school-admin/rewards'
@@ -861,6 +900,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolAdminBranchesRouteImport
       parentRoute: typeof AuthenticatedSchoolAdminRoute
     }
+    '/_authenticated/school-admin/branch-admins': {
+      id: '/_authenticated/school-admin/branch-admins'
+      path: '/branch-admins'
+      fullPath: '/school-admin/branch-admins'
+      preLoaderRoute: typeof AuthenticatedSchoolAdminBranchAdminsRouteImport
+      parentRoute: typeof AuthenticatedSchoolAdminRoute
+    }
     '/_authenticated/parent/profile': {
       id: '/_authenticated/parent/profile'
       path: '/profile'
@@ -915,6 +961,20 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/branch-admin/dashboard'
       preLoaderRoute: typeof AuthenticatedBranchAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedBranchAdminRoute
+    }
+    '/_authenticated/branch-admin/classes': {
+      id: '/_authenticated/branch-admin/classes'
+      path: '/classes'
+      fullPath: '/branch-admin/classes'
+      preLoaderRoute: typeof AuthenticatedBranchAdminClassesRouteImport
+      parentRoute: typeof AuthenticatedBranchAdminRoute
+    }
+    '/_authenticated/branch-admin/badges': {
+      id: '/_authenticated/branch-admin/badges'
+      path: '/badges'
+      fullPath: '/branch-admin/badges'
+      preLoaderRoute: typeof AuthenticatedBranchAdminBadgesRouteImport
       parentRoute: typeof AuthenticatedBranchAdminRoute
     }
     '/_authenticated/admin/teachers': {
@@ -1011,6 +1071,8 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedBranchAdminRouteChildren {
+  AuthenticatedBranchAdminBadgesRoute: typeof AuthenticatedBranchAdminBadgesRoute
+  AuthenticatedBranchAdminClassesRoute: typeof AuthenticatedBranchAdminClassesRoute
   AuthenticatedBranchAdminDashboardRoute: typeof AuthenticatedBranchAdminDashboardRoute
   AuthenticatedBranchAdminRewardsRoute: typeof AuthenticatedBranchAdminRewardsRoute
   AuthenticatedBranchAdminStudentsRoute: typeof AuthenticatedBranchAdminStudentsRoute
@@ -1019,6 +1081,8 @@ interface AuthenticatedBranchAdminRouteChildren {
 
 const AuthenticatedBranchAdminRouteChildren: AuthenticatedBranchAdminRouteChildren =
   {
+    AuthenticatedBranchAdminBadgesRoute: AuthenticatedBranchAdminBadgesRoute,
+    AuthenticatedBranchAdminClassesRoute: AuthenticatedBranchAdminClassesRoute,
     AuthenticatedBranchAdminDashboardRoute:
       AuthenticatedBranchAdminDashboardRoute,
     AuthenticatedBranchAdminRewardsRoute: AuthenticatedBranchAdminRewardsRoute,
@@ -1051,6 +1115,7 @@ const AuthenticatedParentRouteWithChildren =
   AuthenticatedParentRoute._addFileChildren(AuthenticatedParentRouteChildren)
 
 interface AuthenticatedSchoolAdminRouteChildren {
+  AuthenticatedSchoolAdminBranchAdminsRoute: typeof AuthenticatedSchoolAdminBranchAdminsRoute
   AuthenticatedSchoolAdminBranchesRoute: typeof AuthenticatedSchoolAdminBranchesRoute
   AuthenticatedSchoolAdminDashboardRoute: typeof AuthenticatedSchoolAdminDashboardRoute
   AuthenticatedSchoolAdminRewardsRoute: typeof AuthenticatedSchoolAdminRewardsRoute
@@ -1060,6 +1125,8 @@ interface AuthenticatedSchoolAdminRouteChildren {
 
 const AuthenticatedSchoolAdminRouteChildren: AuthenticatedSchoolAdminRouteChildren =
   {
+    AuthenticatedSchoolAdminBranchAdminsRoute:
+      AuthenticatedSchoolAdminBranchAdminsRoute,
     AuthenticatedSchoolAdminBranchesRoute:
       AuthenticatedSchoolAdminBranchesRoute,
     AuthenticatedSchoolAdminDashboardRoute:

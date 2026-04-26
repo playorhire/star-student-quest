@@ -3,10 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { GraduationCap, Plus, Trash2, Pencil, Loader2, X } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Pencil, Loader2, X, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/school-admin/students")({
   component: SchoolAdminStudents,
@@ -20,8 +27,12 @@ function SchoolAdminStudents() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
+  const [form, setForm] = useState({ name: "", email: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
   const [submitting, setSubmitting] = useState(false);
+
+  // Credentials dialog state
+  const [credStudent, setCredStudent] = useState<any>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     if (user?.schoolId) loadData();
@@ -31,7 +42,7 @@ function SchoolAdminStudents() {
     setLoading(true);
     setError(null);
     const [sRes, cRes] = await Promise.all([
-      (supabase as any).from("students").select("id, name, roll_number, total_points, classes(name), avatar_emoji, class_id, section").eq("school_id", user!.schoolId).order("name"),
+      (supabase as any).from("students").select("id, user_id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section").eq("school_id", user!.schoolId).order("name"),
       (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).order("name"),
     ]);
     if (sRes.error) { setError(sRes.error.message + " (" + sRes.error.code + ")"); toast.error(sRes.error.message); }
@@ -42,7 +53,7 @@ function SchoolAdminStudents() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
+    setForm({ name: "", email: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
     setShowForm(true);
   }
 
@@ -50,6 +61,7 @@ function SchoolAdminStudents() {
     setEditing(s);
     setForm({
       name: s.name || "",
+      email: s.email || "",
       roll_number: s.roll_number || "",
       class_id: s.class_id || "",
       avatar_emoji: s.avatar_emoji || "🎓",
@@ -63,7 +75,7 @@ function SchoolAdminStudents() {
     if (!form.name.trim() || !form.roll_number.trim() || !form.class_id) { toast.error("Name, roll number, and class are required"); return; }
     setSubmitting(true);
 
-    const payload = {
+    const payload: any = {
       name: form.name.trim(),
       roll_number: form.roll_number.trim(),
       class_id: form.class_id,
@@ -71,6 +83,7 @@ function SchoolAdminStudents() {
       section: form.section,
       school_id: user!.schoolId,
     };
+    if (form.email.trim()) payload.email = form.email.trim();
 
     if (editing) {
       const { error: err } = await (supabase as any).from("students").update(payload).eq("id", editing.id);
@@ -93,6 +106,23 @@ function SchoolAdminStudents() {
     const { error: err } = await (supabase as any).from("students").delete().eq("id", id);
     if (err) toast.error(err.message);
     else { toast.success("Student deleted"); loadData(); }
+  }
+
+  async function handleResetPassword() {
+    if (!credStudent?.email) {
+      toast.error("No email found for this student");
+      return;
+    }
+    setResettingPassword(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(credStudent.email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    if (error) {
+      toast.error(`Reset failed: ${error.message}`);
+    } else {
+      toast.success("Password reset email sent (if email service is configured)");
+    }
+    setResettingPassword(false);
   }
 
   const allowedRoles = ["school_admin", "admin", "super_admin"];
@@ -131,6 +161,7 @@ function SchoolAdminStudents() {
               <Input placeholder="Roll Number" required value={form.roll_number} onChange={e => setForm(f => ({ ...f, roll_number: e.target.value }))} />
               <Input placeholder="Section" value={form.section} onChange={e => setForm(f => ({ ...f, section: e.target.value }))} />
             </div>
+            <Input type="email" placeholder="Email (optional)" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             <select required value={form.class_id} onChange={e => setForm(f => ({ ...f, class_id: e.target.value }))} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
               <option value="">Select Class</option>
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -162,6 +193,7 @@ function SchoolAdminStudents() {
                   <div className="text-[10px] text-muted-foreground">pts</div>
                 </div>
                 <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => setCredStudent(s)} title="Manage credentials"><KeyRound className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -170,6 +202,52 @@ function SchoolAdminStudents() {
           ))}
         </div>
       )}
+
+      {/* Credentials Dialog */}
+      <Dialog
+        open={!!credStudent}
+        onOpenChange={(open) => !open && setCredStudent(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Student Credentials</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <div className="font-medium">{credStudent?.name}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="font-medium font-mono text-sm">{credStudent?.email || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Auth User ID</Label>
+              <div className="font-mono text-xs bg-muted rounded px-2 py-1 break-all">
+                {credStudent?.user_id || "No auth account linked"}
+              </div>
+            </div>
+            <div className="pt-2 border-t">
+              <Button
+                onClick={handleResetPassword}
+                disabled={resettingPassword || !credStudent?.email}
+                className="w-full"
+                variant="outline"
+              >
+                {resettingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <KeyRound className="h-4 w-4 mr-1" />
+                )}
+                Send Password Reset Email
+              </Button>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                Requires email service configured in Supabase. If disabled, reset password via Supabase Dashboard → Authentication → Users.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

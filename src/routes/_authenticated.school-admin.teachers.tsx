@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { Users, Plus, Trash2, Pencil, Loader2, X, BookOpen, MapPin } from "lucide-react";
+import { Users, Plus, Trash2, Pencil, Loader2, X, BookOpen, MapPin, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -31,6 +31,7 @@ interface AssignmentRow {
 
 interface TeacherRow {
   id: string;
+  user_id: string | null;
   name: string;
   email: string;
   avatar_emoji: string | null;
@@ -82,6 +83,10 @@ function SchoolAdminTeachers() {
   const [assignSection, setAssignSection] = useState("");
   const [assigning, setAssigning] = useState(false);
 
+  // Credentials dialog state
+  const [credTeacher, setCredTeacher] = useState<TeacherRow | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+
   useEffect(() => {
     if (user?.schoolId) loadData();
   }, [user]);
@@ -94,7 +99,7 @@ function SchoolAdminTeachers() {
       (supabase as any)
         .from("teachers")
         .select(
-          "id, name, email, avatar_emoji, branch_id, branches(name), teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
+          "id, user_id, name, email, avatar_emoji, branch_id, branches(name), teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
         )
         .eq("school_id", user!.schoolId)
         .order("name"),
@@ -240,6 +245,23 @@ function SchoolAdminTeachers() {
     }
   }
 
+  async function handleResetPassword() {
+    if (!credTeacher?.email) {
+      toast.error("No email found for this teacher");
+      return;
+    }
+    setResettingPassword(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(credTeacher.email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    if (error) {
+      toast.error(`Reset failed: ${error.message}`);
+    } else {
+      toast.success("Password reset email sent (if email service is configured)");
+    }
+    setResettingPassword(false);
+  }
+
   const allowedRoles = ["school_admin", "admin", "super_admin"];
   if (!user || !allowedRoles.includes(user.role)) {
     return (
@@ -383,6 +405,14 @@ function SchoolAdminTeachers() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setCredTeacher(t)}
+                          title="Manage credentials"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => openEdit(t)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -452,6 +482,52 @@ function SchoolAdminTeachers() {
           ))}
         </div>
       )}
+
+      {/* Credentials Dialog */}
+      <Dialog
+        open={!!credTeacher}
+        onOpenChange={(open) => !open && setCredTeacher(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Teacher Credentials</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <div className="font-medium">{credTeacher?.name}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="font-medium font-mono text-sm">{credTeacher?.email || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Auth User ID</Label>
+              <div className="font-mono text-xs bg-muted rounded px-2 py-1 break-all">
+                {credTeacher?.user_id || "No auth account linked"}
+              </div>
+            </div>
+            <div className="pt-2 border-t">
+              <Button
+                onClick={handleResetPassword}
+                disabled={resettingPassword || !credTeacher?.email}
+                className="w-full"
+                variant="outline"
+              >
+                {resettingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <KeyRound className="h-4 w-4 mr-1" />
+                )}
+                Send Password Reset Email
+              </Button>
+              <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                Requires email service configured in Supabase. If disabled, reset password via Supabase Dashboard → Authentication → Users.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Assignment Dialog */}
       <Dialog

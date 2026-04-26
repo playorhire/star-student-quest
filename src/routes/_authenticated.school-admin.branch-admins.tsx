@@ -46,7 +46,7 @@ function BranchAdminsManagement() {
           .from("user_roles")
           .select("id, user_id, name, email, school_id, branch_id, tenant_role, role")
           .eq("school_id", user.schoolId)
-          .eq("tenant_role", "branch_admin"),
+          .or('tenant_role.eq.branch_admin, and(tenant_role.is.null,role.eq.admin)'),
       ]);
 
       if (branchesRes.error) {

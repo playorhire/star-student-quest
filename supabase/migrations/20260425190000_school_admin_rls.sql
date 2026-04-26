@@ -55,5 +55,18 @@ ON public.classes FOR ALL TO authenticated
 USING (school_id = public.get_my_school_id_safe())
 WITH CHECK (school_id = public.get_my_school_id_safe());
 
+-- user_roles: school admin can read and manage branch admins in their school
+DROP POLICY IF EXISTS "user_roles_sa" ON public.user_roles;
+CREATE POLICY "user_roles_sa"
+ON public.user_roles FOR ALL TO authenticated
+USING (
+  public.get_my_school_id_safe() IS NOT NULL
+  AND school_id = public.get_my_school_id_safe()
+)
+WITH CHECK (
+  public.get_my_school_id_safe() IS NOT NULL
+  AND school_id = public.get_my_school_id_safe()
+);
+
 -- Grant execute to authenticated users
 GRANT EXECUTE ON FUNCTION public.get_my_school_id_safe() TO authenticated;

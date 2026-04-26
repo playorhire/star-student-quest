@@ -58,27 +58,7 @@ function BranchAdminsManagement() {
       if (rolesRes.error) {
         setError(`user_roles query failed: ${rolesRes.error.message}`);
       } else {
-        let all = rolesRes.data || [];
-
-        // Backfill missing email/name from auth.users via edge function
-        try {
-          const { data: authUsersData, error: listErr } = await supabase.functions.invoke("list-users", {});
-          if (!listErr && authUsersData?.users) {
-            const authMap = new Map((authUsersData.users as any[]).map((u: any) => [u.id, u.email]));
-            all = all.map((r: any) => {
-              const authEmail = authMap.get(r.user_id);
-              return {
-                ...r,
-                email: r.email || authEmail || "",
-                name: r.name || r.email || authEmail || "",
-              };
-            });
-          }
-        } catch (e: any) {
-          // ignore backfill errors
-        }
-
-        setAdmins(all);
+        setAdmins(rolesRes.data || []);
       }
     } catch (err: any) {
       setError(`Unexpected error: ${err.message}`);

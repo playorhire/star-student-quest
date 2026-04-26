@@ -61,26 +61,7 @@ function SchoolAdminsManagement() {
         setError(prev => prev ? `${prev}; ${errMsg}` : errMsg);
         setDebugInfo(prev => prev + `user_roles error: ${JSON.stringify(rolesRes.error)}\n`);
       } else {
-        let all = rolesRes.data || [];
-
-        // Backfill missing email/name from auth.users via edge function
-        try {
-          const { data: authUsersData, error: listErr } = await supabase.functions.invoke("list-users", {});
-          if (!listErr && authUsersData?.users) {
-            const authMap = new Map((authUsersData.users as any[]).map((u: any) => [u.id, u.email]));
-            all = all.map((r: any) => {
-              const authEmail = authMap.get(r.user_id);
-              return {
-                ...r,
-                email: r.email || authEmail || "",
-                name: r.name || r.email || authEmail || "",
-              };
-            });
-          }
-        } catch (e: any) {
-          setDebugInfo(prev => prev + `Auth backfill warning: ${e.message}\n`);
-        }
-
+        const all = rolesRes.data || [];
         const filtered = all.filter((r: any) =>
           r.tenant_role === "school_admin" ||
           (r.role === "admin" && !r.tenant_role)

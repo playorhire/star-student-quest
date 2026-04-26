@@ -299,6 +299,7 @@ function TeacherScan() {
       multiplier: rule.multiplier,
       points_awarded: awardedPoints,
       school_id: student.school_id || null,
+      branch_id: student.branch_id || user?.branchId || null,
     };
 
     if (isEditing && selectedTransactionId) {

@@ -6,7 +6,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
-import { UserCog, Plus, Trash2, Loader2, RefreshCw, AlertTriangle, Copy } from "lucide-react";
+import { UserCog, Plus, Trash2, Loader2, RefreshCw, AlertTriangle, Copy, Pencil, Check, X, School } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/super-admin/school-admins")({
   component: SchoolAdminsManagement,
@@ -21,9 +21,17 @@ function SchoolAdminsManagement() {
   const [showSqlMode, setShowSqlMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [createSchoolId, setCreateSchoolId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editSchoolId, setEditSchoolId] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -85,6 +93,7 @@ function SchoolAdminsManagement() {
         role: "admin",
         tenant_role: "school_admin",
         is_primary: true,
+        school_id: createSchoolId || undefined,
       },
     });
 
@@ -131,15 +140,76 @@ function SchoolAdminsManagement() {
     setDebugInfo(prev => prev + `Step 2: SUCCESS! Auth user created via edge function: ${userId}\n`);
     setDebugInfo(prev => prev + `Step 3: user_roles inserted\n`);
     toast.success("School Admin created successfully");
-    setShowForm(false); setEmail(""); setPassword(""); loadData();
+    setShowForm(false); setEmail(""); setPassword(""); setCreateSchoolId(""); loadData();
     setSubmitting(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remove this school admin role?")) return;
+  async function handleDelete(id: string, userId?: string) {
+    if (!confirm("Remove this school admin role? This will also delete the user account permanently.")) return;
+
+    // Delete auth user first via edge function if userId exists
+    if (userId) {
+      const { error: deleteAuthError } = await supabase.functions.invoke("admin-update-user", {
+        body: { targetUserId: userId, deleteUser: true },
+      });
+      if (deleteAuthError) {
+        toast.error(`Failed to delete auth user: ${deleteAuthError.message}`);
+        // Continue to delete role anyway
+      }
+    }
+
     const { error } = await (supabase as any).from("user_roles").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Removed"); loadData(); }
+    else { toast.success("School admin removed"); loadData(); }
+  }
+
+  function startEdit(admin: any) {
+    setEditingId(admin.id);
+    setEditName(admin.name || "");
+    setEditEmail(admin.email || "");
+    setEditSchoolId(admin.school_id || "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditName("");
+    setEditEmail("");
+    setEditSchoolId("");
+  }
+
+  async function handleSaveEdit(admin: any) {
+    setEditSubmitting(true);
+    const updates: any = {};
+    if (editName.trim()) updates.name = editName.trim();
+    if (editEmail.trim()) updates.email = editEmail.trim();
+    updates.school_id = editSchoolId || null;
+
+    // Update user_roles
+    const { error: roleError } = await (supabase as any)
+      .from("user_roles")
+      .update(updates)
+      .eq("id", admin.id);
+
+    if (roleError) {
+      toast.error(`Update failed: ${roleError.message}`);
+      setEditSubmitting(false);
+      return;
+    }
+
+    // If email changed, update auth user too
+    if (editEmail.trim() && editEmail.trim() !== admin.email) {
+      const { error: authError } = await supabase.functions.invoke("admin-update-user", {
+        body: { targetUserId: admin.user_id, email: editEmail.trim() },
+      });
+      if (authError) {
+        toast.error(`Auth email update failed: ${authError.message}`);
+      }
+    }
+
+    toast.success("School admin updated");
+    setEditSubmitting(false);
+    setEditingId(null);
+    loadData();
   }
 
   if (user?.role !== "super_admin") return <div className="text-center py-20"><h1 className="text-xl font-bold">Access Denied</h1></div>;
@@ -207,6 +277,19 @@ VALUES (
             <form onSubmit={handleCreate} className="space-y-3">
               <Input type="email" placeholder="Email" required value={email} onChange={e => setEmail(e.target.value)} />
               <Input type="password" placeholder="Password (6+ chars)" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
+              <div>
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1"><School className="h-3 w-3" /> Assign School (optional)</label>
+                <select
+                  value={createSchoolId}
+                  onChange={e => setCreateSchoolId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">No school assigned</option>
+                  {schools.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
               <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 Create School Admin
@@ -253,23 +336,61 @@ VALUES (
         ) : (
           <div className="space-y-3">{admins.map(a => (
             <Card key={a.id}><CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
+              {editingId === a.id ? (
+                <div className="space-y-3">
                   <div>
-                    <div className="font-semibold">{a.name || a.email || `User: ${a.user_id?.slice(0, 12)}...`}</div>
-                    <div className="text-xs text-muted-foreground">{a.schools?.name || "No school assigned"}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      role: {a.role} • tenant: {a.tenant_role}
-                    </div>
+                    <label className="text-xs font-medium text-muted-foreground">Name</label>
+                    <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Display name" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Email</label>
+                    <Input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><School className="h-3 w-3" /> School</label>
+                    <select
+                      value={editSchoolId}
+                      onChange={e => setEditSchoolId(e.target.value)}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">No school assigned</option>
+                      {schools.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleSaveEdit(a)} disabled={editSubmitting}>
+                      {editSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                      <X className="h-4 w-4 mr-1" /> Cancel
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(a.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
+                    <div>
+                      <div className="font-semibold">{a.name || a.email || `User: ${a.user_id?.slice(0, 12)}...`}</div>
+                      <div className="text-xs text-muted-foreground">{a.schools?.name || "No school assigned"}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        role: {a.role} • tenant: {a.tenant_role}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(a)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(a.id, a.user_id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent></Card>
           ))}</div>
        )}

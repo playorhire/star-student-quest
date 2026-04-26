@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { targetUserId, email, password, selfUpdate } = body;
+    const { targetUserId, email, password, selfUpdate, deleteUser, name } = body;
 
     // If not selfUpdate, require admin role
     if (!selfUpdate) {
@@ -47,18 +47,31 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing target user id" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Handle delete user
+    if (deleteUser) {
+      const { error } = await supabase.auth.admin.deleteUser(userIdToUpdate);
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const updates: Record<string, any> = {};
     if (email) updates.email = email;
     if (password) updates.password = password;
 
-    if (Object.keys(updates).length === 0) {
-      return new Response(JSON.stringify({ error: "Nothing to update" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Update auth user if email/password changed
+    if (Object.keys(updates).length > 0) {
+      const { error } = await supabase.auth.admin.updateUserById(userIdToUpdate, updates);
+      if (error) throw error;
     }
 
-    const { error } = await supabase.auth.admin.updateUserById(userIdToUpdate, updates);
-    if (error) throw error;
+    // Mirror email/name to user_roles and profile tables when applicable
+    if (email || name) {
+      const roleUpdates: Record<string, any> = {};
+      if (email) roleUpdates.email = email;
+      if (name) roleUpdates.name = name;
+      await supabase.from("user_roles").update(roleUpdates).eq("user_id", userIdToUpdate);
+    }
 
-    // Mirror email to profile tables when applicable (both admin-led and self-updates)
     if (email) {
       await supabase.from("teachers").update({ email }).eq("user_id", userIdToUpdate);
       await supabase.from("parents").update({ email }).eq("user_id", userIdToUpdate);

@@ -18,10 +18,16 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await supabase.auth.getUser(token);
     if (!caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { data: roleCheck } = await supabase.from("user_roles").select("role").eq("user_id", caller.id).eq("role", "admin").single();
+    // Allow admins (role='admin' covers old admin, school_admin, super_admin) or explicit super_admin
+    const { data: roleCheck } = await supabase
+      .from("user_roles")
+      .select("role,tenant_role")
+      .eq("user_id", caller.id)
+      .or("role.eq.admin,tenant_role.eq.super_admin")
+      .maybeSingle();
     if (!roleCheck) return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { email, password, role, meta } = await req.json();
+    const { email, password, role, tenant_role, school_id, branch_id, is_primary, meta } = await req.json();
 
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
@@ -31,14 +37,21 @@ Deno.serve(async (req) => {
     if (createError) throw createError;
 
     const userId = newUser.user.id;
-    await supabase.from("user_roles").insert({ user_id: userId, role });
+
+    // Build user_roles insert with multi-tenant fields
+    const roleInsert: Record<string, any> = { user_id: userId, role };
+    if (tenant_role !== undefined) roleInsert.tenant_role = tenant_role;
+    if (school_id !== undefined) roleInsert.school_id = school_id;
+    if (branch_id !== undefined) roleInsert.branch_id = branch_id;
+    if (is_primary !== undefined) roleInsert.is_primary = is_primary;
+    await supabase.from("user_roles").insert(roleInsert);
 
     if (role === "teacher" && meta?.teacherId) {
       await supabase.from("teachers").update({ user_id: userId }).eq("id", meta.teacherId);
     } else if (role === "student" && meta?.studentId) {
       await supabase.from("students").update({ user_id: userId }).eq("id", meta.studentId);
     } else if (role === "teacher") {
-      await supabase.from("teachers").insert({ name: meta?.name || email, email, user_id: userId });
+      await supabase.from("teachers").insert({ name: meta?.name || email, email, user_id: userId, school_id: school_id || null });
     } else if (role === "parent") {
       await supabase.from("parents").insert({
         user_id: userId,

@@ -6,7 +6,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
-import { UserCog, Plus, Trash2, Loader2, RefreshCw, AlertTriangle, Copy } from "lucide-react";
+import { UserCog, Plus, Trash2, Loader2, RefreshCw, AlertTriangle, Copy, Pencil, Save, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/super-admin/school-admins")({
   component: SchoolAdminsManagement,
@@ -25,6 +25,11 @@ function SchoolAdminsManagement() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
+
+  // Edit state
+  const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
+  const [editSchoolId, setEditSchoolId] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -76,52 +81,71 @@ function SchoolAdminsManagement() {
     setSubmitting(true);
     setDebugInfo("");
 
-    // Method 1: Try to create auth user
-    setDebugInfo(prev => prev + `Step 1: Creating auth user for ${email.trim()}...\n`);
-    const { data: authData, error: authErr } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { role: "school_admin" } }
+    // Use Edge Function (service role) so current super-admin session is NOT affected
+    setDebugInfo(prev => prev + `Step 1: Invoking create-user edge function for ${email.trim()}...\n`);
+    const res = await supabase.functions.invoke("create-user", {
+      body: {
+        email: email.trim(),
+        password,
+        role: "admin",
+        tenant_role: "school_admin",
+        school_id: schoolId,
+        is_primary: true,
+      },
     });
 
-    if (authErr) {
-      setDebugInfo(prev => prev + `Auth signup ERROR: ${authErr.message} (${authErr.status})\n`);
-      toast.error(`Auth signup failed: ${authErr.message}`);
+    if (res.error) {
+      const msg = res.error.message || "Edge function failed";
+      setDebugInfo(prev => prev + `Edge function ERROR: ${msg}\n`);
+      toast.error(`Create failed: ${msg}`);
       setSubmitting(false);
       return;
     }
 
-    const targetUserId = authData?.user?.id;
-    if (!targetUserId) {
-      setDebugInfo(prev => prev + `Auth signup returned no user. Session user might be current user instead.\n`);
-      toast.error("Could not get new user ID. Try the SQL method below.");
+    if (res.data?.error) {
+      setDebugInfo(prev => prev + `Edge function returned error: ${res.data.error}\n`);
+      toast.error(`Create failed: ${res.data.error}`);
       setSubmitting(false);
       return;
     }
 
-    setDebugInfo(prev => prev + `Step 2: Auth user created: ${targetUserId}\n`);
-
-    // Method 2: Insert role
-    setDebugInfo(prev => prev + `Step 3: Inserting role record...\n`);
-    const { data: roleData, error: roleErr } = await (supabase as any).from("user_roles").insert({
-      user_id: targetUserId,
-      role: "admin",
-      tenant_role: "school_admin",
-      school_id: schoolId,
-      is_primary: true,
-    }).select();
-
-    if (roleErr) {
-      setDebugInfo(prev => prev + `Role insert ERROR: ${roleErr.message} (${roleErr.code})\n`);
-      toast.error(`Role insert failed: ${roleErr.message}`);
+    const userId = res.data?.userId;
+    if (!userId) {
+      setDebugInfo(prev => prev + `Edge function returned no userId. Response: ${JSON.stringify(res.data)}\n`);
+      toast.error("Could not get new user ID.");
       setSubmitting(false);
       return;
     }
 
-    setDebugInfo(prev => prev + `Step 4: SUCCESS! Role inserted: ${JSON.stringify(roleData)}\n`);
+    setDebugInfo(prev => prev + `Step 2: SUCCESS! Auth user created via edge function: ${userId}\n`);
+    setDebugInfo(prev => prev + `Step 3: user_roles inserted with school_id=${schoolId}\n`);
     toast.success("School Admin created successfully");
     setShowForm(false); setEmail(""); setPassword(""); setSchoolId(""); loadData();
     setSubmitting(false);
+  }
+
+  async function handleUpdate(admin: any) {
+    if (!editSchoolId) { toast.error("Please select a school"); return; }
+    if (editSchoolId === admin.school_id) {
+      setEditingAdmin(null);
+      return;
+    }
+    setSavingEdit(true);
+    const { error: updateErr } = await (supabase as any)
+      .from("user_roles")
+      .update({ school_id: editSchoolId })
+      .eq("id", admin.id);
+
+    if (updateErr) {
+      toast.error(`Update failed: ${updateErr.message}`);
+      setSavingEdit(false);
+      return;
+    }
+
+    toast.success("School assignment updated");
+    setEditingAdmin(null);
+    setSavingEdit(false);
+    loadData();
   }
 
   async function handleDelete(id: string) {
@@ -160,7 +184,7 @@ VALUES (
           <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button onClick={() => { setShowForm(!showForm); setShowSqlMode(false); }}>
+          <Button onClick={() => { setShowForm(!showForm); setShowSqlMode(false); setEditingAdmin(null); }}>
             <Plus className="h-4 w-4 mr-1" />{showForm ? "Cancel" : "Add"}
           </Button>
         </div>
@@ -251,20 +275,53 @@ VALUES (
          </div>
        ) : (
          <div className="space-y-3">{admins.map(a => (
-           <Card key={a.id}><CardContent className="p-4 flex items-center justify-between">
-             <div className="flex items-center gap-3">
-               <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
-               <div>
-                 <div className="font-semibold">{a.schools?.name || "Unknown School"}</div>
-                 <div className="text-xs text-muted-foreground font-mono">{a.user_id?.slice(0, 12)}...</div>
-                 <div className="text-[10px] text-muted-foreground">
-                   role: {a.role} • tenant: {a.tenant_role}
+           <Card key={a.id}><CardContent className="p-4">
+             {editingAdmin?.id === a.id ? (
+               <div className="space-y-3">
+                 <div className="flex items-center gap-2">
+                   <UserCog className="h-5 w-5 text-primary" />
+                   <span className="font-mono text-sm">{a.user_id?.slice(0, 12)}...</span>
+                 </div>
+                 <select
+                   value={editSchoolId}
+                   onChange={e => setEditSchoolId(e.target.value)}
+                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                 >
+                   <option value="">Select School</option>
+                   {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                 </select>
+                 <div className="flex gap-2">
+                   <Button size="sm" onClick={() => handleUpdate(a)} disabled={savingEdit}>
+                     {savingEdit ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                     Save
+                   </Button>
+                   <Button size="sm" variant="outline" onClick={() => setEditingAdmin(null)}>
+                     <X className="h-4 w-4 mr-1" /> Cancel
+                   </Button>
                  </div>
                </div>
-             </div>
-             <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(a.id)}>
-               <Trash2 className="h-4 w-4" />
-             </Button>
+             ) : (
+               <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-3">
+                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
+                   <div>
+                     <div className="font-semibold">{a.schools?.name || "Unknown School"}</div>
+                     <div className="text-xs text-muted-foreground font-mono">{a.user_id?.slice(0, 12)}...</div>
+                     <div className="text-[10px] text-muted-foreground">
+                       role: {a.role} • tenant: {a.tenant_role}
+                     </div>
+                   </div>
+                 </div>
+                 <div className="flex gap-1">
+                   <Button variant="ghost" size="sm" onClick={() => { setEditingAdmin(a); setEditSchoolId(a.school_id || ""); setShowForm(false); }}>
+                     <Pencil className="h-4 w-4" />
+                   </Button>
+                   <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(a.id)}>
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
+                 </div>
+               </div>
+             )}
            </CardContent></Card>
          ))}</div>
       )}

@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const userId = newUser.user.id;
 
     // Build user_roles insert with multi-tenant fields
-    const roleInsert: Record<string, any> = { user_id: userId, role };
+    const roleInsert: Record<string, any> = { user_id: userId, role, email };
     if (tenant_role !== undefined) roleInsert.tenant_role = tenant_role;
     if (school_id !== undefined) roleInsert.school_id = school_id;
     if (branch_id !== undefined) roleInsert.branch_id = branch_id;

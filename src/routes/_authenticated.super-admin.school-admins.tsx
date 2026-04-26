@@ -16,7 +16,6 @@ function SchoolAdminsManagement() {
   const { user } = useAuth();
   const [admins, setAdmins] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
-  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showSqlMode, setShowSqlMode] = useState(false);
@@ -34,12 +33,11 @@ function SchoolAdminsManagement() {
     setDebugInfo("");
 
     try {
-      const [schoolsRes, rolesRes, usersRes] = await Promise.all([
+      const [schoolsRes, rolesRes] = await Promise.all([
         (supabase as any).from("schools").select("id, name").order("name"),
         (supabase as any)
           .from("user_roles")
-          .select("id, user_id, school_id, tenant_role, role, schools(id, name)"),
-        supabase.functions.invoke("list-users", { body: {} }),
+          .select("id, user_id, email, school_id, tenant_role, role, schools(id, name)"),
       ]);
 
       if (schoolsRes.error) {
@@ -48,15 +46,6 @@ function SchoolAdminsManagement() {
       } else {
         setSchools(schoolsRes.data || []);
         setDebugInfo(prev => prev + `Schools loaded: ${schoolsRes.data?.length || 0} rows\n`);
-      }
-
-      // Map user emails
-      const emailMap: Record<string, string> = {};
-      if (!usersRes.error && usersRes.data?.users) {
-        for (const u of usersRes.data.users) {
-          if (u.id && u.email) emailMap[u.id] = u.email;
-        }
-        setUserEmails(emailMap);
       }
 
       if (rolesRes.error) {
@@ -69,13 +58,8 @@ function SchoolAdminsManagement() {
           r.tenant_role === "school_admin" ||
           (r.role === "admin" && !r.tenant_role)
         );
-        // attach email to each admin
-        const withEmail = filtered.map((r: any) => ({
-          ...r,
-          email: emailMap[r.user_id] || null,
-        }));
-        setAdmins(withEmail);
-        setDebugInfo(prev => prev + `School admins loaded: ${withEmail.length} rows (from ${all.length} total)\n`);
+        setAdmins(filtered);
+        setDebugInfo(prev => prev + `School admins loaded: ${filtered.length} rows (from ${all.length} total)\n`);
       }
     } catch (err: any) {
       setError(`Unexpected error: ${err.message}`);

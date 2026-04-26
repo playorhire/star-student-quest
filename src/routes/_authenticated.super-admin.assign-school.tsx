@@ -15,7 +15,6 @@ function AssignSchoolPage() {
   const { user } = useAuth();
   const [schoolAdmins, setSchoolAdmins] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
-  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,27 +28,17 @@ function AssignSchoolPage() {
   async function loadData() {
     setLoading(true);
 
-    const [schoolsRes, adminsRes, usersRes] = await Promise.all([
+    const [schoolsRes, adminsRes] = await Promise.all([
       (supabase as any).from("schools").select("id, name").order("name"),
       (supabase as any)
         .from("user_roles")
-        .select("id, user_id, school_id, tenant_role, role, schools(id, name)"),
-      supabase.functions.invoke("list-users", { body: {} }),
+        .select("id, user_id, email, school_id, tenant_role, role, schools(id, name)"),
     ]);
 
     if (schoolsRes.error) {
       toast.error(`Failed to load schools: ${schoolsRes.error.message}`);
     } else {
       setSchools(schoolsRes.data || []);
-    }
-
-    // Map user emails
-    const emailMap: Record<string, string> = {};
-    if (!usersRes.error && usersRes.data?.users) {
-      for (const u of usersRes.data.users) {
-        if (u.id && u.email) emailMap[u.id] = u.email;
-      }
-      setUserEmails(emailMap);
     }
 
     if (adminsRes.error) {
@@ -60,11 +49,7 @@ function AssignSchoolPage() {
         r.tenant_role === "school_admin" ||
         (r.role === "admin" && !r.tenant_role)
       );
-      const withEmail = filtered.map((r: any) => ({
-        ...r,
-        email: emailMap[r.user_id] || null,
-      }));
-      setSchoolAdmins(withEmail);
+      setSchoolAdmins(filtered);
     }
 
     setLoading(false);

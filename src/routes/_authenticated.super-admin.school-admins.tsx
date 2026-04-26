@@ -32,40 +32,41 @@ function SchoolAdminsManagement() {
     setError(null);
     setDebugInfo("");
 
-    // Test schools first
-    const schoolsRes = await (supabase as any).from("schools").select("id, name").order("name");
-    if (schoolsRes.error) {
-      setError(`Schools query failed: ${schoolsRes.error.message} (${schoolsRes.error.code})`);
-      setDebugInfo(prev => prev + `Schools error: ${JSON.stringify(schoolsRes.error)}\n`);
-    } else {
-      setSchools(schoolsRes.data || []);
-      setDebugInfo(prev => prev + `Schools loaded: ${schoolsRes.data?.length || 0} rows\n`);
-    }
+    try {
+      const [schoolsRes, rolesRes] = await Promise.all([
+        (supabase as any).from("schools").select("id, name").order("name"),
+        (supabase as any)
+          .from("user_roles")
+          .select("id, user_id, school_id, tenant_role, role, schools(id, name)"),
+      ]);
 
-    // Test user_roles
-    const rolesRes = await (supabase as any)
-      .from("user_roles")
-      .select("id, user_id, school_id, tenant_role, role, schools(id, name)")
-      .eq("tenant_role", "school_admin");
-
-    if (rolesRes.error) {
-      const errMsg = `user_roles query failed: ${rolesRes.error.message} (${rolesRes.error.code})`;
-      setError(prev => prev ? `${prev}; ${errMsg}` : errMsg);
-      setDebugInfo(prev => prev + `user_roles error: ${JSON.stringify(rolesRes.error)}\n`);
-
-      // Try fallback without tenant_role filter
-      const fallbackRes = await (supabase as any)
-        .from("user_roles")
-        .select("id, user_id, school_id, role");
-      if (!fallbackRes.error && fallbackRes.data) {
-        setDebugInfo(prev => prev + `Fallback query returned ${fallbackRes.data.length} rows. tenant_role column likely missing.\n`);
+      if (schoolsRes.error) {
+        setError(`Schools query failed: ${schoolsRes.error.message} (${schoolsRes.error.code})`);
+        setDebugInfo(prev => prev + `Schools error: ${JSON.stringify(schoolsRes.error)}\n`);
+      } else {
+        setSchools(schoolsRes.data || []);
+        setDebugInfo(prev => prev + `Schools loaded: ${schoolsRes.data?.length || 0} rows\n`);
       }
-    } else {
-      setAdmins(rolesRes.data || []);
-      setDebugInfo(prev => prev + `School admins loaded: ${rolesRes.data?.length || 0} rows\n`);
-    }
 
-    setLoading(false);
+      if (rolesRes.error) {
+        const errMsg = `user_roles query failed: ${rolesRes.error.message} (${rolesRes.error.code})`;
+        setError(prev => prev ? `${prev}; ${errMsg}` : errMsg);
+        setDebugInfo(prev => prev + `user_roles error: ${JSON.stringify(rolesRes.error)}\n`);
+      } else {
+        const all = rolesRes.data || [];
+        const filtered = all.filter((r: any) =>
+          r.tenant_role === "school_admin" ||
+          (r.role === "admin" && !r.tenant_role)
+        );
+        setAdmins(filtered);
+        setDebugInfo(prev => prev + `School admins loaded: ${filtered.length} rows (from ${all.length} total)\n`);
+      }
+    } catch (err: any) {
+      setError(`Unexpected error: ${err.message}`);
+      setDebugInfo(prev => prev + `Exception: ${err.message}\n`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {

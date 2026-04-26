@@ -32,8 +32,7 @@ function AssignSchoolPage() {
       (supabase as any).from("schools").select("id, name").order("name"),
       (supabase as any)
         .from("user_roles")
-        .select("id, user_id, school_id, tenant_role, role, schools(id, name)")
-        .eq("tenant_role", "school_admin"),
+        .select("id, user_id, school_id, tenant_role, role, schools(id, name)"),
     ]);
 
     if (schoolsRes.error) {
@@ -45,7 +44,12 @@ function AssignSchoolPage() {
     if (adminsRes.error) {
       toast.error(`Failed to load school admins: ${adminsRes.error.message}`);
     } else {
-      setSchoolAdmins(adminsRes.data || []);
+      const all = adminsRes.data || [];
+      const filtered = all.filter((r: any) =>
+        r.tenant_role === "school_admin" ||
+        (r.role === "admin" && !r.tenant_role)
+      );
+      setSchoolAdmins(filtered);
     }
 
     setLoading(false);

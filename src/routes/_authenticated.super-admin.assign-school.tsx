@@ -31,8 +31,8 @@ function AssignSchoolPage() {
     const [schoolsRes, adminsRes] = await Promise.all([
       (supabase as any).from("schools").select("id, name").order("name"),
       (supabase as any)
-        .from("user_roles")
-        .select("id, user_id, email, school_id, tenant_role, role, schools(id, name)"),
+          .from("user_roles")
+          .select("id, user_id, name, email, school_id, tenant_role, role, schools(id, name)"),
     ]);
 
     if (schoolsRes.error) {
@@ -136,7 +136,7 @@ function AssignSchoolPage() {
                   <option value="">Select School Admin</option>
                   {schoolAdmins.map((admin) => (
                     <option key={admin.id} value={admin.id}>
-                      {admin.email || admin.user_id?.slice(0, 12) + "..."} — Currently: {admin.schools?.name || "Not assigned"}
+                      {admin.name || admin.email || `User: ${admin.user_id?.slice(0, 12)}...`} — {admin.schools?.name || "No school"}
                     </option>
                   ))}
                 </select>
@@ -147,7 +147,7 @@ function AssignSchoolPage() {
                 <div className="rounded-lg bg-muted/50 p-3 text-sm flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">
-                    Currently assigned to: <strong>{currentSchoolName}</strong>
+                    {selectedAdmin?.name || selectedAdmin?.email || `User: ${selectedAdmin?.user_id?.slice(0, 12)}...`} → <strong>{currentSchoolName}</strong>
                   </span>
                 </div>
               )}
@@ -204,8 +204,8 @@ function AssignSchoolPage() {
                     <UserCog className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <div className="text-sm">
-                      {admin.email || admin.user_id?.slice(0, 12) + "..."}
+                    <div className="text-sm font-medium">
+                      {admin.name || admin.email || `User: ${admin.user_id?.slice(0, 12)}...`}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {admin.schools?.name ? (
@@ -214,7 +214,7 @@ function AssignSchoolPage() {
                           {admin.schools.name}
                         </span>
                       ) : (
-                        <span className="text-amber-500">Not assigned to any school</span>
+                        <span className="text-amber-500">No school assigned</span>
                       )}
                     </div>
                   </div>

@@ -37,7 +37,7 @@ function SchoolAdminsManagement() {
         (supabase as any).from("schools").select("id, name").order("name"),
         (supabase as any)
           .from("user_roles")
-          .select("id, user_id, email, school_id, tenant_role, role, schools(id, name)"),
+          .select("id, user_id, name, email, school_id, tenant_role, role, schools(id, name)"),
       ]);
 
       if (schoolsRes.error) {
@@ -257,8 +257,8 @@ VALUES (
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
                   <div>
-                    <div className="font-semibold">{a.schools?.name || "Not assigned"}</div>
-                    <div className="text-xs text-muted-foreground">{a.email || `User: ${a.user_id?.slice(0, 12)}...`}</div>
+                    <div className="font-semibold">{a.name || a.email || `User: ${a.user_id?.slice(0, 12)}...`}</div>
+                    <div className="text-xs text-muted-foreground">{a.schools?.name || "No school assigned"}</div>
                     <div className="text-[10px] text-muted-foreground">
                       role: {a.role} • tenant: {a.tenant_role}
                     </div>

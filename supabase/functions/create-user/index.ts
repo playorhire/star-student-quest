@@ -39,7 +39,8 @@ Deno.serve(async (req) => {
     const userId = newUser.user.id;
 
     // Build user_roles insert with multi-tenant fields
-    const roleInsert: Record<string, any> = { user_id: userId, role, email };
+    const displayName = meta?.name || email;
+    const roleInsert: Record<string, any> = { user_id: userId, role, email, name: displayName };
     if (tenant_role !== undefined) roleInsert.tenant_role = tenant_role;
     if (school_id !== undefined) roleInsert.school_id = school_id;
     if (branch_id !== undefined) roleInsert.branch_id = branch_id;
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
       const uniqueStudentIds = [...new Set(studentIds.filter(Boolean))];
       if (uniqueStudentIds.length > 0) {
         await supabase.from("parent_student_links").insert(
-          uniqueStudentIds.map((studentId: string) => ({
+        uniqueStudentIds.map((studentId: any) => ({
             parent_user_id: userId,
             student_id: studentId,
           }))

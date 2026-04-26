@@ -57,9 +57,6 @@ function SchoolAdminsManagement() {
           if (u.id && u.email) emailMap[u.id] = u.email;
         }
         setUserEmails(emailMap);
-        setDebugInfo(prev => prev + `Emails loaded: ${usersRes.data.users.length}\n`);
-      } else if (usersRes.error) {
-        setDebugInfo(prev => prev + `Emails error: ${usersRes.error.message}\n`);
       }
 
       if (rolesRes.error) {
@@ -277,7 +274,7 @@ VALUES (
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"><UserCog className="h-5 w-5 text-primary" /></div>
                   <div>
                     <div className="font-semibold">{a.schools?.name || "Not assigned"}</div>
-                    <div className="text-xs text-muted-foreground">{a.email || a.user_id?.slice(0, 12) + "..."}</div>
+                    <div className="text-xs text-muted-foreground">{a.email || `User: ${a.user_id?.slice(0, 12)}...`}</div>
                     <div className="text-[10px] text-muted-foreground">
                       role: {a.role} • tenant: {a.tenant_role}
                     </div>

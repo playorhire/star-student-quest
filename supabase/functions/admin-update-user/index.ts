@@ -5,6 +5,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type TenantRole =
+  | "super_admin"
+  | "school_admin"
+  | "branch_admin"
+  | "teacher"
+  | "student"
+  | "parent";
+
+type RoleRow = {
+  role: string;
+  tenant_role: TenantRole | null;
+  school_id: string | null;
+  branch_id: string | null;
+};
+
+const MANAGEMENT_RULES: Record<TenantRole, TenantRole[]> = {
+  super_admin: ["school_admin"],
+  school_admin: ["branch_admin", "teacher"],
+  branch_admin: ["student"],
+  teacher: [],
+  student: [],
+  parent: [],
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,16 +53,73 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { targetUserId, email, password, selfUpdate, deleteUser, name } = body;
 
-    // If not selfUpdate, require admin role
+    const { data: callerRoleData } = await supabase
+      .from("user_roles")
+      .select("role, tenant_role, school_id, branch_id")
+      .eq("user_id", caller.id)
+      .eq("is_primary", true)
+      .single();
+
+    const callerRole = ((callerRoleData?.tenant_role || (callerRoleData?.role === "admin" ? "super_admin" : callerRoleData?.role)) as TenantRole | undefined);
+
     if (!selfUpdate) {
-      const { data: roleCheck } = await supabase
+      if (!callerRole) {
+        return new Response(JSON.stringify({ error: "Unauthorized role" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const userIdToCheck = targetUserId;
+      if (!userIdToCheck) {
+        return new Response(JSON.stringify({ error: "Missing target user id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: targetRoleData } = await supabase
         .from("user_roles")
-        .select("role")
-        .eq("user_id", caller.id)
-        .eq("role", "admin")
+        .select("role, tenant_role, school_id, branch_id")
+        .eq("user_id", userIdToCheck)
+        .eq("is_primary", true)
         .single();
-      if (!roleCheck) {
-        return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      const targetRole = ((targetRoleData?.tenant_role || (targetRoleData?.role === "admin" ? "super_admin" : targetRoleData?.role)) as TenantRole | undefined);
+
+      if (!targetRole) {
+        return new Response(JSON.stringify({ error: "Target user role not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const allowedTargets = MANAGEMENT_RULES[callerRole] || [];
+      if (!allowedTargets.includes(targetRole)) {
+        return new Response(JSON.stringify({ error: `${callerRole} cannot manage ${targetRole} users` }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const callerScope = callerRoleData as RoleRow;
+      const targetScope = targetRoleData as RoleRow;
+
+      if (callerRole === "school_admin" && callerScope.school_id !== targetScope.school_id) {
+        return new Response(JSON.stringify({ error: "Schooladmin can only manage users in their school" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (callerRole === "branch_admin" && (
+        callerScope.school_id !== targetScope.school_id ||
+        callerScope.branch_id !== targetScope.branch_id
+      )) {
+        return new Response(JSON.stringify({ error: "Branchadmin can only manage students in their branch" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -75,6 +156,7 @@ Deno.serve(async (req) => {
     if (email) {
       await supabase.from("teachers").update({ email }).eq("user_id", userIdToUpdate);
       await supabase.from("parents").update({ email }).eq("user_id", userIdToUpdate);
+      await supabase.from("students").update({ email }).eq("user_id", userIdToUpdate);
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

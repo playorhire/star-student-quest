@@ -5,6 +5,39 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type TenantRole =
+  | "super_admin"
+  | "school_admin"
+  | "branch_admin"
+  | "teacher"
+  | "student"
+  | "parent";
+
+type UserRoleRow = {
+  role: string;
+  tenant_role: TenantRole | null;
+  school_id: string | null;
+  branch_id: string | null;
+};
+
+const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
+  super_admin: ["school_admin"],
+  school_admin: ["branch_admin", "teacher"],
+  branch_admin: ["student"],
+  teacher: [],
+  student: [],
+  parent: [],
+};
+
+const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
+  super_admin: "admin",
+  school_admin: "admin",
+  branch_admin: "admin",
+  teacher: "teacher",
+  student: "student",
+  parent: "parent",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,29 +51,99 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await supabase.auth.getUser(token);
     if (!caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Allow admins (role='admin' covers old admin, school_admin, super_admin)
-    // Also allow school admins to create branch admins within their school
-    const { data: roleCheck } = await supabase
-      .from("user_roles")
-      .select("role, tenant_role, school_id")
-      .eq("user_id", caller.id)
-      .single();
-    
-    if (!roleCheck) return new Response(JSON.stringify({ error: "User role not found" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    
-    const isAdmin = roleCheck.role === "admin";
-    const isSchoolAdmin = roleCheck.tenant_role === "school_admin";
-    
-    if (!isAdmin && !isSchoolAdmin) {
-      return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    
-    // School admins can only create users within their school
-    if (isSchoolAdmin && school_id !== roleCheck.school_id) {
-      return new Response(JSON.stringify({ error: "School admins can only create users within their school" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const {
+      email,
+      password,
+      role,
+      tenant_role,
+      school_id,
+      branch_id,
+      is_primary,
+      meta,
+    } = await req.json();
+
+    const requestedTenantRole = (tenant_role || role) as TenantRole | undefined;
+
+    if (!email || !password || !requestedTenantRole) {
+      return new Response(JSON.stringify({ error: "email, password, and role/tenant_role are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const { email, password, role, tenant_role, school_id, branch_id, is_primary, meta } = await req.json();
+    const normalizedRole = BASE_ROLE_BY_TENANT_ROLE[requestedTenantRole];
+
+    const { data: roleCheck } = await supabase
+      .from("user_roles")
+      .select("role, tenant_role, school_id, branch_id")
+      .eq("user_id", caller.id)
+      .eq("is_primary", true)
+      .single();
+
+    if (!roleCheck) return new Response(JSON.stringify({ error: "User role not found" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const callerRole = ((roleCheck.tenant_role || (roleCheck.role === "admin" ? "super_admin" : roleCheck.role)) as TenantRole);
+    const allowedTargets = CREATION_RULES[callerRole] || [];
+
+    if (!allowedTargets.includes(requestedTenantRole)) {
+      return new Response(JSON.stringify({ error: `${callerRole} cannot create ${requestedTenantRole} users` }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const callerScope = roleCheck as UserRoleRow;
+
+    if (callerRole === "super_admin") {
+      if (requestedTenantRole !== "school_admin") {
+        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin users" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!school_id) {
+        return new Response(JSON.stringify({ error: "school_id is required for schooladmin users" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (callerRole === "school_admin") {
+      if (!callerScope.school_id || school_id !== callerScope.school_id) {
+        return new Response(JSON.stringify({ error: "Schooladmin can only create users inside their assigned school" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (requestedTenantRole === "branch_admin" && !branch_id) {
+        return new Response(JSON.stringify({ error: "branch_id is required for branchadmin users" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (callerRole === "branch_admin") {
+      if (!callerScope.school_id || !callerScope.branch_id) {
+        return new Response(JSON.stringify({ error: "Branchadmin scope is not configured" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (requestedTenantRole !== "student") {
+        return new Response(JSON.stringify({ error: "Branchadmin can only create student users" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (school_id !== callerScope.school_id || branch_id !== callerScope.branch_id) {
+        return new Response(JSON.stringify({ error: "Branchadmin can only create students inside their assigned branch" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
@@ -55,10 +158,10 @@ Deno.serve(async (req) => {
     const displayName = meta?.name || email;
     const roleInsert: Record<string, any> = {
       user_id: userId,
-      role,
+      role: normalizedRole,
       email,
       name: displayName,
-      tenant_role: tenant_role || "school_admin",
+      tenant_role: requestedTenantRole,
     };
     if (school_id !== undefined) roleInsert.school_id = school_id;
     if (branch_id !== undefined) roleInsert.branch_id = branch_id;
@@ -69,13 +172,33 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to insert user_roles: ${roleInsertError.message}`);
     }
 
-    if (role === "teacher" && meta?.teacherId) {
+    if (normalizedRole === "teacher" && meta?.teacherId) {
       await supabase.from("teachers").update({ user_id: userId }).eq("id", meta.teacherId);
-    } else if (role === "student" && meta?.studentId) {
+    } else if (normalizedRole === "student" && meta?.studentId) {
       await supabase.from("students").update({ user_id: userId }).eq("id", meta.studentId);
-    } else if (role === "teacher") {
-      await supabase.from("teachers").insert({ name: meta?.name || email, email, user_id: userId, school_id: school_id || null });
-    } else if (role === "parent") {
+    } else if (normalizedRole === "teacher") {
+      await supabase.from("teachers").insert({
+        name: meta?.name || email,
+        email,
+        user_id: userId,
+        school_id: school_id || null,
+        branch_id: branch_id || null,
+      });
+    } else if (normalizedRole === "student") {
+      if (!meta?.rollNumber || !meta?.classId) {
+        throw new Error("Student creation requires meta.studentId or both meta.rollNumber and meta.classId");
+      }
+      await supabase.from("students").insert({
+        name: meta?.name || email,
+        email,
+        user_id: userId,
+        school_id: school_id || null,
+        branch_id: branch_id || null,
+        roll_number: meta.rollNumber,
+        class_id: meta.classId,
+        section: meta?.section || null,
+      });
+    } else if (normalizedRole === "parent") {
       await supabase.from("parents").insert({
         user_id: userId,
         name: meta?.name || email,

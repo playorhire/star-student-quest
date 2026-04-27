@@ -46,7 +46,9 @@ function BranchAdminsManagement() {
           .from("user_roles")
           .select("id, user_id, name, email, school_id, branch_id, tenant_role, role")
           .eq("school_id", user.schoolId)
-          .or('tenant_role.eq.branch_admin, and(tenant_role.is.null,role.eq.admin)'),
+          .eq("tenant_role", "branch_admin")
+          .eq("is_primary", true)
+          .order("name"),
       ]);
 
       if (branchesRes.error) {
@@ -78,7 +80,7 @@ function BranchAdminsManagement() {
       body: {
         email: email.trim(),
         password,
-        role: "admin",
+        role: "branch_admin",
         tenant_role: "branch_admin",
         is_primary: true,
         school_id: user!.schoolId,

@@ -45,7 +45,10 @@ function SchoolAdminsManagement() {
         (supabase as any).from("schools").select("id, name").order("name"),
         (supabase as any)
           .from("user_roles")
-          .select("id, user_id, name, email, school_id, tenant_role, role, schools(id, name)"),
+          .select("id, user_id, name, email, school_id, tenant_role, role, schools(id, name)")
+          .eq("tenant_role", "school_admin")
+          .eq("is_primary", true)
+          .order("name"),
       ]);
 
       if (schoolsRes.error) {
@@ -61,13 +64,9 @@ function SchoolAdminsManagement() {
         setError(prev => prev ? `${prev}; ${errMsg}` : errMsg);
         setDebugInfo(prev => prev + `user_roles error: ${JSON.stringify(rolesRes.error)}\n`);
       } else {
-        const all = rolesRes.data || [];
-        const filtered = all.filter((r: any) =>
-          r.tenant_role === "school_admin" ||
-          (r.role === "admin" && !r.tenant_role)
-        );
-        setAdmins(filtered);
-        setDebugInfo(prev => prev + `School admins loaded: ${filtered.length} rows (from ${all.length} total)\n`);
+        const schoolAdmins = rolesRes.data || [];
+        setAdmins(schoolAdmins);
+        setDebugInfo(prev => prev + `School admins loaded: ${schoolAdmins.length} rows\n`);
       }
     } catch (err: any) {
       setError(`Unexpected error: ${err.message}`);
@@ -90,7 +89,7 @@ function SchoolAdminsManagement() {
       body: {
         email: email.trim(),
         password,
-        role: "admin",
+        role: "school_admin",
         tenant_role: "school_admin",
         is_primary: true,
         school_id: createSchoolId || undefined,
@@ -223,7 +222,7 @@ function SchoolAdminsManagement() {
 INSERT INTO public.user_roles (user_id, role, tenant_role, is_primary)
 VALUES (
   'PASTE-USER-ID-HERE',
-  'admin',
+  'school_admin',
   'school_admin',
   true
 );`;

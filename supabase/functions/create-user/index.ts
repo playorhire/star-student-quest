@@ -82,7 +82,17 @@ Deno.serve(async (req) => {
 
     if (!roleCheck) return new Response(JSON.stringify({ error: "User role not found" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const callerRole = ((roleCheck.tenant_role || (roleCheck.role === "admin" ? "super_admin" : roleCheck.role)) as TenantRole);
+    let resolvedTenantRole = roleCheck.tenant_role;
+    // Handle legacy records where school_admin/branch_admin got incorrectly migrated to 'student'
+    if (!resolvedTenantRole || resolvedTenantRole === "student") {
+      if (roleCheck.role === "school_admin") resolvedTenantRole = "school_admin";
+      else if (roleCheck.role === "branch_admin") resolvedTenantRole = "branch_admin";
+      else if (roleCheck.role === "admin") resolvedTenantRole = "super_admin";
+      else if (roleCheck.role === "teacher") resolvedTenantRole = "teacher";
+      else if (roleCheck.role === "parent") resolvedTenantRole = "parent";
+      else resolvedTenantRole = "student";
+    }
+    const callerRole = resolvedTenantRole as TenantRole;
     const allowedTargets = CREATION_RULES[callerRole] || [];
 
     if (!allowedTargets.includes(requestedTenantRole)) {

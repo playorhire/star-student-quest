@@ -118,21 +118,63 @@ Deno.serve(async (req) => {
         });
       }
     }
+if (callerRole === "school_admin") {
 
-    if (callerRole === "school_admin") {
-      if (!callerScope.school_id || school_id !== callerScope.school_id) {
-        return new Response(JSON.stringify({ error: "Schooladmin can only create users inside their assigned school" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (requestedTenantRole === "branch_admin" && !branch_id) {
-        return new Response(JSON.stringify({ error: "branch_id is required for branchadmin users" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+  // ✅ Must belong to same school
+  if (!callerScope.school_id || school_id !== callerScope.school_id) {
+    return new Response(JSON.stringify({
+      error: "School admin can only create users inside their assigned school"
+    }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // ✅ ONLY allow branch_admin creation
+  if (requestedTenantRole !== "branch_admin") {
+    return new Response(JSON.stringify({
+      error: "School admin can only create branch admin users"
+    }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // ✅ Require branch_id
+  if (!branch_id) {
+    return new Response(JSON.stringify({
+      error: "branch_id is required for branch admin users"
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // ✅ Validate branch exists + belongs to same school
+  const { data: branch, error: branchError } = await supabase
+    .from("branches")
+    .select("id, school_id")
+    .eq("id", branch_id)
+    .single();
+
+  if (branchError || !branch) {
+    return new Response(JSON.stringify({
+      error: "Invalid branch_id"
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (branch.school_id !== callerScope.school_id) {
+    return new Response(JSON.stringify({
+      error: "Branch does not belong to your school"
+    }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
 
     if (callerRole === "branch_admin") {
       if (!callerScope.school_id || !callerScope.branch_id) {
@@ -235,4 +277,5 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
+
 });

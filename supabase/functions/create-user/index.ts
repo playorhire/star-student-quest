@@ -31,8 +31,8 @@ const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
 
 const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
   super_admin: "admin",
-  school_admin: "school_admin",
-  branch_admin: "branch_admin",
+  school_admin: "admin",
+  branch_admin: "admin",
   teacher: "teacher",
   student: "student",
   parent: "parent",

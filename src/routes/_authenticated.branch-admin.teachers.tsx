@@ -181,7 +181,7 @@ function BranchAdminTeachers() {
       if (err) toast.error(err.message);
       else toast.success("Teacher updated");
     } else {
-      // Create auth user if email and password provided
+      // Create auth user via edge function (handles teachers table insert)
       if (form.password) {
         const res = await supabase.functions.invoke("create-user", {
           body: {
@@ -191,7 +191,10 @@ function BranchAdminTeachers() {
             tenant_role: "teacher",
             school_id: user!.schoolId,
             branch_id: user!.branchId,
-            meta: { name: form.name.trim() },
+            meta: { 
+              name: form.name.trim(),
+              avatar_emoji: form.avatar_emoji,
+            },
           },
         });
         if (res.error || res.data?.error) {
@@ -199,13 +202,15 @@ function BranchAdminTeachers() {
           setSubmitting(false);
           return;
         }
-        payload.user_id = res.data?.userId;
+        toast.success("Teacher created");
+      } else {
+        // Create teacher without auth account
+        const { error: err } = await (supabase as any)
+          .from("teachers")
+          .insert(payload);
+        if (err) toast.error(err.message);
+        else toast.success("Teacher created");
       }
-      const { error: err } = await (supabase as any)
-        .from("teachers")
-        .insert(payload);
-      if (err) toast.error(err.message);
-      else toast.success("Teacher created");
     }
 
     setShowForm(false);

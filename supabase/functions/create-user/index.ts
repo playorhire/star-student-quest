@@ -208,18 +208,19 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to insert user_roles: ${roleInsertError.message}`);
     }
 
-    if (normalizedRole === "teacher" && meta?.teacherId) {
-      await supabase.from("teachers").update({ user_id: userId }).eq("id", meta.teacherId);
-    } else if (normalizedRole === "student" && meta?.studentId) {
-      await supabase.from("students").update({ user_id: userId }).eq("id", meta.studentId);
-    } else if (normalizedRole === "teacher") {
-      await supabase.from("teachers").insert({
+    // Handle domain-specific table inserts for teacher and student roles
+    if (normalizedRole === "teacher") {
+      const { error: teacherError } = await supabase.from("teachers").insert({
         name: meta?.name || email,
         email,
         user_id: userId,
         school_id: school_id || null,
         branch_id: branch_id || null,
+        avatar_emoji: meta?.avatar_emoji || "👨‍🏫",
       });
+      if (teacherError) {
+        throw new Error(`Failed to insert teacher: ${teacherError.message}`);
+      }
     } else if (normalizedRole === "student") {
       if (!meta?.rollNumber || !meta?.classId) {
         throw new Error("Student creation requires meta.studentId or both meta.rollNumber and meta.classId");
@@ -232,7 +233,10 @@ Deno.serve(async (req) => {
         branch_id: branch_id || null,
         roll_number: meta.rollNumber,
         class_id: meta.classId,
-        section: meta?.section || null,
+        section: meta.section || "A",
+        total_points: 0,
+        qr_code: crypto.randomUUID(),
+        avatar_emoji: meta?.avatar_emoji || "🎓",
       });
     } else if (normalizedRole === "parent") {
       await supabase.from("parents").insert({

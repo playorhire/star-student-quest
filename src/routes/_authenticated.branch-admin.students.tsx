@@ -100,7 +100,7 @@ function BranchAdminStudents() {
       if (err) toast.error(err.message);
       else toast.success("Student updated");
     } else {
-      // Create auth user if email and password provided
+      // Create auth user via edge function (handles students table insert)
       if (form.email.trim() && form.password) {
         const res = await supabase.functions.invoke("create-user", {
           body: {
@@ -109,12 +109,13 @@ function BranchAdminStudents() {
             role: "student",
             tenant_role: "student",
             school_id: user!.schoolId,
-            branch_id: user!.branchId,
+            branch_id: null,
             meta: {
               name: form.name.trim(),
               rollNumber: form.roll_number.trim(),
               classId: form.class_id,
               section: form.section,
+              avatar_emoji: form.avatar_emoji,
             },
           },
         });
@@ -123,11 +124,13 @@ function BranchAdminStudents() {
           setSubmitting(false);
           return;
         }
-        payload.user_id = res.data?.userId;
+        toast.success("Student created");
+      } else {
+        // Create student without auth account
+        const { error: err } = await (supabase as any).from("students").insert({ ...payload, total_points: 0, qr_code: crypto.randomUUID() });
+        if (err) toast.error(err.message);
+        else toast.success("Student created");
       }
-      const { error: err } = await (supabase as any).from("students").insert({ ...payload, total_points: 0, qr_code: crypto.randomUUID() });
-      if (err) toast.error(err.message);
-      else toast.success("Student created");
     }
 
     setShowForm(false);

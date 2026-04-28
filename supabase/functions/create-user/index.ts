@@ -23,7 +23,7 @@ type UserRoleRow = {
 const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
   super_admin: ["school_admin"],
   school_admin: ["branch_admin", "teacher"],
-  branch_admin: ["student"],
+  branch_admin: ["teacher", "student"],
   teacher: [],
   student: [],
   parent: [],
@@ -118,63 +118,43 @@ Deno.serve(async (req) => {
         });
       }
     }
-if (callerRole === "school_admin") {
-
-  // ✅ Must belong to same school
-  if (!callerScope.school_id || school_id !== callerScope.school_id) {
-    return new Response(JSON.stringify({
-      error: "School admin can only create users inside their assigned school"
-    }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // ✅ ONLY allow branch_admin creation
-  if (requestedTenantRole !== "branch_admin") {
-    return new Response(JSON.stringify({
-      error: "School admin can only create branch admin users"
-    }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // ✅ Require branch_id
-  if (!branch_id) {
-    return new Response(JSON.stringify({
-      error: "branch_id is required for branch admin users"
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  // ✅ Validate branch exists + belongs to same school
-  const { data: branch, error: branchError } = await supabase
-    .from("branches")
-    .select("id, school_id")
-    .eq("id", branch_id)
-    .single();
-
-  if (branchError || !branch) {
-    return new Response(JSON.stringify({
-      error: "Invalid branch_id"
-    }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  if (branch.school_id !== callerScope.school_id) {
-    return new Response(JSON.stringify({
-      error: "Branch does not belong to your school"
-    }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-}
+    if (callerRole === "school_admin") {
+      if (!callerScope.school_id || school_id !== callerScope.school_id) {
+        return new Response(JSON.stringify({ error: "Schooladmin can only create users inside their assigned school" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!["branch_admin", "teacher"].includes(requestedTenantRole)) {
+        return new Response(JSON.stringify({ error: "Schooladmin can only create branchadmin or teacher users" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!branch_id) {
+        return new Response(JSON.stringify({ error: "branch_id is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: branch, error: branchError } = await supabase
+        .from("branches")
+        .select("id, school_id")
+        .eq("id", branch_id)
+        .single();
+      if (branchError || !branch) {
+        return new Response(JSON.stringify({ error: "Invalid branch_id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (branch.school_id !== callerScope.school_id) {
+        return new Response(JSON.stringify({ error: "Branch does not belong to your school" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (callerRole === "branch_admin") {
       if (!callerScope.school_id || !callerScope.branch_id) {
@@ -183,14 +163,14 @@ if (callerRole === "school_admin") {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (requestedTenantRole !== "student") {
-        return new Response(JSON.stringify({ error: "Branchadmin can only create student users" }), {
+      if (!["teacher", "student"].includes(requestedTenantRole)) {
+        return new Response(JSON.stringify({ error: "Branchadmin can only create teacher or student users" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (school_id !== callerScope.school_id || branch_id !== callerScope.branch_id) {
-        return new Response(JSON.stringify({ error: "Branchadmin can only create students inside their assigned branch" }), {
+        return new Response(JSON.stringify({ error: "Branchadmin can only create users inside their assigned branch" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -202,30 +182,6 @@ if (callerRole === "school_admin") {
       password,
       email_confirm: true,
     });
-
-    const userId = newUser.user.id;
-
-const { error: profileError } = await supabaseAdmin
-  .from("profiles")
-  .insert({
-    id: userId,
-    full_name: full_name || email,
-    email: email,
-    role: requestedTenantRole,   // 🔥 IMPORTANT
-    school_id: school_id || null,
-    branch_id: branch_id || null,
-  });
-
-if (profileError) {
-  console.error("Profile insert failed:", profileError);
-  return new Response(JSON.stringify({
-    error: "User created but profile failed",
-    details: profileError.message
-  }), {
-    status: 500,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
     if (createError) throw createError;
 
     const userId = newUser.user.id;

@@ -23,7 +23,7 @@ type RoleRow = {
 const MANAGEMENT_RULES: Record<TenantRole, TenantRole[]> = {
   super_admin: ["school_admin"],
   school_admin: ["branch_admin", "teacher"],
-  branch_admin: ["student"],
+  branch_admin: ["teacher", "student"],
   teacher: [],
   student: [],
   parent: [],

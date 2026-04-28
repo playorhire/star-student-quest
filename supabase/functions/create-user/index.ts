@@ -202,6 +202,30 @@ if (callerRole === "school_admin") {
       password,
       email_confirm: true,
     });
+
+    const userId = newUser.user.id;
+
+const { error: profileError } = await supabaseAdmin
+  .from("profiles")
+  .insert({
+    id: userId,
+    full_name: full_name || email,
+    email: email,
+    role: requestedTenantRole,   // 🔥 IMPORTANT
+    school_id: school_id || null,
+    branch_id: branch_id || null,
+  });
+
+if (profileError) {
+  console.error("Profile insert failed:", profileError);
+  return new Response(JSON.stringify({
+    error: "User created but profile failed",
+    details: profileError.message
+  }), {
+    status: 500,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
     if (createError) throw createError;
 
     const userId = newUser.user.id;

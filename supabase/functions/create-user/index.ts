@@ -56,11 +56,13 @@ Deno.serve(async (req) => {
       password,
       role,
       tenant_role,
-      school_id,
+      school_id: inputSchoolId,
       branch_id,
       is_primary,
       meta,
     } = await req.json();
+
+    let school_id = inputSchoolId;
 
     const requestedTenantRole = (tenant_role || role) as TenantRole | undefined;
 
@@ -154,6 +156,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      // Override school_id with caller's school_id
+      school_id = callerScope.school_id;
     }
 
     if (callerRole === "branch_admin") {

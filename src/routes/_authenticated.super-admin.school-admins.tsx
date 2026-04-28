@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import { toast } from "sonner";
 import { UserCog, Plus, Trash2, Loader2, RefreshCw, AlertTriangle, Copy, Pencil, Check, X, School } from "lucide-react";
 
@@ -273,22 +274,52 @@ VALUES (
           </div>
 
           {!showSqlMode ? (
-            <form onSubmit={handleCreate} className="space-y-3">
-              <Input type="email" placeholder="Email" required value={email} onChange={e => setEmail(e.target.value)} />
-              <Input type="password" placeholder="Password (6+ chars)" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} />
-              <div>
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1"><School className="h-3 w-3" /> Assign School (optional)</label>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="admin-email">Email *</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  placeholder="schooladmin@school.com"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="admin-password">Password *</Label>
+                <Input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Minimum 6 characters"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Required for login access</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="admin-school" className="flex items-center gap-2">
+                  <School className="h-4 w-4" />
+                  Assign School
+                </Label>
                 <select
+                  id="admin-school"
                   value={createSchoolId}
                   onChange={e => setCreateSchoolId(e.target.value)}
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="">No school assigned</option>
+                  <option value="">Select a school</option>
                   {schools.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
+                <p className="text-xs text-muted-foreground">The school this admin will manage</p>
               </div>
+
               <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 Create School Admin
@@ -336,28 +367,46 @@ VALUES (
           <div className="space-y-3">{admins.map(a => (
             <Card key={a.id}><CardContent className="p-4">
               {editingId === a.id ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Name</label>
-                    <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Display name" />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Display Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      placeholder="Display name"
+                    />
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Email</label>
-                    <Input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email" />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editEmail}
+                      onChange={e => setEditEmail(e.target.value)}
+                      placeholder="Email"
+                    />
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><School className="h-3 w-3" /> School</label>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-school" className="flex items-center gap-2">
+                      <School className="h-4 w-4" />
+                      School
+                    </Label>
                     <select
+                      id="edit-school"
                       value={editSchoolId}
                       onChange={e => setEditSchoolId(e.target.value)}
                       className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      <option value="">No school assigned</option>
+                      <option value="">Select a school</option>
                       {schools.map(s => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </div>
+
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleSaveEdit(a)} disabled={editSubmitting}>
                       {editSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}

@@ -71,6 +71,7 @@ function SchoolAdminTeachers() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    password: "",
     avatar_emoji: "👨‍🏫",
     branch_id: "",
   });
@@ -134,7 +135,7 @@ function SchoolAdminTeachers() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", email: "", avatar_emoji: "👨‍🏫", branch_id: "" });
+    setForm({ name: "", email: "", password: "", avatar_emoji: "👨‍🏫", branch_id: "" });
     setShowForm(true);
   }
 
@@ -143,6 +144,7 @@ function SchoolAdminTeachers() {
     setForm({
       name: t.name || "",
       email: t.email || "",
+      password: "",
       avatar_emoji: t.avatar_emoji || "👨‍🏫",
       branch_id: t.branch_id || "",
     });
@@ -153,6 +155,14 @@ function SchoolAdminTeachers() {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Name and email required");
+      return;
+    }
+    if (!editing && form.password && form.password.length < 6) {
+      toast.error("Password must be 6+ chars");
+      return;
+    }
+    if (editing && form.password && form.password.length < 6) {
+      toast.error("Password must be 6+ chars");
       return;
     }
     setSubmitting(true);
@@ -166,6 +176,22 @@ function SchoolAdminTeachers() {
     };
 
     if (editing) {
+      // Update email/password via edge function if provided
+      if (form.email.trim() !== editing.email || form.password) {
+        const updatePayload: any = {
+          targetUserId: editing.user_id,
+          email: form.email.trim(),
+          password: form.password || undefined,
+        };
+        const res = await supabase.functions.invoke("admin-update-user", {
+          body: updatePayload,
+        });
+        if (res.error || res.data?.error) {
+          toast.error(res.data?.error || res.error?.message || "Failed to update credentials");
+          setSubmitting(false);
+          return;
+        }
+      }
       const { error: err } = await (supabase as any)
         .from("teachers")
         .update(payload)
@@ -173,6 +199,26 @@ function SchoolAdminTeachers() {
       if (err) toast.error(err.message);
       else toast.success("Teacher updated");
     } else {
+      // Create auth user if email and password provided
+      if (form.password) {
+        const res = await supabase.functions.invoke("create-user", {
+          body: {
+            email: form.email.trim(),
+            password: form.password,
+            role: "teacher",
+            tenant_role: "teacher",
+            school_id: user!.schoolId,
+            branch_id: form.branch_id || null,
+            meta: { name: form.name.trim() },
+          },
+        });
+        if (res.error || res.data?.error) {
+          toast.error(res.data?.error || res.error?.message || "Failed to create account");
+          setSubmitting(false);
+          return;
+        }
+        payload.user_id = res.data?.userId;
+      }
       const { error: err } = await (supabase as any)
         .from("teachers")
         .insert(payload);
@@ -303,18 +349,27 @@ function SchoolAdminTeachers() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-[auto_1fr] gap-3 items-center">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-3">
+                <Label>Avatar Emoji</Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={form.avatar_emoji}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, avatar_emoji: e.target.value }))
+                    }
+                    className="w-16 text-center text-lg px-0"
+                    maxLength={4}
+                  />
+                  <span className="text-sm text-muted-foreground">Choose an emoji for this teacher</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="teacher-name">Full Name *</Label>
                 <Input
-                  value={form.avatar_emoji}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, avatar_emoji: e.target.value }))
-                  }
-                  className="w-16 text-center text-lg px-0"
-                  maxLength={4}
-                />
-                <Input
-                  placeholder="Full Name"
+                  id="teacher-name"
+                  placeholder="Enter teacher's full name"
                   required
                   value={form.name}
                   onChange={(e) =>
@@ -322,15 +377,40 @@ function SchoolAdminTeachers() {
                   }
                 />
               </div>
-              <Input
-                type="email"
-                placeholder="Email"
-                required
-                value={form.email}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
-                }
-              />
+
+              <div className="space-y-2">
+                <Label htmlFor="teacher-email">Email *</Label>
+                <Input
+                  id="teacher-email"
+                  type="email"
+                  placeholder="teacher@school.com"
+                  required
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="teacher-password">
+                  {editing ? "New Password (optional)" : "Password *"}
+                </Label>
+                <Input
+                  id="teacher-password"
+                  type="password"
+                  placeholder={editing ? "Leave blank to keep current password" : "Minimum 6 characters"}
+                  minLength={6}
+                  required={!editing}
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, password: e.target.value }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {editing ? "Only enter a new password if you want to change it" : "Required for login access"}
+                </p>
+              </div>
               <div>
                 <Label className="text-xs">Branch</Label>
                 <select

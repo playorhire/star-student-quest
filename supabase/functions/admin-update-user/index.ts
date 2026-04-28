@@ -29,6 +29,15 @@ const MANAGEMENT_RULES: Record<TenantRole, TenantRole[]> = {
   parent: [],
 };
 
+const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
+  super_admin: "admin",
+  school_admin: "admin",
+  branch_admin: "admin",
+  teacher: "teacher",
+  student: "student",
+  parent: "parent",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -151,6 +160,21 @@ Deno.serve(async (req) => {
       if (email) roleUpdates.email = email;
       if (name) roleUpdates.name = name;
       await supabase.from("user_roles").update(roleUpdates).eq("user_id", userIdToUpdate);
+    }
+
+    // Ensure role is set to "admin" for super_admin, school_admin, and branch_admin users
+    const { data: targetRoleDataCheck } = await supabase
+      .from("user_roles")
+      .select("tenant_role")
+      .eq("user_id", userIdToUpdate)
+      .eq("is_primary", true)
+      .single();
+
+    if (targetRoleDataCheck?.tenant_role) {
+      const normalizedRole = BASE_ROLE_BY_TENANT_ROLE[targetRoleDataCheck.tenant_role as TenantRole];
+      if (normalizedRole) {
+        await supabase.from("user_roles").update({ role: normalizedRole }).eq("user_id", userIdToUpdate);
+      }
     }
 
     if (email) {

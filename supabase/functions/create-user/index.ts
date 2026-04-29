@@ -60,6 +60,8 @@ Deno.serve(async (req) => {
       branch_id,
       is_primary,
       meta,
+      skip_domain_insert,
+      teacher_id,
     } = await req.json();
 
     let school_id = inputSchoolId;
@@ -209,19 +211,28 @@ Deno.serve(async (req) => {
     }
 
     // Handle domain-specific table inserts for teacher and student roles
-    if (normalizedRole === "teacher") {
-      const { error: teacherError } = await supabase.from("teachers").insert({
-        name: meta?.name || email,
-        email,
+    if (skip_domain_insert && normalizedRole === "teacher" && teacher_id) {
+      // Update existing teacher record with auth user_id (form already created the record)
+      const { error: teacherUpdateError } = await supabase.from("teachers").update({
         user_id: userId,
-        school_id: school_id || null,
-        branch_id: branch_id || null,
-        avatar_emoji: meta?.avatar_emoji || "👨‍🏫",
-      });
-      if (teacherError) {
-        throw new Error(`Failed to insert teacher: ${teacherError.message}`);
+      }).eq("id", teacher_id);
+      if (teacherUpdateError) {
+        throw new Error(`Failed to update teacher user_id: ${teacherUpdateError.message}`);
       }
-    } else if (normalizedRole === "student") {
+    } else if (!skip_domain_insert) {
+      if (normalizedRole === "teacher") {
+        const { error: teacherError } = await supabase.from("teachers").insert({
+          name: meta?.name || email,
+          email,
+          user_id: userId,
+          school_id: school_id || null,
+          branch_id: branch_id || null,
+          avatar_emoji: meta?.avatar_emoji || "👨‍🏫",
+        });
+        if (teacherError) {
+          throw new Error(`Failed to insert teacher: ${teacherError.message}`);
+        }
+      } else if (normalizedRole === "student") {
       if (!meta?.rollNumber || !meta?.classId) {
         throw new Error("Student creation requires meta.studentId or both meta.rollNumber and meta.classId");
       }
@@ -259,6 +270,7 @@ Deno.serve(async (req) => {
           }))
         );
       }
+    }
     }
 
     return new Response(JSON.stringify({ userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -199,7 +199,20 @@ function SchoolAdminTeachers() {
       if (err) toast.error(err.message);
       else toast.success("Teacher updated");
     } else {
-      // Create auth user via edge function (handles teachers table insert)
+      // Step 1: Insert teacher record into teachers table
+      const { data: newTeacher, error: teacherInsertError } = await (supabase as any)
+        .from("teachers")
+        .insert(payload)
+        .select()
+        .single();
+
+      if (teacherInsertError) {
+        toast.error(teacherInsertError.message);
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 2: If password provided, create auth user via edge function (edge function updates user_id)
       if (form.password) {
         const res = await supabase.functions.invoke("create-user", {
           body: {
@@ -209,6 +222,8 @@ function SchoolAdminTeachers() {
             tenant_role: "teacher",
             school_id: user!.schoolId,
             branch_id: form.branch_id || null,
+            skip_domain_insert: true,
+            teacher_id: newTeacher.id,
             meta: {
               name: form.name.trim(),
               avatar_emoji: form.avatar_emoji,
@@ -216,19 +231,13 @@ function SchoolAdminTeachers() {
           },
         });
         if (res.error || res.data?.error) {
-          toast.error(res.data?.error || res.error?.message || "Failed to create account");
+          toast.error(res.data?.error || res.error?.message || "Failed to create auth account");
           setSubmitting(false);
           return;
         }
-        toast.success("Teacher created");
-      } else {
-        // Create teacher without auth account
-        const { error: err } = await (supabase as any)
-          .from("teachers")
-          .insert(payload);
-        if (err) toast.error(err.message);
-        else toast.success("Teacher created");
       }
+
+      toast.success("Teacher created");
     }
 
     setShowForm(false);

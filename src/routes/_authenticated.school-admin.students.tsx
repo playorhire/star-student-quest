@@ -42,8 +42,8 @@ function SchoolAdminStudents() {
     setLoading(true);
     setError(null);
     const [sRes, cRes] = await Promise.all([
-      (supabase as any).from("students").select("id, user_id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section").eq("school_id", user!.schoolId).order("name"),
-      (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).order("name"),
+      (supabase as any).from("students").select("id, user_id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section, branches(name)").eq("school_id", user!.schoolId).order("name"),
+      (supabase as any).from("classes").select("id, name, branches(name)").eq("school_id", user!.schoolId).order("name"),
     ]);
     if (sRes.error) { setError(sRes.error.message + " (" + sRes.error.code + ")"); toast.error(sRes.error.message); }
     else setStudents(sRes.data || []);
@@ -255,7 +255,7 @@ function SchoolAdminStudents() {
               <Label htmlFor="student-class">Class *</Label>
               <select id="student-class" required value={form.class_id} onChange={e => setForm(f => ({ ...f, class_id: e.target.value }))} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Select Class</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.branches?.name ? `(${c.branches.name})` : ""}</option>)}
               </select>
             </div>
             <div className="flex gap-2">
@@ -278,7 +278,7 @@ function SchoolAdminStudents() {
                 <div className="text-2xl">{s.avatar_emoji || "🎓"}</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold">{s.name}</div>
-                  <div className="text-xs text-muted-foreground">{s.classes?.name} • Roll #{s.roll_number} • Section {s.section}</div>
+                  <div className="text-xs text-muted-foreground">{s.classes?.name} • Roll #{s.roll_number} • Section {s.section} • {s.branches?.name || "—"}</div>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-black text-primary">{s.total_points ?? 0}</div>

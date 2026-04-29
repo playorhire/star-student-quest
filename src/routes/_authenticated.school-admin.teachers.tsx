@@ -48,6 +48,7 @@ interface BranchRow {
 interface ClassRow {
   id: string;
   name: string;
+  branches?: { name: string } | null;
 }
 
 interface SubjectRow {
@@ -111,7 +112,7 @@ function SchoolAdminTeachers() {
         .order("name"),
       (supabase as any)
         .from("classes")
-        .select("id, name")
+        .select("id, name, branches(name)")
         .eq("school_id", user!.schoolId)
         .order("name"),
       (supabase as any)
@@ -651,7 +652,7 @@ function SchoolAdminTeachers() {
                 <option value="">Select class</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.name} {c.branches?.name ? `(${c.branches.name})` : ""}
                   </option>
                 ))}
               </select>

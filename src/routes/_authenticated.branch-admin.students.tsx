@@ -33,7 +33,7 @@ function BranchAdminStudents() {
     setError(null);
     const [sRes, cRes] = await Promise.all([
       (supabase as any).from("students").select("id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section, user_id").eq("branch_id", user!.branchId).order("name"),
-      (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).order("name"),
+      (supabase as any).from("classes").select("id, name, branches(name)").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
     ]);
     if (sRes.error) { setError(sRes.error.message + " (" + sRes.error.code + ")"); toast.error(sRes.error.message); }
     else setStudents(sRes.data || []);
@@ -229,7 +229,7 @@ function BranchAdminStudents() {
               <Label htmlFor="student-class">Class *</Label>
               <select id="student-class" required value={form.class_id} onChange={e => setForm(f => ({ ...f, class_id: e.target.value }))} className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Select Class</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.branches?.name ? `(${c.branches.name})` : ""}</option>)}
               </select>
             </div>
 

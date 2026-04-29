@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin/students")({
 });
 
 interface StudentRow { id: string; name: string; roll_number: string; section: string; total_points: number; avatar_emoji: string; class_id: string; user_id: string | null; classes: { name: string } | null; }
-interface ClassRow { id: string; name: string; }
+interface ClassRow { id: string; name: string; branches?: { name: string } | null; }
 
 function AdminStudents() {
   const [students, setStudents] = useState<StudentRow[]>([]);

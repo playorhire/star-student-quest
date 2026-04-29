@@ -43,8 +43,8 @@ function BranchAdminClasses() {
   async function load() {
     setLoading(true);
     const [c, s] = await Promise.all([
-      (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).order("name"),
-      (supabase as any).from("subjects").select("id, name, class_id").eq("school_id", user!.schoolId).order("name"),
+      (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
+      (supabase as any).from("subjects").select("id, name, class_id").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
     ]);
     setClasses(c.data || []);
     setSubjects(s.data || []);
@@ -74,7 +74,7 @@ function BranchAdminClasses() {
       if (error) toast.error(error.message);
       else toast.success("Class updated");
     } else {
-      const { error } = await (supabase as any).from("classes").insert({ name: className.trim(), school_id: user!.schoolId });
+      const { error } = await (supabase as any).from("classes").insert({ name: className.trim(), school_id: user!.schoolId, branch_id: user!.branchId });
       if (error) toast.error(error.message);
       else toast.success("Class created");
     }
@@ -119,7 +119,7 @@ function BranchAdminClasses() {
       if (error) toast.error(error.message);
       else toast.success("Subject updated");
     } else {
-      const { data, error } = await (supabase as any).from("subjects").insert({ name: subjectName.trim(), class_id: subjectClassId, school_id: user!.schoolId }).select().single();
+      const { data, error } = await (supabase as any).from("subjects").insert({ name: subjectName.trim(), class_id: subjectClassId, school_id: user!.schoolId, branch_id: user!.branchId }).select().single();
       if (error) {
         toast.error(error.message);
       } else if (data) {
@@ -129,6 +129,8 @@ function BranchAdminClasses() {
           multiplier: 1.0,
           min_marks: 0,
           max_marks: 100,
+          school_id: user!.schoolId,
+          branch_id: user!.branchId,
         });
         toast.success("Subject created");
       }

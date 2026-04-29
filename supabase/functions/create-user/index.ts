@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       meta,
       skip_domain_insert,
       teacher_id,
+      student_id,
     } = await req.json();
 
     let school_id = inputSchoolId;
@@ -211,14 +212,29 @@ Deno.serve(async (req) => {
     }
 
     // Handle domain-specific table inserts for teacher and student roles
+    console.log("Domain insert check:", { skip_domain_insert, normalizedRole, teacher_id, student_id, userId });
     if (skip_domain_insert && normalizedRole === "teacher" && teacher_id) {
       // Update existing teacher record with auth user_id (form already created the record)
+      console.log(`Updating teacher ${teacher_id} with user_id ${userId}`);
       const { error: teacherUpdateError } = await supabase.from("teachers").update({
         user_id: userId,
       }).eq("id", teacher_id);
       if (teacherUpdateError) {
+        console.error("Teacher update error:", teacherUpdateError);
         throw new Error(`Failed to update teacher user_id: ${teacherUpdateError.message}`);
       }
+      console.log("Teacher updated successfully");
+    } else if (skip_domain_insert && normalizedRole === "student" && student_id) {
+      // Update existing student record with auth user_id (form already created the record)
+      console.log(`Updating student ${student_id} with user_id ${userId}`);
+      const { error: studentUpdateError } = await supabase.from("students").update({
+        user_id: userId,
+      }).eq("id", student_id);
+      if (studentUpdateError) {
+        console.error("Student update error:", studentUpdateError);
+        throw new Error(`Failed to update student user_id: ${studentUpdateError.message}`);
+      }
+      console.log("Student updated successfully");
     } else if (!skip_domain_insert) {
       if (normalizedRole === "teacher") {
         const { error: teacherError } = await supabase.from("teachers").insert({

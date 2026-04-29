@@ -109,7 +109,20 @@ function SchoolAdminStudents() {
       if (err) toast.error(err.message);
       else toast.success("Student updated");
     } else {
-      // Create auth user via edge function (handles students table insert)
+      // Step 1: Insert student record into students table
+      const { data: newStudent, error: studentInsertError } = await (supabase as any)
+        .from("students")
+        .insert({ ...payload, total_points: 0, qr_code: crypto.randomUUID() })
+        .select()
+        .single();
+
+      if (studentInsertError) {
+        toast.error(studentInsertError.message);
+        setSubmitting(false);
+        return;
+      }
+
+      // Step 2: If password provided, create auth user via edge function (edge function updates user_id)
       if (form.email.trim() && form.password) {
         const res = await supabase.functions.invoke("create-user", {
           body: {
@@ -119,6 +132,8 @@ function SchoolAdminStudents() {
             tenant_role: "student",
             school_id: user!.schoolId,
             branch_id: null,
+            skip_domain_insert: true,
+            student_id: newStudent.id,
             meta: {
               name: form.name.trim(),
               rollNumber: form.roll_number.trim(),
@@ -129,17 +144,13 @@ function SchoolAdminStudents() {
           },
         });
         if (res.error || res.data?.error) {
-          toast.error(res.data?.error || res.error?.message || "Failed to create account");
+          toast.error(res.data?.error || res.error?.message || "Failed to create auth account");
           setSubmitting(false);
           return;
         }
-        toast.success("Student created");
-      } else {
-        // Create student without auth account
-        const { error: err } = await (supabase as any).from("students").insert({ ...payload, total_points: 0, qr_code: crypto.randomUUID() });
-        if (err) toast.error(err.message);
-        else toast.success("Student created");
       }
+
+      toast.success("Student created");
     }
 
     setShowForm(false);

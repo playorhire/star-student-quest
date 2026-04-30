@@ -1,5 +1,5 @@
--- Backfill existing teacher rows that were created before create-user linked user_id.
--- Only update unambiguous matches where the auth user is not already linked to another teacher row.
+-- Re-run teacher user_id backfill for databases where the earlier migration
+-- was already applied before legacy-role matching was added.
 WITH teacher_auth_matches AS (
   SELECT
     t.id AS teacher_id,
@@ -25,8 +25,3 @@ SET user_id = tam.auth_user_id
 FROM teacher_auth_matches tam
 WHERE t.id = tam.teacher_id
   AND tam.matching_teacher_count = 1;
-
--- Prevent one auth user from being linked to multiple teacher records.
-CREATE UNIQUE INDEX IF NOT EXISTS teachers_user_id_unique_idx
-ON public.teachers (user_id)
-WHERE user_id IS NOT NULL;

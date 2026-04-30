@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     const { data: roleCheck } = await supabase
       .from("user_roles")
       .select("role, tenant_role, school_id, branch_id")
-      .eq("user_id", userId)
+      .eq("user_id", caller.id)
       .eq("is_primary", true)
       .single();
 

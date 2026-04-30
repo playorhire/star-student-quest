@@ -165,8 +165,11 @@ function BranchAdminStudents() {
           },
         });
         if (res.error || res.data?.error) {
+          // Clean up the student record if auth user creation failed
+          await (supabase as any).from("students").delete().eq("id", newStudent.id);
           toast.error(res.data?.error || res.error?.message || "Failed to create auth account");
           setSubmitting(false);
+          isSubmittingRef.current = false;
           return;
         }
       }

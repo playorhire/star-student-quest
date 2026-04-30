@@ -216,9 +216,10 @@ Deno.serve(async (req) => {
     if (skip_domain_insert && normalizedRole === "teacher" && teacher_id) {
       // Update existing teacher record with auth user_id (form already created the record)
       console.log(`Updating teacher ${teacher_id} with user_id ${userId}`);
-      const { error: teacherUpdateError } = await supabase.from("teachers").update({
+      const { data: teacherUpdateData, error: teacherUpdateError } = await supabase.from("teachers").update({
         user_id: userId,
-      }).eq("id", teacher_id);
+      }).eq("id", teacher_id).select();
+      console.log("Teacher update result:", { data: teacherUpdateData, error: teacherUpdateError });
       if (teacherUpdateError) {
         console.error("Teacher update error:", teacherUpdateError);
         throw new Error(`Failed to update teacher user_id: ${teacherUpdateError.message}`);
@@ -227,9 +228,10 @@ Deno.serve(async (req) => {
     } else if (skip_domain_insert && normalizedRole === "student" && student_id) {
       // Update existing student record with auth user_id (form already created the record)
       console.log(`Updating student ${student_id} with user_id ${userId}`);
-      const { error: studentUpdateError } = await supabase.from("students").update({
+      const { data: studentUpdateData, error: studentUpdateError } = await supabase.from("students").update({
         user_id: userId,
-      }).eq("id", student_id);
+      }).eq("id", student_id).select();
+      console.log("Student update result:", { data: studentUpdateData, error: studentUpdateError });
       if (studentUpdateError) {
         console.error("Student update error:", studentUpdateError);
         throw new Error(`Failed to update student user_id: ${studentUpdateError.message}`);

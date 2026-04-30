@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     const { data: roleCheck } = await supabase
       .from("user_roles")
       .select("role, tenant_role, school_id, branch_id")
-      .eq("user_id", caller.id)
+      .eq("user_id", userId)
       .eq("is_primary", true)
       .single();
 
@@ -214,17 +214,8 @@ Deno.serve(async (req) => {
     // Handle domain-specific table inserts for teacher and student roles
     console.log("Domain insert check:", { skip_domain_insert, normalizedRole, teacher_id, student_id, userId });
     if (skip_domain_insert && normalizedRole === "teacher" && teacher_id) {
-      // Update existing teacher record with auth user_id (form already created the record)
-      console.log(`Updating teacher ${teacher_id} with user_id ${userId}`);
-      const { data: teacherUpdateData, error: teacherUpdateError } = await supabase.from("teachers").update({
-        user_id: userId,
-      }).eq("id", teacher_id).select();
-      console.log("Teacher update result:", { data: teacherUpdateData, error: teacherUpdateError });
-      if (teacherUpdateError) {
-        console.error("Teacher update error:", teacherUpdateError);
-        throw new Error(`Failed to update teacher user_id: ${teacherUpdateError.message}`);
-      }
-      console.log("Teacher updated successfully");
+      // Teacher record already created by form, no update needed
+      console.log(`Teacher ${teacher_id} already created by form`);
     } else if (skip_domain_insert && normalizedRole === "student" && student_id) {
       // Update existing student record with auth user_id (form already created the record)
       console.log(`Updating student ${student_id} with user_id ${userId}`);
@@ -242,7 +233,6 @@ Deno.serve(async (req) => {
         const { error: teacherError } = await supabase.from("teachers").insert({
           name: meta?.name || email,
           email,
-          user_id: userId,
           school_id: school_id || null,
           branch_id: branch_id || null,
           avatar_emoji: meta?.avatar_emoji || "👨‍🏫",

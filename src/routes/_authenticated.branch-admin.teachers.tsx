@@ -251,22 +251,6 @@ function BranchAdminTeachers() {
           isSubmittingRef.current = false;
           return;
         }
-        
-        // Verify user_id was updated
-        const { data: updatedTeacher } = await (supabase as any)
-          .from("teachers")
-          .select("user_id")
-          .eq("id", newTeacher.id)
-          .single();
-        console.log("Teacher after edge function:", updatedTeacher);
-        if (!updatedTeacher?.user_id) {
-          console.error("user_id not set after edge function call");
-          await (supabase as any).from("teachers").delete().eq("id", newTeacher.id);
-          toast.error("Failed to link auth user to teacher record");
-          setSubmitting(false);
-          isSubmittingRef.current = false;
-          return;
-        }
       }
 
       toast.success("Teacher created");

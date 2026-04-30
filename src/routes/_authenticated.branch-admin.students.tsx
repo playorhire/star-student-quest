@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { GraduationCap, Plus, Trash2, Pencil, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ function BranchAdminStudents() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (user?.branchId) loadData();
@@ -63,9 +64,17 @@ function BranchAdminStudents() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmittingRef.current) {
+      return;
+    }
+    
     if (!form.name.trim() || !form.roll_number.trim() || !form.class_id) { toast.error("Name, roll number, and class are required"); return; }
     if (!editing && form.email.trim() && !form.password) { toast.error("Password is required when email is provided"); return; }
     if (form.password && form.password.length < 6) { toast.error("Password must be 6+ chars"); return; }
+    
+    isSubmittingRef.current = true;
     setSubmitting(true);
 
     const payload: any = {
@@ -100,6 +109,22 @@ function BranchAdminStudents() {
       if (err) toast.error(err.message);
       else toast.success("Student updated");
     } else {
+      // Check if student with this roll number already exists in the branch
+      const { data: existingStudent } = await (supabase as any)
+        .from("students")
+        .select("id")
+        .eq("roll_number", form.roll_number.trim())
+        .eq("school_id", user!.schoolId)
+        .eq("branch_id", user!.branchId)
+        .maybeSingle();
+      
+      if (existingStudent) {
+        toast.error("A student with this roll number already exists in your branch");
+        setSubmitting(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+
       // Step 1: Insert student record into students table
       const { data: newStudent, error: studentInsertError } = await (supabase as any)
         .from("students")
@@ -108,8 +133,13 @@ function BranchAdminStudents() {
         .single();
 
       if (studentInsertError) {
-        toast.error(studentInsertError.message);
+        if (studentInsertError.code === '23505') {
+          toast.error("A student with this roll number or email already exists");
+        } else {
+          toast.error(studentInsertError.message);
+        }
         setSubmitting(false);
+        isSubmittingRef.current = false;
         return;
       }
 
@@ -147,6 +177,7 @@ function BranchAdminStudents() {
     setShowForm(false);
     setEditing(null);
     setSubmitting(false);
+    isSubmittingRef.current = false;
     loadData();
   }
 

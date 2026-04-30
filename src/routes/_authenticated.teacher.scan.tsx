@@ -131,9 +131,9 @@ function TeacherScan() {
   useEffect(() => {
     const load = async () => {
       if (!user) return;
-      const { data: teacher } = await supabase
+      const { data: teacher } = await (supabase as any)
         .from("teachers")
-        .select("id")
+        .select("id, branch_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -154,10 +154,17 @@ function TeacherScan() {
         return;
       }
 
-      const { data: students } = await supabase
+      const studentQuery = (supabase as any)
         .from("students")
-        .select("*")
+        .select("id, name, roll_number, total_points, avatar_emoji, class_id, section, qr_code")
+        .eq("school_id", user.schoolId)
         .in("class_id", classIds);
+      
+      if (teacher.branch_id) {
+        studentQuery.eq("branch_id", teacher.branch_id);
+      }
+
+      const { data: students } = await studentQuery;
 
       setStudentsForClasses(students || []);
     };

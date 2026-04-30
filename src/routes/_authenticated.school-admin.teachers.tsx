@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Users, Plus, Trash2, Pencil, Loader2, X, BookOpen, MapPin, KeyRound } from "lucide-react";
 import { toast } from "sonner";
@@ -88,6 +88,7 @@ function SchoolAdminTeachers() {
   // Credentials dialog state
   const [credTeacher, setCredTeacher] = useState<TeacherRow | null>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (user?.schoolId) loadData();
@@ -200,6 +201,20 @@ function SchoolAdminTeachers() {
       if (err) toast.error(err.message);
       else toast.success("Teacher updated");
     } else {
+      // Check if teacher with this email already exists
+      const { data: existingTeacher } = await (supabase as any)
+        .from("teachers")
+        .select("id")
+        .eq("email", form.email.trim())
+        .eq("school_id", user!.schoolId)
+        .maybeSingle();
+      
+      if (existingTeacher) {
+        toast.error("A teacher with this email already exists in your school");
+        setSubmitting(false);
+        return;
+      }
+
       // Step 1: Insert teacher record into teachers table
       const { data: newTeacher, error: teacherInsertError } = await (supabase as any)
         .from("teachers")
@@ -208,7 +223,11 @@ function SchoolAdminTeachers() {
         .single();
 
       if (teacherInsertError) {
-        toast.error(teacherInsertError.message);
+        if (teacherInsertError.code === '23505') {
+          toast.error("A teacher with this email already exists in your school");
+        } else {
+          toast.error(teacherInsertError.message);
+        }
         setSubmitting(false);
         return;
       }
@@ -244,6 +263,7 @@ function SchoolAdminTeachers() {
     setShowForm(false);
     setEditing(null);
     setSubmitting(false);
+    isSubmittingRef.current = false;
     loadData();
   }
 

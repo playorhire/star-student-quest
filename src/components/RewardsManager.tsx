@@ -17,7 +17,7 @@ interface Reward {
   category: string;
 }
 
-export function RewardsManager() {
+export function RewardsManager({ branchId }: { branchId?: string }) {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,10 +35,14 @@ export function RewardsManager() {
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [branchId]);
 
   async function load() {
-    const { data } = await supabase.from("rewards").select("*").order("point_cost");
+    let query = supabase.from("rewards").select("*").order("point_cost");
+    if (branchId) {
+      (query as any).eq("branch_id", branchId);
+    }
+    const { data } = await query;
     setRewards(data || []);
   }
 

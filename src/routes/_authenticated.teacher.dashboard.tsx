@@ -3,24 +3,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "../components/ui/card";
 import { TrendingUp, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/teacher/dashboard")({
   component: TeacherDashboard,
 });
 
 function TeacherDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({ pointsToday: 0, totalStudents: 0, totalScans: 0 });
   const [recentTxns, setRecentTxns] = useState<any[]>([]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [user]);
 
   async function load() {
     const today = new Date().toISOString().split("T")[0];
+    const studentsQuery = supabase.from("students").select("id", { count: "exact", head: true });
+    if (user?.branchId) {
+      (studentsQuery as any).eq("branch_id", user.branchId);
+    }
+    
+    const todayTxQuery = supabase.from("point_transactions").select("points_awarded").gte("created_at", today);
+    const totalTxQuery = supabase.from("point_transactions").select("id", { count: "exact", head: true });
+    const recentQuery = supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, students(name, avatar_emoji), subjects(name)").order("created_at", { ascending: false }).limit(5);
+    
+    if (user?.branchId) {
+      (todayTxQuery as any).eq("branch_id", user.branchId);
+      (totalTxQuery as any).eq("branch_id", user.branchId);
+      (recentQuery as any).eq("branch_id", user.branchId);
+    }
+    
     const [todayTx, studentsCount, totalTx, recent] = await Promise.all([
-      supabase.from("point_transactions").select("points_awarded").gte("created_at", today),
-      supabase.from("students").select("id", { count: "exact", head: true }),
-      supabase.from("point_transactions").select("id", { count: "exact", head: true }),
-      supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, students(name, avatar_emoji), subjects(name)").order("created_at", { ascending: false }).limit(5),
+      todayTxQuery,
+      studentsQuery,
+      totalTxQuery,
+      recentQuery,
     ]);
     setStats({
       pointsToday: (todayTx.data || []).reduce((s, t) => s + t.points_awarded, 0),

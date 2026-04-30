@@ -2,22 +2,30 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "../components/ui/card";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/teacher/history")({
   component: TeacherHistory,
 });
 
 function TeacherHistory() {
+  const { user } = useAuth();
   const [txns, setTxns] = useState<any[]>([]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [user]);
 
   async function load() {
-    const { data } = await supabase
+    const query = supabase
       .from("point_transactions")
       .select("id, points_awarded, marks_entered, created_at, students(name, avatar_emoji), subjects(name)")
       .order("created_at", { ascending: false })
       .limit(50);
+    
+    if (user?.branchId) {
+      (query as any).eq("branch_id", user.branchId);
+    }
+    
+    const { data } = await query;
     setTxns(data || []);
   }
 

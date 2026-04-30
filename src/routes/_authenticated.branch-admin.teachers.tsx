@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Users, Plus, Trash2, Pencil, Loader2, X, BookOpen, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +76,7 @@ function BranchAdminTeachers() {
   const [assignSubjectId, setAssignSubjectId] = useState("");
   const [assignSection, setAssignSection] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (user?.branchId) loadData();
@@ -136,6 +137,12 @@ function BranchAdminTeachers() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmittingRef.current) {
+      return;
+    }
+    
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("Name and email required");
       return;
@@ -148,6 +155,8 @@ function BranchAdminTeachers() {
       toast.error("Password must be 6+ chars");
       return;
     }
+    
+    isSubmittingRef.current = true;
     setSubmitting(true);
 
     const payload: any = {
@@ -183,6 +192,21 @@ function BranchAdminTeachers() {
       if (err) toast.error(err.message);
       else toast.success("Teacher updated");
     } else {
+      // Check if teacher with this email already exists
+      const { data: existingTeacher } = await (supabase as any)
+        .from("teachers")
+        .select("id")
+        .eq("email", form.email.trim())
+        .eq("school_id", user!.schoolId)
+        .eq("branch_id", user!.branchId)
+        .maybeSingle();
+      
+      if (existingTeacher) {
+        toast.error("A teacher with this email already exists in your branch");
+        setSubmitting(false);
+        return;
+      }
+
       // Step 1: Insert teacher record into teachers table
       const { data: newTeacher, error: teacherInsertError } = await (supabase as any)
         .from("teachers")
@@ -191,7 +215,11 @@ function BranchAdminTeachers() {
         .single();
 
       if (teacherInsertError) {
-        toast.error(teacherInsertError.message);
+        if (teacherInsertError.code === '23505') {
+          toast.error("A teacher with this email already exists in your branch");
+        } else {
+          toast.error(teacherInsertError.message);
+        }
         setSubmitting(false);
         return;
       }
@@ -227,6 +255,7 @@ function BranchAdminTeachers() {
     setShowForm(false);
     setEditing(null);
     setSubmitting(false);
+    isSubmittingRef.current = false;
     loadData();
   }
 

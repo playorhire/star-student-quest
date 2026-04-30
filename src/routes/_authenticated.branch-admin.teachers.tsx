@@ -251,6 +251,20 @@ function BranchAdminTeachers() {
           isSubmittingRef.current = false;
           return;
         }
+
+        if (res.data?.userId) {
+          const { error: linkError } = await (supabase as any)
+            .from("teachers")
+            .update({ user_id: res.data.userId })
+            .eq("id", newTeacher.id);
+          if (linkError) {
+            await (supabase as any).from("teachers").delete().eq("id", newTeacher.id);
+            toast.error("Failed to link auth user to teacher record");
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
       }
 
       toast.success("Teacher created");

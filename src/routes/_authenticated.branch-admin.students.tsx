@@ -3,11 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { GraduationCap, Plus, Trash2, Pencil, Loader2, X } from "lucide-react";
+import { GraduationCap, Plus, Trash2, Pencil, Loader2, X, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/branch-admin/students")({
   component: BranchAdminStudents,
@@ -23,6 +29,8 @@ function BranchAdminStudents() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
   const [submitting, setSubmitting] = useState(false);
+  const [credStudent, setCredStudent] = useState<any>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -172,6 +180,20 @@ function BranchAdminStudents() {
           isSubmittingRef.current = false;
           return;
         }
+
+        if (res.data?.userId) {
+          const { error: linkError } = await (supabase as any)
+            .from("students")
+            .update({ user_id: res.data.userId })
+            .eq("id", newStudent.id);
+          if (linkError) {
+            await (supabase as any).from("students").delete().eq("id", newStudent.id);
+            toast.error("Failed to link auth user to student record");
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
       }
 
       toast.success("Student created");
@@ -189,6 +211,20 @@ function BranchAdminStudents() {
     const { error: err } = await (supabase as any).from("students").delete().eq("id", id);
     if (err) toast.error(err.message);
     else { toast.success("Student deleted"); loadData(); }
+  }
+
+  async function handleResetPassword() {
+    if (!credStudent?.email) {
+      toast.error("No email found for this student");
+      return;
+    }
+    setResettingPassword(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(credStudent.email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    if (error) toast.error(`Reset failed: ${error.message}`);
+    else toast.success("Password reset email sent (if email service is configured)");
+    setResettingPassword(false);
   }
 
   const allowedRoles = ["branch_admin", "school_admin", "admin", "super_admin"];
@@ -287,6 +323,7 @@ function BranchAdminStudents() {
                 <div className="text-2xl">{s.avatar_emoji || "🎓"}</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold">{s.name}</div>
+                  <div className="text-xs text-muted-foreground font-mono truncate">Auth: {s.user_id || "Not linked"}</div>
                   <div className="text-xs text-muted-foreground">{s.classes?.name} • Roll #{s.roll_number} • Section {s.section}</div>
                 </div>
                 <div className="text-right shrink-0">
@@ -294,6 +331,7 @@ function BranchAdminStudents() {
                   <div className="text-[10px] text-muted-foreground">pts</div>
                 </div>
                 <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => setCredStudent(s)} title="Manage credentials"><KeyRound className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -302,6 +340,47 @@ function BranchAdminStudents() {
           ))}
         </div>
       )}
+      <Dialog
+        open={!!credStudent}
+        onOpenChange={(open) => !open && setCredStudent(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Student Credentials</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-muted-foreground">Name</Label>
+              <div className="font-medium">{credStudent?.name}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <div className="font-medium font-mono text-sm">{credStudent?.email || "No email"}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Auth User ID</Label>
+              <div className="font-mono text-xs bg-muted rounded px-2 py-1 break-all">
+                {credStudent?.user_id || "No auth account linked"}
+              </div>
+            </div>
+            <div className="pt-2 border-t">
+              <Button
+                onClick={handleResetPassword}
+                disabled={resettingPassword || !credStudent?.email}
+                className="w-full"
+                variant="outline"
+              >
+                {resettingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <KeyRound className="h-4 w-4 mr-1" />
+                )}
+                Send Password Reset Email
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

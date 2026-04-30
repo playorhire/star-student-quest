@@ -259,6 +259,13 @@ function SchoolAdminTeachers() {
           isSubmittingRef.current = false;
           return;
         }
+
+        if (res.data?.userId) {
+          await (supabase as any)
+            .from("teachers")
+            .update({ user_id: res.data.userId })
+            .eq("id", newTeacher.id);
+        }
         
         // Verify user_id was updated
         const { data: updatedTeacher } = await (supabase as any)

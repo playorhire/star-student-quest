@@ -219,8 +219,6 @@ Deno.serve(async (req) => {
       let teacherUpdate = supabase.from("teachers").update({
         user_id: userId,
       }).eq("id", teacher_id);
-      if (school_id !== undefined) teacherUpdate = teacherUpdate.eq("school_id", school_id);
-      if (branch_id !== undefined) teacherUpdate = teacherUpdate.eq("branch_id", branch_id);
 
       const { data: teacherUpdateData, error: teacherUpdateError } = await teacherUpdate.select();
       console.log("Teacher update result:", { data: teacherUpdateData, error: teacherUpdateError });
@@ -249,6 +247,7 @@ Deno.serve(async (req) => {
         const { error: teacherError } = await supabase.from("teachers").insert({
           name: meta?.name || email,
           email,
+          user_id: userId,
           school_id: school_id || null,
           branch_id: branch_id || null,
           avatar_emoji: meta?.avatar_emoji || "👨‍🏫",

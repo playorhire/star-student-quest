@@ -180,6 +180,20 @@ function SchoolAdminStudents() {
           isSubmittingRef.current = false;
           return;
         }
+
+        if (res.data?.userId) {
+          const { error: linkError } = await (supabase as any)
+            .from("students")
+            .update({ user_id: res.data.userId })
+            .eq("id", newStudent.id);
+          if (linkError) {
+            await (supabase as any).from("students").delete().eq("id", newStudent.id);
+            toast.error("Failed to link auth user to student record");
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
       }
 
       toast.success("Student created");
@@ -311,6 +325,7 @@ function SchoolAdminStudents() {
                 <div className="text-2xl">{s.avatar_emoji || "🎓"}</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold">{s.name}</div>
+                  <div className="text-xs text-muted-foreground font-mono truncate">Auth: {s.user_id || "Not linked"}</div>
                   <div className="text-xs text-muted-foreground">{s.classes?.name} • Roll #{s.roll_number} • Section {s.section} • {s.branches?.name || "—"}</div>
                 </div>
                 <div className="text-right shrink-0">

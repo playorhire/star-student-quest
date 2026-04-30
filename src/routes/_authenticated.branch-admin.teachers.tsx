@@ -90,7 +90,7 @@ function BranchAdminTeachers() {
       (supabase as any)
         .from("teachers")
         .select(
-          "id, name, email, avatar_emoji, branch_id, teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
+          "id, user_id, name, email, avatar_emoji, branch_id, teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
         )
         .eq("branch_id", user!.branchId)
         .order("name"),
@@ -471,6 +471,9 @@ function BranchAdminTeachers() {
                         <div className="font-semibold truncate">{t.name}</div>
                         <div className="text-xs text-muted-foreground">
                           {t.email}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono truncate">
+                          Auth: {t.user_id || "Not linked"}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                           <MapPin className="h-3 w-3" />

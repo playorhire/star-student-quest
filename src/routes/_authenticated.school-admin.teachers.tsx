@@ -529,6 +529,9 @@ function SchoolAdminTeachers() {
                         <div className="text-xs text-muted-foreground">
                           {t.email}
                         </div>
+                        <div className="text-xs text-muted-foreground font-mono truncate">
+                          Auth: {t.user_id || "Not linked"}
+                        </div>
                         {t.branch_id && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                             <MapPin className="h-3 w-3" />

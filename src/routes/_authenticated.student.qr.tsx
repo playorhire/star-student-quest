@@ -113,8 +113,9 @@ function StudentQR() {
       // Footer text
       ctx.fillStyle = "#6b7280";
       ctx.font = `${12 * scale}px sans-serif`;
-      ctx.fillText("Show QR or share the code with your teacher", cardW / 2, cardH - 28 * scale);
-
+      ctx.fillText("Show QR or share the code with your teacher,", cardW / 2, cardH - 28 * scale);
+      // Line 2 (new line)
+      ctx.fillText("Question ! 0331-897-2780.",cardW / 2, cardH - 12 * scale);
       URL.revokeObjectURL(url);
       const a = document.createElement("a");
       a.download = `${student.name.replace(/\s+/g, "_")}_Student_Card.png`;

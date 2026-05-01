@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { CheckCircle, Bell, KeyRound, Mail } from "lucide-react";
+import { CheckCircle, Bell, KeyRound, Mail, Users2 } from "lucide-react";
+import { LinkedChildrenManager } from "@/components/LinkedChildrenManager";
 
 export const Route = createFileRoute("/_authenticated/parent/profile")({
   component: ParentProfile,
@@ -159,6 +160,17 @@ function ParentProfile() {
           <Button onClick={handleSave} className="rounded-xl w-full" disabled={saving || (Boolean(password) && !passwordValidation.isValid)}>
             {saving ? "Saving..." : "Save Changes"}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-2 border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Users2 className="h-4 w-4" /> Linked Children
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LinkedChildrenManager />
         </CardContent>
       </Card>
     </div>

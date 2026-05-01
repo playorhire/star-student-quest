@@ -23,7 +23,7 @@ type UserRoleRow = {
 const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
   super_admin: ["school_admin"],
   school_admin: ["branch_admin", "teacher"],
-  branch_admin: ["teacher", "student"],
+  branch_admin: ["teacher", "student", "parent"],
   teacher: [],
   student: [],
   parent: [],
@@ -170,8 +170,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (!["teacher", "student"].includes(requestedTenantRole)) {
-        return new Response(JSON.stringify({ error: "Branchadmin can only create teacher or student users" }), {
+      if (!["teacher", "student", "parent"].includes(requestedTenantRole)) {
+        return new Response(JSON.stringify({ error: "Branchadmin can only create teacher, student, or parent users" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

@@ -89,28 +89,48 @@ function BranchAdminParents() {
 
       if (studentsError) throw studentsError;
 
-      // Then get parents and links in parallel
-      const [pRes, lRes] = await Promise.all([
-        (supabase as any)
+      // Try RPC first (if migration has been applied)
+      const { data: parentsData, error: parentsError } = await (supabase as any)
+        .rpc('get_parents_for_branch_admin', { p_branch_id: user!.branchId });
+
+      if (!parentsError && parentsData) {
+        // RPC worked, use the data directly
+        setParents(parentsData);
+      } else {
+        // Fallback: Use existing "Authenticated can view parents" policy
+        console.log('Using fallback query for parents access');
+        
+        const { data: parentsList, error: parentsListError } = await (supabase as any)
           .from("parents")
           .select("id, user_id, name, email, phone, created_at")
-          .order("name"),
-        (supabase as any)
+          .order("name");
+        
+        if (parentsListError) throw parentsListError;
+        
+        // Get parent-student links for students in this branch
+        const studentIds = studentsData?.map((s: any) => s.id) || [];
+        const { data: linksData, error: linksError } = await (supabase as any)
           .from("parent_student_links")
           .select("parent_user_id, student_id, students(id, name, roll_number, classes(name))")
-          .in("student_id", studentsData?.map((s: any) => s.id) || []),
-      ]);
+          .in("student_id", studentIds);
 
-      if (pRes.error) throw pRes.error;
-      if (lRes.error) throw lRes.error;
-
-      // Combine parents with their linked students
-      const parentsWithLinks = (pRes.data || []).map((parent: any) => ({
-        ...parent,
-        linked_students: (lRes.data || []).filter((link: any) => link.parent_user_id === parent.user_id)
-      }));
-
-      setParents(parentsWithLinks);
+        if (linksError) {
+          console.log('Links query failed, continuing without linked students:', linksError);
+          // Set parents without linked students
+          setParents((parentsList || []).map((parent: any) => ({
+            ...parent,
+            linked_students: []
+          })));
+        } else {
+          // Combine parents with their linked students
+          const parentsWithLinks = (parentsList || []).map((parent: any) => ({
+            ...parent,
+            linked_students: (linksData || []).filter((link: any) => link.parent_user_id === parent.user_id)
+          }));
+          setParents(parentsWithLinks);
+        }
+      }
+      
       setStudents(studentsData || []);
     } catch (err: any) {
       setError(err.message);

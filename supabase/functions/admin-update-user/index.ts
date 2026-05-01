@@ -23,7 +23,7 @@ type RoleRow = {
 const MANAGEMENT_RULES: Record<TenantRole, TenantRole[]> = {
   super_admin: ["school_admin"],
   school_admin: ["branch_admin", "teacher"],
-  branch_admin: ["teacher", "student"],
+  branch_admin: ["teacher", "student", "parent"],
   teacher: [],
   student: [],
   parent: [],
@@ -125,10 +125,27 @@ Deno.serve(async (req) => {
         callerScope.school_id !== targetScope.school_id ||
         callerScope.branch_id !== targetScope.branch_id
       )) {
-        return new Response(JSON.stringify({ error: "Branchadmin can only manage students in their branch" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Parents are not branch-scoped in user_roles. Allow if they have a
+        // linked student in the branch admin's branch.
+        if (targetRole === "parent") {
+          const { data: linkedInBranch } = await supabase
+            .from("parent_student_links")
+            .select("student_id, students!inner(branch_id)")
+            .eq("parent_user_id", userIdToCheck)
+            .eq("students.branch_id", callerScope.branch_id)
+            .limit(1);
+          if (!linkedInBranch || linkedInBranch.length === 0) {
+            return new Response(JSON.stringify({ error: "Branch admin can only manage parents linked to students in their branch" }), {
+              status: 403,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          return new Response(JSON.stringify({ error: "Branch admin can only manage users in their branch" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 

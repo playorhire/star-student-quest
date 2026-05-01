@@ -935,6 +935,20 @@ export type Database = {
       generate_student_code: { Args: never; Returns: string }
       get_my_branch_id: { Args: never; Returns: string }
       get_my_branch_id_safe: { Args: never; Returns: string }
+      get_my_linked_children: {
+        Args: never
+        Returns: {
+          avatar_emoji: string
+          branch_name: string
+          class_id: string
+          class_name: string
+          id: string
+          name: string
+          roll_number: string
+          school_name: string
+          total_points: number
+        }[]
+      }
       get_my_primary_role: {
         Args: never
         Returns: Database["public"]["Enums"]["tenant_role"]
@@ -976,6 +990,19 @@ export type Database = {
           p_student_id: string
         }
         Returns: Json
+      }
+      search_student_for_parent: {
+        Args: { p_name: string; p_roll: string }
+        Returns: {
+          already_linked: boolean
+          avatar_emoji: string
+          branch_name: string
+          class_name: string
+          id: string
+          name: string
+          roll_number: string
+          school_name: string
+        }[]
       }
       update_student_user_id: {
         Args: { new_user_id: string; student_id: string }

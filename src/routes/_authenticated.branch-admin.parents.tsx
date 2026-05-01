@@ -153,7 +153,7 @@ function BranchAdminParents() {
 
     try {
       if (editing) {
-        // Update existing parent
+        // Update parent profile fields
         const { error: updateError } = await (supabase as any)
           .from("parents")
           .update({
@@ -162,8 +162,42 @@ function BranchAdminParents() {
             phone: form.phone.trim() || null,
           })
           .eq("id", editing.id);
-
         if (updateError) throw updateError;
+
+        // Update auth email/password if provided and parent has account
+        if (editing.user_id && (form.email.trim() !== editing.email || form.password.trim())) {
+          const updateBody: any = { targetUserId: editing.user_id, name: form.name.trim() };
+          if (form.email.trim() !== editing.email) updateBody.email = form.email.trim();
+          if (form.password.trim()) updateBody.password = form.password.trim();
+          const res = await supabase.functions.invoke("admin-update-user", { body: updateBody });
+          if (res.error || res.data?.error) {
+            toast.error(res.data?.error || res.error?.message || "Failed to update account");
+            setSubmitting(false);
+            isSubmittingRef.current = false;
+            return;
+          }
+        }
+
+        // Sync student links
+        if (editing.user_id) {
+          const currentIds = new Set((editing.linked_students || []).map(l => l.student_id));
+          const newIds = new Set(form.studentIds);
+          const toAdd = [...newIds].filter(id => !currentIds.has(id));
+          const toRemove = [...currentIds].filter(id => !newIds.has(id));
+          if (toAdd.length > 0) {
+            await (supabase as any).from("parent_student_links").insert(
+              toAdd.map(student_id => ({ parent_user_id: editing.user_id, student_id }))
+            );
+          }
+          if (toRemove.length > 0) {
+            await (supabase as any)
+              .from("parent_student_links")
+              .delete()
+              .eq("parent_user_id", editing.user_id)
+              .in("student_id", toRemove);
+          }
+        }
+
         toast.success("Parent updated");
       } else {
         // Create new parent with auth user

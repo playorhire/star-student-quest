@@ -403,19 +403,19 @@ function BranchAdminParents() {
                 <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
               )}
             </div>
-            {!editing && (
-              <div>
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="Create password"
-                  required
-                />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="password">
+                {editing ? "New Password (leave blank to keep current)" : "Password *"}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={editing ? "Leave blank to keep" : "Create password"}
+                required={!editing}
+              />
+            </div>
             <div>
               <Label htmlFor="phone">Phone</Label>
               <Input
@@ -425,8 +425,7 @@ function BranchAdminParents() {
                 placeholder="Phone number (optional)"
               />
             </div>
-            {!editing && (
-              <div>
+            <div>
                 <Label>Link Students (optional)</Label>
                 <div className="space-y-2">
                   {students.length === 0 ? (
@@ -467,8 +466,7 @@ function BranchAdminParents() {
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+            </div>
             <div className="flex gap-2 pt-4">
               <Button
                 type="button"

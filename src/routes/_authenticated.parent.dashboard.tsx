@@ -3,6 +3,7 @@ import { useAuth } from "../lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { MessageSquare, X } from "lucide-react";
+import { LinkedChildrenManager } from "@/components/LinkedChildrenManager";
 
 export const Route = createFileRoute("/_authenticated/parent/dashboard")({
   component: ParentDashboard,
@@ -16,6 +17,8 @@ interface ChildData {
   class_name: string;
   class_id: string;
   roll_number: string;
+  branch_name: string;
+  school_name: string;
 }
 
 interface TeacherOption {
@@ -94,33 +97,21 @@ function ParentDashboard() {
   }, [selectedChildId, children]);
 
   async function loadData() {
-    const { data: links } = await supabase
-      .from("parent_student_links")
-      .select("student_id")
-      .eq("parent_user_id", user!.id);
-
-    if (!links?.length) {
-      setLoading(false);
-      return;
-    }
-
-    const studentIds = links.map(l => l.student_id);
-
-    const { data: studentsData } = await supabase
-      .from("students")
-      .select("id, name, total_points, avatar_emoji, roll_number, class_id, classes(name)")
-      .in("id", studentIds);
-
-    if (studentsData) {
-      setChildren(studentsData.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-        total_points: s.total_points,
-        avatar_emoji: s.avatar_emoji,
-        class_name: s.classes?.name || "",
-        class_id: s.class_id,
-        roll_number: s.roll_number,
-      })));
+    const { data, error } = await (supabase as any).rpc("get_my_linked_children");
+    if (!error && data) {
+      setChildren(
+        (data as any[]).map((s) => ({
+          id: s.id,
+          name: s.name,
+          total_points: s.total_points,
+          avatar_emoji: s.avatar_emoji,
+          class_name: s.class_name || "",
+          class_id: s.class_id,
+          roll_number: s.roll_number,
+          branch_name: s.branch_name || "",
+          school_name: s.school_name || "",
+        }))
+      );
     }
     setLoading(false);
   }
@@ -149,10 +140,11 @@ function ParentDashboard() {
       </div>
 
       {children.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-8 text-center">
-          <div className="text-4xl mb-3">👶</div>
+        <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-3">
+          <div className="text-4xl">👶</div>
           <p className="text-muted-foreground">No children linked to your account yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">Ask the school admin to link your child.</p>
+          <p className="text-xs text-muted-foreground">Search by your child's name and roll number to link them.</p>
+          <LinkedChildrenManager compact onChange={() => loadData()} />
         </div>
       ) : (
         <>
@@ -195,6 +187,9 @@ function ParentDashboard() {
                     <div className="flex-1">
                       <div className="font-bold text-foreground">{child.name}</div>
                       <div className="text-xs text-muted-foreground">{child.class_name} • Roll #{child.roll_number}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        {child.school_name}{child.branch_name ? ` — ${child.branch_name}` : ""}
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-black text-primary">{child.total_points}</div>
@@ -210,6 +205,10 @@ function ParentDashboard() {
                   </button>
                 </div>
               ))}
+          </div>
+
+          <div className="pt-2">
+            <LinkedChildrenManager compact onChange={() => loadData()} />
           </div>
         </>
       )}

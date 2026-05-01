@@ -22,6 +22,7 @@ export type Database = {
           id: string
           name: string
           required_points: number
+          school_id: string | null
         }
         Insert: {
           created_at?: string
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           name: string
           required_points: number
+          school_id?: string | null
         }
         Update: {
           created_at?: string
@@ -38,26 +40,97 @@ export type Database = {
           id?: string
           name?: string
           required_points?: number
+          school_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "badges_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          name: string
+          school_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       classes: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           name: string
+          school_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           name: string
+          school_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           name?: string
+          school_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "classes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -185,33 +258,53 @@ export type Database = {
       }
       point_rules: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
+          max_marks: number | null
+          min_marks: number | null
           multiplier: number
           passing_marks: number
-          min_marks: number
-          max_marks: number
+          school_id: string | null
           subject_id: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
+          max_marks?: number | null
+          min_marks?: number | null
           multiplier?: number
           passing_marks?: number
-          min_marks?: number
-          max_marks?: number
+          school_id?: string | null
           subject_id: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
+          max_marks?: number | null
+          min_marks?: number | null
           multiplier?: number
           passing_marks?: number
-          min_marks?: number
-          max_marks?: number
+          school_id?: string | null
           subject_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "point_rules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_rules_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "point_rules_subject_id_fkey"
             columns: ["subject_id"]
@@ -223,39 +316,68 @@ export type Database = {
       }
       point_transactions: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           marks_entered: number
           multiplier: number
+          notes: string | null
           passing_marks: number
           points_awarded: number
+          reward_id: string | null
+          school_id: string | null
           student_id: string
           subject_id: string
           teacher_id: string
+          transaction_type: string | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           marks_entered: number
           multiplier: number
+          notes?: string | null
           passing_marks: number
           points_awarded: number
+          reward_id?: string | null
+          school_id?: string | null
           student_id: string
           subject_id: string
           teacher_id: string
+          transaction_type?: string | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           marks_entered?: number
           multiplier?: number
+          notes?: string | null
           passing_marks?: number
           points_awarded?: number
+          reward_id?: string | null
+          school_id?: string | null
           student_id?: string
           subject_id?: string
           teacher_id?: string
+          transaction_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "point_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "point_transactions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "point_transactions_student_id_fkey"
             columns: ["student_id"]
@@ -279,37 +401,102 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       redemptions: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           points_spent: number
           reward_id: string
+          school_id: string | null
           status: string
           student_id: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           points_spent: number
           reward_id: string
+          school_id?: string | null
           status?: string
           student_id: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           points_spent?: number
           reward_id?: string
+          school_id?: string | null
           status?: string
           student_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "redemptions_reward_id_fkey"
             columns: ["reward_id"]
             isOneToOne: false
             referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redemptions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
           {
@@ -323,6 +510,7 @@ export type Database = {
       }
       rewards: {
         Row: {
+          branch_id: string | null
           category: string
           created_at: string
           description: string | null
@@ -330,9 +518,11 @@ export type Database = {
           id: string
           name: string
           point_cost: number
+          school_id: string | null
           stock: number
         }
         Insert: {
+          branch_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -340,9 +530,11 @@ export type Database = {
           id?: string
           name: string
           point_cost: number
+          school_id?: string | null
           stock?: number
         }
         Update: {
+          branch_id?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -350,19 +542,105 @@ export type Database = {
           id?: string
           name?: string
           point_cost?: number
+          school_id?: string | null
           stock?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "rewards_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rewards_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
         Relationships: []
+      }
+      student_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
           avatar_emoji: string
+          branch_id: string | null
           class_id: string
           created_at: string
+          email: string | null
           id: string
+          lifetime_points: number
           name: string
           qr_code: string
           roll_number: string
+          school_id: string | null
           section: string
           student_code: string
           total_points: number
@@ -370,12 +648,16 @@ export type Database = {
         }
         Insert: {
           avatar_emoji?: string
+          branch_id?: string | null
           class_id: string
           created_at?: string
+          email?: string | null
           id?: string
+          lifetime_points?: number
           name: string
           qr_code?: string
           roll_number: string
+          school_id?: string | null
           section?: string
           student_code: string
           total_points?: number
@@ -383,12 +665,16 @@ export type Database = {
         }
         Update: {
           avatar_emoji?: string
+          branch_id?: string | null
           class_id?: string
           created_at?: string
+          email?: string | null
           id?: string
+          lifetime_points?: number
           name?: string
           qr_code?: string
           roll_number?: string
+          school_id?: string | null
           section?: string
           student_code?: string
           total_points?: number
@@ -396,34 +682,61 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "students_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "students_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "students_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
         ]
       }
       subjects: {
         Row: {
+          branch_id: string | null
           class_id: string
           created_at: string
           id: string
           name: string
+          school_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           class_id: string
           created_at?: string
           id?: string
           name: string
+          school_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           class_id?: string
           created_at?: string
           id?: string
           name?: string
+          school_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "subjects_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subjects_class_id_fkey"
             columns: ["class_id"]
@@ -431,36 +744,66 @@ export type Database = {
             referencedRelation: "classes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teacher_assignments: {
         Row: {
+          branch_id: string | null
           class_id: string
           created_at: string
           id: string
+          school_id: string | null
+          section: string | null
           subject_id: string
           teacher_id: string
         }
         Insert: {
+          branch_id?: string | null
           class_id: string
           created_at?: string
           id?: string
+          school_id?: string | null
+          section?: string | null
           subject_id: string
           teacher_id: string
         }
         Update: {
+          branch_id?: string | null
           class_id?: string
           created_at?: string
           id?: string
+          school_id?: string | null
+          section?: string | null
           subject_id?: string
           teacher_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "teacher_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "teacher_assignments_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_assignments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
           {
@@ -481,55 +824,140 @@ export type Database = {
       }
       teachers: {
         Row: {
+          avatar_emoji: string
+          branch_id: string | null
           created_at: string
           email: string
           id: string
           name: string
+          school_id: string | null
           user_id: string | null
         }
         Insert: {
+          avatar_emoji?: string
+          branch_id?: string | null
           created_at?: string
           email: string
           id?: string
           name: string
+          school_id?: string | null
           user_id?: string | null
         }
         Update: {
+          avatar_emoji?: string
+          branch_id?: string | null
           created_at?: string
           email?: string
           id?: string
           name?: string
+          school_id?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teachers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teachers_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
+          branch_id: string | null
           created_at: string
+          email: string | null
           id: string
+          is_primary: boolean | null
+          name: string | null
           role: Database["public"]["Enums"]["app_role"]
+          school_id: string | null
+          tenant_role: Database["public"]["Enums"]["tenant_role"] | null
           user_id: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
+          email?: string | null
           id?: string
+          is_primary?: boolean | null
+          name?: string | null
           role: Database["public"]["Enums"]["app_role"]
+          school_id?: string | null
+          tenant_role?: Database["public"]["Enums"]["tenant_role"] | null
           user_id: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
+          email?: string | null
           id?: string
+          is_primary?: boolean | null
+          name?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string | null
+          tenant_role?: Database["public"]["Enums"]["tenant_role"] | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      belongs_to_branch: { Args: { _branch_id: string }; Returns: boolean }
+      belongs_to_school: { Args: { _school_id: string }; Returns: boolean }
+      current_user_school_id: { Args: never; Returns: string }
       generate_student_code: { Args: never; Returns: string }
+      get_my_branch_id: { Args: never; Returns: string }
+      get_my_branch_id_safe: { Args: never; Returns: string }
+      get_my_primary_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["tenant_role"]
+      }
+      get_my_school_id: { Args: never; Returns: string }
+      get_my_school_id_safe: { Args: never; Returns: string }
+      get_my_teacher_id: { Args: never; Returns: string }
+      get_my_tenant_role: { Args: never; Returns: string }
+      get_parents_for_branch_admin: {
+        Args: { p_branch_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          linked_students: Json
+          name: string
+          phone: string
+          user_id: string
+        }[]
+      }
+      get_user_branch: { Args: never; Returns: string }
+      get_user_role: { Args: never; Returns: string }
+      get_user_school: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -537,9 +965,49 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_tenant_role: { Args: { _role: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
+      is_super_admin_safe: { Args: never; Returns: boolean }
+      is_teacher: { Args: never; Returns: boolean }
+      redeem_reward: {
+        Args: {
+          p_points_spent: number
+          p_reward_id: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
+      update_student_user_id: {
+        Args: { new_user_id: string; student_id: string }
+        Returns: undefined
+      }
+      update_teacher_user_id: {
+        Args: { new_user_id: string; teacher_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      app_role: "admin" | "teacher" | "student" | "parent"
+      app_role:
+        | "admin"
+        | "teacher"
+        | "student"
+        | "parent"
+        | "super_admin"
+        | "school_admin"
+        | "branch_admin"
+      tenant_role:
+        | "super_admin"
+        | "school_admin"
+        | "branch_admin"
+        | "teacher"
+        | "student"
+        | "parent"
+      user_role:
+        | "super_admin"
+        | "school_admin"
+        | "branch_admin"
+        | "teacher"
+        | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -667,7 +1135,30 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "teacher", "student", "parent"],
+      app_role: [
+        "admin",
+        "teacher",
+        "student",
+        "parent",
+        "super_admin",
+        "school_admin",
+        "branch_admin",
+      ],
+      tenant_role: [
+        "super_admin",
+        "school_admin",
+        "branch_admin",
+        "teacher",
+        "student",
+        "parent",
+      ],
+      user_role: [
+        "super_admin",
+        "school_admin",
+        "branch_admin",
+        "teacher",
+        "student",
+      ],
     },
   },
 } as const

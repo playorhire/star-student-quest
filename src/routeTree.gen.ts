@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterSchoolRouteImport } from './routes/register-school'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -65,6 +66,11 @@ import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated.admin.classes'
 import { Route as AuthenticatedAdminBadgesRouteImport } from './routes/_authenticated.admin.badges'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterSchoolRoute = RegisterSchoolRouteImport.update({
   id: '/register-school',
   path: '/register-school',
@@ -388,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -444,6 +451,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -502,6 +510,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
@@ -560,6 +569,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register-school'
+    | '/reset-password'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register-school'
+    | '/reset-password'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/register-school'
+    | '/reset-password'
     | '/_authenticated/admin'
     | '/_authenticated/branch-admin'
     | '/_authenticated/parent'
@@ -731,10 +743,18 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   RegisterSchoolRoute: typeof RegisterSchoolRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register-school': {
       id: '/register-school'
       path: '/register-school'
@@ -1323,6 +1343,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   RegisterSchoolRoute: RegisterSchoolRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

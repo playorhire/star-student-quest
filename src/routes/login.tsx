@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { useState } from "react";
 import { GraduationCap, ScanLine, Shield, Users } from "lucide-react";
@@ -74,6 +74,11 @@ function LoginPage() {
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="text-right">
+            <Link to={"/forgot-password" as any} className="text-xs font-bold text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <button
             type="submit"
             disabled={loading || authLoading}

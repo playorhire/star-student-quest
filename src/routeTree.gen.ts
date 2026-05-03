@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterSchoolRouteImport } from './routes/register-school'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -63,6 +64,11 @@ import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminClassesRouteImport } from './routes/_authenticated.admin.classes'
 import { Route as AuthenticatedAdminBadgesRouteImport } from './routes/_authenticated.admin.badges'
 
+const RegisterSchoolRoute = RegisterSchoolRouteImport.update({
+  id: '/register-school',
+  path: '/register-school',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -374,6 +380,7 @@ const AuthenticatedAdminBadgesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/register-school': typeof RegisterSchoolRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -428,6 +435,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/register-school': typeof RegisterSchoolRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -484,6 +492,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/register-school': typeof RegisterSchoolRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/register-school'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -594,6 +604,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/register-school'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -649,6 +660,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/register-school'
     | '/_authenticated/admin'
     | '/_authenticated/branch-admin'
     | '/_authenticated/parent'
@@ -705,10 +717,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RegisterSchoolRoute: typeof RegisterSchoolRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register-school': {
+      id: '/register-school'
+      path: '/register-school'
+      fullPath: '/register-school'
+      preLoaderRoute: typeof RegisterSchoolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -1281,6 +1301,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  RegisterSchoolRoute: RegisterSchoolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

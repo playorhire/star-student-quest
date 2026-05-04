@@ -70,6 +70,7 @@ function BranchAdminParents() {
   });
   const [submitting, setSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (user?.branchId) loadData();
@@ -283,6 +284,20 @@ function BranchAdminParents() {
     );
   }
 
+  const q = search.trim().toLowerCase();
+  const filteredParents = q
+    ? parents.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q),
+      )
+    : [...parents]
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )
+        .slice(0, 5);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -296,8 +311,21 @@ function BranchAdminParents() {
         </Button>
       </div>
 
+      <div className="space-y-1">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or email..."
+        />
+        {!q && (
+          <p className="text-xs text-muted-foreground">
+            Showing 5 most recently added. Search to find others.
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-4">
-        {parents.map((parent) => (
+        {filteredParents.map((parent) => (
           <Card key={parent.id} className="p-4">
             <CardContent className="p-0">
               <div className="flex items-start justify-between">
@@ -359,6 +387,11 @@ function BranchAdminParents() {
             </CardContent>
           </Card>
         ))}
+        {filteredParents.length === 0 && parents.length > 0 && (
+          <Card className="p-6 text-center text-sm text-muted-foreground">
+            No parents match "{search}"
+          </Card>
+        )}
         {parents.length === 0 && (
           <Card className="p-8 text-center">
             <Users2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

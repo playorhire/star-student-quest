@@ -61,9 +61,9 @@ function Index() {
           <Link to="/login" className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-sm font-bold text-foreground/80 hover:text-foreground transition-colors">
             Log in
           </Link>
-          <Link to="/login">
+          <Link to={"/register-school" as any}>
             <Button className="rounded-full px-5 font-bold shadow-md shadow-primary/30">
-              Get Started <ArrowRight className="ml-1 h-4 w-4" />
+              Register School <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </Link>
         </nav>
@@ -89,16 +89,16 @@ function Index() {
               students, teachers, and parents. 🎉
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center lg:justify-start gap-3">
-              <Link to="/login">
+              <Link to={"/register-school" as any}>
                 <Button size="lg" className="rounded-full px-7 h-12 text-base font-bold shadow-xl shadow-primary/30 hover:scale-105 transition-transform">
-                  Start Earning <Zap className="ml-1 h-4 w-4" />
+                  Register your School <Zap className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
-              <a href="#features">
+              <Link to="/login">
                 <Button size="lg" variant="outline" className="rounded-full px-7 h-12 text-base font-bold bg-white/60 backdrop-blur border-2">
-                  See how it works
+                  Log in
                 </Button>
-              </a>
+              </Link>
             </div>
             <div className="mt-6 flex items-center justify-center lg:justify-start gap-5 text-xs text-muted-foreground font-semibold">
               <div className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-secondary text-secondary" /> Loved by teachers</div>
@@ -255,9 +255,9 @@ function Index() {
           <p className="relative mt-3 text-white/90 max-w-md mx-auto">
             Join classrooms turning every gold-star moment into a celebration.
           </p>
-          <Link to="/login" className="relative inline-block mt-6">
+          <Link to={"/register-school" as any} className="relative inline-block mt-6">
             <Button size="lg" className="rounded-full px-8 h-12 bg-white text-primary hover:bg-white/90 font-black text-base shadow-xl hover:scale-105 transition-transform">
-              Get Started Free <ArrowRight className="ml-1 h-4 w-4" />
+              Register your School <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </Link>
         </div>

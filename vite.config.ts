@@ -9,7 +9,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   server: {
     host: '0.0.0.0',
-    allowedHosts: ["localhost", "exposure-undergo-tubular.ngrok-free.dev"],
+    allowedHosts: ["localhost", "starpoints-orpin.vercel.app"],
     port: 8080
   }
 });

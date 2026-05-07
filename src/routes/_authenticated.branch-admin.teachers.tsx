@@ -36,6 +36,8 @@ interface TeacherRow {
   avatar_emoji: string | null;
   branch_id: string | null;
   user_id: string | null;
+  house_id?: string | null;
+  houses?: { name: string; emoji: string; color: string } | null;
   teacher_assignments?: AssignmentRow[];
 }
 
@@ -56,6 +58,7 @@ function BranchAdminTeachers() {
   const [teachers, setTeachers] = useState<TeacherRow[]>([]);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
+  const [houses, setHouses] = useState<{ id: string; name: string; emoji: string; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +70,7 @@ function BranchAdminTeachers() {
     email: "",
     password: "",
     avatar_emoji: "👨‍🏫",
+    house_id: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -86,11 +90,11 @@ function BranchAdminTeachers() {
     setLoading(true);
     setError(null);
 
-    const [tRes, cRes, sRes] = await Promise.all([
+    const [tRes, cRes, sRes, hRes] = await Promise.all([
       (supabase as any)
         .from("teachers")
         .select(
-          "id, user_id, name, email, avatar_emoji, branch_id, teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
+          "id, user_id, name, email, avatar_emoji, branch_id, house_id, houses(name, emoji, color), teacher_assignments(id, class_id, subject_id, section, classes(name), subjects(name))"
         )
         .eq("branch_id", user!.branchId)
         .order("name"),
@@ -105,6 +109,11 @@ function BranchAdminTeachers() {
         .select("id, name, class_id")
         .eq("school_id", user!.schoolId)
         .order("name"),
+      (supabase as any)
+        .from("houses")
+        .select("id, name, emoji, color")
+        .eq("branch_id", user!.branchId)
+        .order("name"),
     ]);
 
     if (tRes.error) {
@@ -115,12 +124,13 @@ function BranchAdminTeachers() {
     }
     setClasses(cRes.data || []);
     setSubjects(sRes.data || []);
+    setHouses(hRes.data || []);
     setLoading(false);
   }
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", email: "", password: "", avatar_emoji: "👨‍🏫" });
+    setForm({ name: "", email: "", password: "", avatar_emoji: "👨‍🏫", house_id: "" });
     setShowForm(true);
   }
 
@@ -131,6 +141,7 @@ function BranchAdminTeachers() {
       email: t.email || "",
       password: "",
       avatar_emoji: t.avatar_emoji || "👨‍🏫",
+      house_id: t.house_id || "",
     });
     setShowForm(true);
   }
@@ -165,6 +176,7 @@ function BranchAdminTeachers() {
       avatar_emoji: form.avatar_emoji,
       school_id: user!.schoolId,
       branch_id: user!.branchId,
+      house_id: form.house_id || null,
     };
 
     if (editing) {

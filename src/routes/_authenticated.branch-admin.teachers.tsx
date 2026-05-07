@@ -520,6 +520,11 @@ function BranchAdminTeachers() {
                           <MapPin className="h-3 w-3" />
                           Branch
                         </div>
+                        {t.houses && (
+                          <div className="text-xs mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: t.houses.color + "20", color: t.houses.color }}>
+                            {t.houses.emoji} {t.houses.name}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <Button

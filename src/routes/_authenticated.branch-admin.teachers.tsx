@@ -452,6 +452,21 @@ function BranchAdminTeachers() {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="teacher-house">House</Label>
+                <select
+                  id="teacher-house"
+                  value={form.house_id}
+                  onChange={(e) => setForm((f) => ({ ...f, house_id: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">No house</option>
+                  {houses.map((h) => (
+                    <option key={h.id} value={h.id}>{h.emoji} {h.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <Button
                   type="submit"

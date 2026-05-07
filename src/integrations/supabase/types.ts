@@ -132,6 +132,42 @@ export type Database = {
           },
         ]
       }
+      houses: {
+        Row: {
+          branch_id: string
+          color: string
+          created_at: string
+          emoji: string
+          id: string
+          name: string
+          school_id: string
+          total_points: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          color?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          name: string
+          school_id: string
+          total_points?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          color?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          name?: string
+          school_id?: string
+          total_points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -635,6 +671,7 @@ export type Database = {
           class_id: string
           created_at: string
           email: string | null
+          house_id: string | null
           id: string
           lifetime_points: number
           name: string
@@ -652,6 +689,7 @@ export type Database = {
           class_id: string
           created_at?: string
           email?: string | null
+          house_id?: string | null
           id?: string
           lifetime_points?: number
           name: string
@@ -669,6 +707,7 @@ export type Database = {
           class_id?: string
           created_at?: string
           email?: string | null
+          house_id?: string | null
           id?: string
           lifetime_points?: number
           name?: string
@@ -693,6 +732,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
             referencedColumns: ["id"]
           },
           {
@@ -828,6 +874,7 @@ export type Database = {
           branch_id: string | null
           created_at: string
           email: string
+          house_id: string | null
           id: string
           name: string
           school_id: string | null
@@ -838,6 +885,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           email: string
+          house_id?: string | null
           id?: string
           name: string
           school_id?: string | null
@@ -848,6 +896,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           email?: string
+          house_id?: string | null
           id?: string
           name?: string
           school_id?: string | null
@@ -859,6 +908,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teachers_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
             referencedColumns: ["id"]
           },
           {

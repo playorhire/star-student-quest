@@ -223,6 +223,8 @@ function ParentDashboard() {
         </>
       )}
 
+      <HouseLeaderboard branchId={childBranchId} />
+
       <div>
         <h3 className="text-lg font-bold text-foreground mb-3">
           Recent Activity{selectedChildId !== "all" && children.find(c => c.id === selectedChildId) ? ` — ${children.find(c => c.id === selectedChildId)!.name}` : ""}

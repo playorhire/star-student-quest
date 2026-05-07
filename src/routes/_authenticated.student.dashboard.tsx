@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { toast } from "sonner";
+import { HouseLeaderboard } from "@/components/HouseLeaderboard";
 
 export const Route = createFileRoute("/_authenticated/student/dashboard")({
   component: StudentDashboard,
@@ -34,7 +35,7 @@ function StudentDashboard() {
   }, [student?.id, user?.id]);
 
   async function load() {
-    const { data: s } = await (supabase as any).from("students").select("*, classes(name), lifetime_points").eq("user_id", user!.id).single();
+    const { data: s } = await (supabase as any).from("students").select("*, classes(name), lifetime_points, branch_id").eq("user_id", user!.id).single();
     if (!s) return;
     setStudent(s);
 
@@ -76,6 +77,8 @@ function StudentDashboard() {
           </CardContent>
         </Card>
       )}
+
+      <HouseLeaderboard branchId={student.branch_id} />
 
       {earnedBadges.length > 0 && (
         <div>

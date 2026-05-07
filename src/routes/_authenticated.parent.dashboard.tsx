@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { MessageSquare, X } from "lucide-react";
 import { LinkedChildrenManager } from "@/components/LinkedChildrenManager";
+import { HouseLeaderboard } from "@/components/HouseLeaderboard";
 
 export const Route = createFileRoute("/_authenticated/parent/dashboard")({
   component: ParentDashboard,
@@ -47,6 +48,7 @@ function ParentDashboard() {
   const [pickerChild, setPickerChild] = useState<ChildData | null>(null);
   const [pickerTeachers, setPickerTeachers] = useState<TeacherOption[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const [childBranchId, setChildBranchId] = useState<string | null>(null);
 
   async function openTeacherPicker(child: ChildData) {
     setPickerChild(child);
@@ -94,6 +96,7 @@ function ParentDashboard() {
   useEffect(() => {
     if (!children.length) return;
     loadActivity();
+    loadChildBranch();
   }, [selectedChildId, children]);
 
   async function loadData() {
@@ -126,6 +129,13 @@ function ParentDashboard() {
       .order("created_at", { ascending: false })
       .limit(10);
     if (txns) setRecentActivity(txns as any);
+  }
+
+  async function loadChildBranch() {
+    const targetId = selectedChildId === "all" ? children[0]?.id : selectedChildId;
+    if (!targetId) return;
+    const { data } = await (supabase as any).from("students").select("branch_id").eq("id", targetId).maybeSingle();
+    setChildBranchId(data?.branch_id || null);
   }
 
   if (loading) {

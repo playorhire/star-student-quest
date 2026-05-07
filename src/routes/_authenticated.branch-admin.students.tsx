@@ -23,11 +23,12 @@ function BranchAdminStudents() {
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [houses, setHouses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A", house_id: "" });
   const [submitting, setSubmitting] = useState(false);
   const [credStudent, setCredStudent] = useState<any>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -40,19 +41,21 @@ function BranchAdminStudents() {
   async function loadData() {
     setLoading(true);
     setError(null);
-    const [sRes, cRes] = await Promise.all([
-      (supabase as any).from("students").select("id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section, user_id").eq("branch_id", user!.branchId).order("name"),
+    const [sRes, cRes, hRes] = await Promise.all([
+      (supabase as any).from("students").select("id, name, email, roll_number, total_points, classes(name), avatar_emoji, class_id, section, user_id, house_id, houses(name, color, emoji)").eq("branch_id", user!.branchId).order("name"),
       (supabase as any).from("classes").select("id, name, branches(name)").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
+      (supabase as any).from("houses").select("id, name, emoji, color").eq("branch_id", user!.branchId).order("name"),
     ]);
     if (sRes.error) { setError(sRes.error.message + " (" + sRes.error.code + ")"); toast.error(sRes.error.message); }
     else setStudents(sRes.data || []);
     setClasses(cRes.data || []);
+    setHouses(hRes.data || []);
     setLoading(false);
   }
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A" });
+    setForm({ name: "", email: "", password: "", roll_number: "", class_id: "", avatar_emoji: "🎓", section: "A", house_id: "" });
     setShowForm(true);
   }
 
@@ -66,6 +69,7 @@ function BranchAdminStudents() {
       class_id: s.class_id || "",
       avatar_emoji: s.avatar_emoji || "🎓",
       section: s.section || "A",
+      house_id: s.house_id || "",
     });
     setShowForm(true);
   }
@@ -94,6 +98,7 @@ function BranchAdminStudents() {
       section: form.section,
       school_id: user!.schoolId,
       branch_id: user!.branchId,
+      house_id: form.house_id || null,
     };
 
     if (editing) {

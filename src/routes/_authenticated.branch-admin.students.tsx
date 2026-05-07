@@ -338,6 +338,11 @@ function BranchAdminStudents() {
                   <div className="font-semibold">{s.name}</div>
                   <div className="text-xs text-muted-foreground font-mono truncate">Auth: {s.user_id || "Not linked"}</div>
                   <div className="text-xs text-muted-foreground">{s.classes?.name} • Roll #{s.roll_number} • Section {s.section}</div>
+                  {s.houses && (
+                    <div className="text-xs mt-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: s.houses.color + "20", color: s.houses.color }}>
+                      {s.houses.emoji} {s.houses.name}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-black text-primary">{s.total_points ?? 0}</div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Users, GraduationCap, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { HouseLeaderboard } from "@/components/HouseLeaderboard";
 
 export const Route = createFileRoute("/_authenticated/branch-admin/dashboard")({
   component: BranchAdminDashboard,
@@ -72,6 +73,8 @@ function BranchAdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <HouseLeaderboard branchId={user?.branchId} />
     </div>
   );
 }

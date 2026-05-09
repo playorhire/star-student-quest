@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { LayoutDashboard, QrCode, History, Gift, LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationsList";
 
 export const Route = createFileRoute("/_authenticated/student")({
   component: StudentLayout,
@@ -27,6 +28,7 @@ function StudentLayout() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <NotificationBell to="/student/notifications" />
             <button onClick={() => logout()} className="text-muted-foreground hover:text-destructive transition-colors">
               <LogOut className="h-4 w-4" />
             </button>

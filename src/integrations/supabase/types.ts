@@ -987,6 +987,10 @@ export type Database = {
     Functions: {
       belongs_to_branch: { Args: { _branch_id: string }; Returns: boolean }
       belongs_to_school: { Args: { _school_id: string }; Returns: boolean }
+      create_notification: {
+        Args: { _body: string; _title: string; _user_id: string }
+        Returns: undefined
+      }
       current_user_school_id: { Args: never; Returns: string }
       generate_student_code: { Args: never; Returns: string }
       get_my_branch_id: { Args: never; Returns: string }

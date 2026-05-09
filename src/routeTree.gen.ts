@@ -26,6 +26,7 @@ import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_auth
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherRewardsRouteImport } from './routes/_authenticated.teacher.rewards'
 import { Route as AuthenticatedTeacherProfileRouteImport } from './routes/_authenticated.teacher.profile'
+import { Route as AuthenticatedTeacherNotificationsRouteImport } from './routes/_authenticated.teacher.notifications'
 import { Route as AuthenticatedTeacherMessagesRouteImport } from './routes/_authenticated.teacher.messages'
 import { Route as AuthenticatedTeacherHistoryRouteImport } from './routes/_authenticated.teacher.history'
 import { Route as AuthenticatedTeacherDashboardRouteImport } from './routes/_authenticated.teacher.dashboard'
@@ -36,6 +37,7 @@ import { Route as AuthenticatedSuperAdminDashboardRouteImport } from './routes/_
 import { Route as AuthenticatedSuperAdminAssignSchoolRouteImport } from './routes/_authenticated.super-admin.assign-school'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
 import { Route as AuthenticatedStudentQrRouteImport } from './routes/_authenticated.student.qr'
+import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated.student.notifications'
 import { Route as AuthenticatedStudentHistoryRouteImport } from './routes/_authenticated.student.history'
 import { Route as AuthenticatedStudentDashboardRouteImport } from './routes/_authenticated.student.dashboard'
 import { Route as AuthenticatedSchoolAdminTeachersRouteImport } from './routes/_authenticated.school-admin.teachers'
@@ -157,6 +159,12 @@ const AuthenticatedTeacherProfileRoute =
     path: '/profile',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedTeacherNotificationsRoute =
+  AuthenticatedTeacherNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedTeacherMessagesRoute =
   AuthenticatedTeacherMessagesRouteImport.update({
     id: '/messages',
@@ -216,6 +224,12 @@ const AuthenticatedStudentQrRoute = AuthenticatedStudentQrRouteImport.update({
   path: '/qr',
   getParentRoute: () => AuthenticatedStudentRoute,
 } as any)
+const AuthenticatedStudentNotificationsRoute =
+  AuthenticatedStudentNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedStudentHistoryRoute =
   AuthenticatedStudentHistoryRouteImport.update({
     id: '/history',
@@ -439,6 +453,7 @@ export interface FileRoutesByFullPath {
   '/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
+  '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
@@ -449,6 +464,7 @@ export interface FileRoutesByFullPath {
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
   '/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
+  '/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -497,6 +513,7 @@ export interface FileRoutesByTo {
   '/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
+  '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
@@ -507,6 +524,7 @@ export interface FileRoutesByTo {
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
   '/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
+  '/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -557,6 +575,7 @@ export interface FileRoutesById {
   '/_authenticated/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/_authenticated/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/_authenticated/student/history': typeof AuthenticatedStudentHistoryRoute
+  '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/_authenticated/student/qr': typeof AuthenticatedStudentQrRoute
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/_authenticated/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
@@ -567,6 +586,7 @@ export interface FileRoutesById {
   '/_authenticated/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/_authenticated/teacher/history': typeof AuthenticatedTeacherHistoryRoute
   '/_authenticated/teacher/messages': typeof AuthenticatedTeacherMessagesRoute
+  '/_authenticated/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/_authenticated/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/_authenticated/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
@@ -617,6 +637,7 @@ export interface FileRouteTypes {
     | '/school-admin/teachers'
     | '/student/dashboard'
     | '/student/history'
+    | '/student/notifications'
     | '/student/qr'
     | '/student/rewards'
     | '/super-admin/assign-school'
@@ -627,6 +648,7 @@ export interface FileRouteTypes {
     | '/teacher/dashboard'
     | '/teacher/history'
     | '/teacher/messages'
+    | '/teacher/notifications'
     | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
@@ -675,6 +697,7 @@ export interface FileRouteTypes {
     | '/school-admin/teachers'
     | '/student/dashboard'
     | '/student/history'
+    | '/student/notifications'
     | '/student/qr'
     | '/student/rewards'
     | '/super-admin/assign-school'
@@ -685,6 +708,7 @@ export interface FileRouteTypes {
     | '/teacher/dashboard'
     | '/teacher/history'
     | '/teacher/messages'
+    | '/teacher/notifications'
     | '/teacher/profile'
     | '/teacher/rewards'
     | '/teacher/scan'
@@ -734,6 +758,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school-admin/teachers'
     | '/_authenticated/student/dashboard'
     | '/_authenticated/student/history'
+    | '/_authenticated/student/notifications'
     | '/_authenticated/student/qr'
     | '/_authenticated/student/rewards'
     | '/_authenticated/super-admin/assign-school'
@@ -744,6 +769,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/dashboard'
     | '/_authenticated/teacher/history'
     | '/_authenticated/teacher/messages'
+    | '/_authenticated/teacher/notifications'
     | '/_authenticated/teacher/profile'
     | '/_authenticated/teacher/rewards'
     | '/_authenticated/teacher/scan'
@@ -880,6 +906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherProfileRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/teacher/notifications': {
+      id: '/_authenticated/teacher/notifications'
+      path: '/notifications'
+      fullPath: '/teacher/notifications'
+      preLoaderRoute: typeof AuthenticatedTeacherNotificationsRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/teacher/messages': {
       id: '/_authenticated/teacher/messages'
       path: '/messages'
@@ -948,6 +981,13 @@ declare module '@tanstack/react-router' {
       path: '/qr'
       fullPath: '/student/qr'
       preLoaderRoute: typeof AuthenticatedStudentQrRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
+    '/_authenticated/student/notifications': {
+      id: '/_authenticated/student/notifications'
+      path: '/notifications'
+      fullPath: '/student/notifications'
+      preLoaderRoute: typeof AuthenticatedStudentNotificationsRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
     '/_authenticated/student/history': {
@@ -1273,6 +1313,7 @@ const AuthenticatedSchoolAdminRouteWithChildren =
 interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentDashboardRoute: typeof AuthenticatedStudentDashboardRoute
   AuthenticatedStudentHistoryRoute: typeof AuthenticatedStudentHistoryRoute
+  AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
   AuthenticatedStudentQrRoute: typeof AuthenticatedStudentQrRoute
   AuthenticatedStudentRewardsRoute: typeof AuthenticatedStudentRewardsRoute
 }
@@ -1280,6 +1321,8 @@ interface AuthenticatedStudentRouteChildren {
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentDashboardRoute: AuthenticatedStudentDashboardRoute,
   AuthenticatedStudentHistoryRoute: AuthenticatedStudentHistoryRoute,
+  AuthenticatedStudentNotificationsRoute:
+    AuthenticatedStudentNotificationsRoute,
   AuthenticatedStudentQrRoute: AuthenticatedStudentQrRoute,
   AuthenticatedStudentRewardsRoute: AuthenticatedStudentRewardsRoute,
 }
@@ -1316,6 +1359,7 @@ interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherDashboardRoute: typeof AuthenticatedTeacherDashboardRoute
   AuthenticatedTeacherHistoryRoute: typeof AuthenticatedTeacherHistoryRoute
   AuthenticatedTeacherMessagesRoute: typeof AuthenticatedTeacherMessagesRoute
+  AuthenticatedTeacherNotificationsRoute: typeof AuthenticatedTeacherNotificationsRoute
   AuthenticatedTeacherProfileRoute: typeof AuthenticatedTeacherProfileRoute
   AuthenticatedTeacherRewardsRoute: typeof AuthenticatedTeacherRewardsRoute
   AuthenticatedTeacherScanRoute: typeof AuthenticatedTeacherScanRoute
@@ -1326,6 +1370,8 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherDashboardRoute: AuthenticatedTeacherDashboardRoute,
   AuthenticatedTeacherHistoryRoute: AuthenticatedTeacherHistoryRoute,
   AuthenticatedTeacherMessagesRoute: AuthenticatedTeacherMessagesRoute,
+  AuthenticatedTeacherNotificationsRoute:
+    AuthenticatedTeacherNotificationsRoute,
   AuthenticatedTeacherProfileRoute: AuthenticatedTeacherProfileRoute,
   AuthenticatedTeacherRewardsRoute: AuthenticatedTeacherRewardsRoute,
   AuthenticatedTeacherScanRoute: AuthenticatedTeacherScanRoute,

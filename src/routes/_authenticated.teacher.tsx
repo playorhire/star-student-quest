@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth-context";
 import { LayoutDashboard, Award, History, Gift, User, LogOut, MessageSquare, GraduationCap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "@/components/NotificationsList";
 
 export const Route = createFileRoute("/_authenticated/teacher")({
   component: TeacherLayout,
@@ -63,6 +64,7 @@ function TeacherLayout() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <NotificationBell to="/teacher/notifications" />
             <button onClick={() => logout()} className="text-muted-foreground hover:text-destructive transition-colors">
               <LogOut className="h-4 w-4" />
             </button>

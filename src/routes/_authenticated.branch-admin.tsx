@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, GraduationCap, Users, Gift, BookOpen, Medal, Users2, LogOut, Home } from "lucide-react";
+import { LayoutDashboard, GraduationCap, Users, Gift, BookOpen, Medal, Users2, LogOut, Home, HelpCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/branch-admin")({
   component: BranchAdminLayout,
@@ -30,6 +30,7 @@ function BranchAdminLayout() {
     { to: "/branch-admin/houses" as any, label: "Houses", icon: Home },
     { to: "/branch-admin/rewards" as any, label: "Rewards", icon: Gift },
     { to: "/branch-admin/badges" as any, label: "Badges", icon: Medal },
+    { to: "/branch-admin/help" as any, label: "Help", icon: HelpCircle },
   ];
 
   return (

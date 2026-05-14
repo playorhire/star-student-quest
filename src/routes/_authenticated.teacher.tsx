@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth-context";
-import { LayoutDashboard, Award, History, Gift, User, LogOut, MessageSquare, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Award, History, Gift, User, LogOut, MessageSquare, GraduationCap, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/NotificationsList";
 
@@ -22,6 +22,7 @@ function TeacherLayout() {
     { to: "/teacher/history" as const, label: "History", icon: History },
     { to: "/teacher/rewards" as const, label: "Rewards", icon: Gift },
     { to: "/teacher/profile" as const, label: "Profile", icon: User },
+    { to: "/teacher/help" as any, label: "Help", icon: HelpCircle },
   ];
 
   useEffect(() => {

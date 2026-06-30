@@ -33,8 +33,8 @@ function LoginPage() {
       await login(email, password);
       // Auth state change listener will handle role detection and redirect happens in _authenticated or index
       navigate({ to: "/" });
-    } catch (err: any) {
-      const raw = err?.message || "Login failed";
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : "Login failed";
       const friendly = /invalid login/i.test(raw)
         ? "Incorrect email or password."
         : /email not confirmed/i.test(raw)
@@ -86,7 +86,7 @@ function LoginPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="text-right">
-            <Link to={"/forgot-password" as any} className="text-xs font-bold text-primary hover:underline">
+            <Link to="/forgot-password" className="text-xs font-bold text-primary hover:underline">
               Forgot password?
             </Link>
           </div>

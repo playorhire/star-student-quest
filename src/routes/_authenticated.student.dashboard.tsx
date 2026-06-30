@@ -6,6 +6,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
 import { toast } from "sonner";
 import { HouseLeaderboard } from "@/components/HouseLeaderboard";
+import { ErrorState } from "@/components/ErrorState";
+import { notifyError, describeSupabaseError } from "@/lib/handle-error";
 
 export const Route = createFileRoute("/_authenticated/student/dashboard")({
   component: StudentDashboard,
@@ -16,6 +18,8 @@ function StudentDashboard() {
   const [student, setStudent] = useState<any>(null);
   const [badges, setBadges] = useState<any[]>([]);
   const [recentTxns, setRecentTxns] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -35,18 +39,38 @@ function StudentDashboard() {
   }, [student?.id, user?.id]);
 
   async function load() {
-    const { data: s } = await (supabase as any).from("students").select("*, classes(name), lifetime_points, branch_id").eq("user_id", user!.id).single();
-    if (!s) return;
-    setStudent(s);
+    setError(null);
+    setLoading(true);
+    try {
+      const { data: s, error: sErr } = await (supabase as any).from("students").select("*, classes(name), lifetime_points, branch_id").eq("user_id", user!.id).single();
+      if (sErr) throw sErr;
+      if (!s) { setError("We couldn't find your student profile. Please contact your school admin."); return; }
+      setStudent(s);
 
-    const [b, txns] = await Promise.all([
-      supabase.from("badges").select("*").order("required_points"),
-      supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, subjects(name)").eq("student_id", s.id).order("created_at", { ascending: false }).limit(10),
-    ]);
-    setBadges(b.data || []);
-    setRecentTxns(txns.data || []);
+      const [b, txns] = await Promise.all([
+        supabase.from("badges").select("*").order("required_points"),
+        supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, subjects(name)").eq("student_id", s.id).order("created_at", { ascending: false }).limit(10),
+      ]);
+      if (b.error) throw b.error;
+      if (txns.error) throw txns.error;
+      setBadges(b.data || []);
+      setRecentTxns(txns.data || []);
+    } catch (err) {
+      const msg = describeSupabaseError(err);
+      setError(msg);
+      notifyError("Couldn't load your dashboard", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
+  if (error && !student) {
+    return (
+      <div className="py-6">
+        <ErrorState message={error} onRetry={() => load()} />
+      </div>
+    );
+  }
   if (!student) return <div className="flex justify-center py-12"><div className="text-2xl animate-bounce">🎓</div></div>;
 
   const earnedBadges = badges.filter(b => (student.lifetime_points ?? student.total_points) >= b.required_points);

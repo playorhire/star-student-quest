@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { useState } from "react";
 import { GraduationCap, ScanLine, Shield, Users } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -24,13 +25,23 @@ function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!email.trim()) { setError("Please enter your email."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("That doesn't look like a valid email address."); return; }
+    if (!password) { setError("Please enter your password."); return; }
     setLoading(true);
     try {
       await login(email, password);
       // Auth state change listener will handle role detection and redirect happens in _authenticated or index
       navigate({ to: "/" });
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      const raw = err?.message || "Login failed";
+      const friendly = /invalid login/i.test(raw)
+        ? "Incorrect email or password."
+        : /email not confirmed/i.test(raw)
+        ? "Please confirm your email before signing in."
+        : raw;
+      setError(friendly);
+      toast.error("Login failed", { description: friendly });
     } finally {
       setLoading(false);
     }

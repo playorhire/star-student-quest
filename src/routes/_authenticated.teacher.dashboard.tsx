@@ -5,6 +5,8 @@ import { TrendingUp, Users, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { HouseLeaderboard } from "@/components/HouseLeaderboard";
+import { ErrorState } from "@/components/ErrorState";
+import { notifyError, describeSupabaseError } from "@/lib/handle-error";
 
 export const Route = createFileRoute("/_authenticated/teacher/dashboard")({
   component: TeacherDashboard,
@@ -14,10 +16,15 @@ function TeacherDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ pointsToday: 0, totalStudents: 0, totalScans: 0 });
   const [recentTxns, setRecentTxns] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { load(); }, [user]);
 
   async function load() {
+    setError(null);
+    setLoading(true);
+    try {
     const today = new Date().toISOString().split("T")[0];
     const studentsQuery = supabase.from("students").select("id", { count: "exact", head: true });
     if (user?.branchId) {
@@ -40,6 +47,8 @@ function TeacherDashboard() {
       totalTxQuery,
       recentQuery,
     ]);
+    const firstErr = [todayTx, studentsCount, totalTx, recent].find((r: any) => r.error)?.error;
+    if (firstErr) throw firstErr;
     setStats({
       pointsToday: (todayTx.data || []).reduce((s, t) => s + t.points_awarded, 0),
       totalStudents: studentsCount.count || 0,
@@ -47,6 +56,13 @@ totalScans: totalTx.count || 0,
       // label kept as "totalScans" for backward compat; UI says "Records"
     });
     setRecentTxns(recent.data || []);
+    } catch (err) {
+      const msg = describeSupabaseError(err);
+      setError(msg);
+      notifyError("Couldn't load dashboard", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -55,6 +71,9 @@ totalScans: totalTx.count || 0,
         <h1 className="text-2xl font-black text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Your teaching overview</p>
       </div>
+      {error && !loading && (
+        <ErrorState message={error} onRetry={() => load()} />
+      )}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-2 border-primary/20"><CardContent className="p-4 text-center"><Zap className="mx-auto h-6 w-6 text-primary mb-1" /><div className="text-2xl font-black text-primary">{stats.pointsToday}</div><div className="text-[10px] text-muted-foreground font-semibold">Points Today</div></CardContent></Card>
         <Card className="border-2 border-secondary/20"><CardContent className="p-4 text-center"><Users className="mx-auto h-6 w-6 text-secondary mb-1" /><div className="text-2xl font-black text-secondary">{stats.totalStudents}</div><div className="text-[10px] text-muted-foreground font-semibold">Students</div></CardContent></Card>

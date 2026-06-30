@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "../components/ui/card";
 import { TrendingUp, Users, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { HouseLeaderboard } from "@/components/HouseLeaderboard";
 import { ErrorState } from "@/components/ErrorState";
@@ -15,47 +15,52 @@ export const Route = createFileRoute("/_authenticated/teacher/dashboard")({
 function TeacherDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ pointsToday: 0, totalStudents: 0, totalScans: 0 });
-  const [recentTxns, setRecentTxns] = useState<any[]>([]);
+  const [recentTxns, setRecentTxns] = useState<Array<{
+    id: string;
+    points_awarded: number;
+    marks_entered: number;
+    students: { name: string | null; avatar_emoji: string | null } | null;
+    subjects: { name: string | null } | null;
+  }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, [user]);
-
-  async function load() {
+  const load = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
-    const today = new Date().toISOString().split("T")[0];
-    const studentsQuery = supabase.from("students").select("id", { count: "exact", head: true });
-    if (user?.branchId) {
-      (studentsQuery as any).eq("branch_id", user.branchId);
-    }
-    
-    const todayTxQuery = supabase.from("point_transactions").select("points_awarded").gte("created_at", today);
-    const totalTxQuery = supabase.from("point_transactions").select("id", { count: "exact", head: true });
-    const recentQuery = supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, students(name, avatar_emoji), subjects(name)").order("created_at", { ascending: false }).limit(5);
-    
-    if (user?.branchId) {
-      (todayTxQuery as any).eq("branch_id", user.branchId);
-      (totalTxQuery as any).eq("branch_id", user.branchId);
-      (recentQuery as any).eq("branch_id", user.branchId);
-    }
-    
-    const [todayTx, studentsCount, totalTx, recent] = await Promise.all([
-      todayTxQuery,
-      studentsQuery,
-      totalTxQuery,
-      recentQuery,
-    ]);
-    const firstErr = [todayTx, studentsCount, totalTx, recent].find((r: any) => r.error)?.error;
-    if (firstErr) throw firstErr;
-    setStats({
-      pointsToday: (todayTx.data || []).reduce((s, t) => s + t.points_awarded, 0),
-      totalStudents: studentsCount.count || 0,
-totalScans: totalTx.count || 0,
-      // label kept as "totalScans" for backward compat; UI says "Records"
-    });
-    setRecentTxns(recent.data || []);
+      const today = new Date().toISOString().split("T")[0];
+      let studentsQuery = supabase.from("students").select("id", { count: "exact", head: true });
+      let todayTxQuery = supabase.from("point_transactions").select("points_awarded").gte("created_at", today);
+      let totalTxQuery = supabase.from("point_transactions").select("id", { count: "exact", head: true });
+      let recentQuery = supabase
+        .from("point_transactions")
+        .select("id, points_awarded, marks_entered, created_at, students(name, avatar_emoji), subjects(name)")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (user?.branchId) {
+        studentsQuery = studentsQuery.eq("branch_id", user.branchId);
+        todayTxQuery = todayTxQuery.eq("branch_id", user.branchId);
+        totalTxQuery = totalTxQuery.eq("branch_id", user.branchId);
+        recentQuery = recentQuery.eq("branch_id", user.branchId);
+      }
+
+      const [todayTx, studentsCount, totalTx, recent] = await Promise.all([
+        todayTxQuery,
+        studentsQuery,
+        totalTxQuery,
+        recentQuery,
+      ]);
+      const firstErr = todayTx.error || studentsCount.error || totalTx.error || recent.error;
+      if (firstErr) throw firstErr;
+      setStats({
+        pointsToday: (todayTx.data || []).reduce((s, t) => s + t.points_awarded, 0),
+        totalStudents: studentsCount.count || 0,
+        // label kept as "totalScans" for backward compat; UI says "Records"
+        totalScans: totalTx.count || 0,
+      });
+      setRecentTxns(recent.data || []);
     } catch (err) {
       const msg = describeSupabaseError(err);
       setError(msg);
@@ -63,7 +68,9 @@ totalScans: totalTx.count || 0,
     } finally {
       setLoading(false);
     }
-  }
+  }, [user?.branchId]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-6">

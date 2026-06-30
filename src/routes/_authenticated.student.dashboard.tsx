@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
@@ -9,46 +9,59 @@ import { HouseLeaderboard } from "@/components/HouseLeaderboard";
 import { ErrorState } from "@/components/ErrorState";
 import { notifyError, describeSupabaseError } from "@/lib/handle-error";
 
+type StudentProfile = {
+  id: string;
+  avatar_emoji: string;
+  branch_id: string | null;
+  lifetime_points: number;
+  name: string;
+  roll_number: string;
+  total_points: number;
+  classes: { name: string | null } | null;
+};
+
+type BadgeRecord = {
+  id: string;
+  emoji: string;
+  name: string;
+  required_points: number;
+};
+
+type RecentTransaction = {
+  id: string;
+  points_awarded: number;
+  marks_entered: number;
+  subjects: { name: string | null } | null;
+};
+
 export const Route = createFileRoute("/_authenticated/student/dashboard")({
   component: StudentDashboard,
 });
 
 function StudentDashboard() {
   const { user } = useAuth();
-  const [student, setStudent] = useState<any>(null);
-  const [badges, setBadges] = useState<any[]>([]);
-  const [recentTxns, setRecentTxns] = useState<any[]>([]);
+  const [student, setStudent] = useState<StudentProfile | null>(null);
+  const [badges, setBadges] = useState<BadgeRecord[]>([]);
+  const [recentTxns, setRecentTxns] = useState<RecentTransaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { if (user) load(); }, [user]);
-
-  // Realtime: live student total + new-points toast
-  useEffect(() => {
-    if (!student?.id || !user?.id) return;
-    const channel = supabase
-      .channel(`student-dash-${student.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "students", filter: `id=eq.${student.id}` },
-        (payload) => { if (payload.new) setStudent((s: any) => ({ ...s, ...payload.new })); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "point_transactions", filter: `student_id=eq.${student.id}` },
-        () => { load(); })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (payload) => { toast.success(payload.new.title, { description: payload.new.body }); })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [student?.id, user?.id]);
-
-  async function load() {
+  const load = useCallback(async () => {
+    if (!user?.id) return;
     setError(null);
     setLoading(true);
     try {
-      const { data: s, error: sErr } = await (supabase as any).from("students").select("*, classes(name), lifetime_points, branch_id").eq("user_id", user!.id).single();
+      const { data: s, error: sErr } = await supabase
+        .from("students")
+        .select("*, classes(name), lifetime_points, branch_id")
+        .eq("user_id", user.id)
+        .single();
       if (sErr) throw sErr;
       if (!s) { setError("We couldn't find your student profile. Please contact your school admin."); return; }
       setStudent(s);
 
       const [b, txns] = await Promise.all([
-        supabase.from("badges").select("*").order("required_points"),
+        supabase.from("badges").select("id, emoji, name, required_points").order("required_points"),
         supabase.from("point_transactions").select("id, points_awarded, marks_entered, created_at, subjects(name)").eq("student_id", s.id).order("created_at", { ascending: false }).limit(10),
       ]);
       if (b.error) throw b.error;
@@ -62,7 +75,24 @@ function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user?.id]);
+
+  useEffect(() => { if (user) load(); }, [user, load]);
+
+  // Realtime: live student total + new-points toast
+  useEffect(() => {
+    if (!student?.id || !user?.id) return;
+    const channel = supabase
+      .channel(`student-dash-${student.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "students", filter: `id=eq.${student.id}` },
+        (payload) => { if (payload.new) setStudent((s) => (s ? { ...s, ...payload.new } : s)); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "point_transactions", filter: `student_id=eq.${student.id}` },
+        () => { load(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => { toast.success(payload.new.title, { description: payload.new.body }); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [student?.id, user?.id, load]);
 
   if (error && !student) {
     return (

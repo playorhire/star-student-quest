@@ -33,8 +33,8 @@ function ForgotPasswordPage() {
       if (error) throw error;
       setSent(true);
       toast.success("Reset link sent — check your email.");
-    } catch (err: any) {
-      toast.error(err.message || "Could not send reset email");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not send reset email");
     } finally {
       setLoading(false);
     }

@@ -598,6 +598,30 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          allowed: boolean
+          created_at: string
+          feature_key: string
+          role: Database["public"]["Enums"]["tenant_role"]
+          updated_at: string
+        }
+        Insert: {
+          allowed?: boolean
+          created_at?: string
+          feature_key: string
+          role: Database["public"]["Enums"]["tenant_role"]
+          updated_at?: string
+        }
+        Update: {
+          allowed?: boolean
+          created_at?: string
+          feature_key?: string
+          role?: Database["public"]["Enums"]["tenant_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           address: string | null

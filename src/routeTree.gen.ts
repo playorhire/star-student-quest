@@ -34,6 +34,7 @@ import { Route as AuthenticatedTeacherDashboardRouteImport } from './routes/_aut
 import { Route as AuthenticatedSuperAdminSettingsRouteImport } from './routes/_authenticated.super-admin.settings'
 import { Route as AuthenticatedSuperAdminSchoolsRouteImport } from './routes/_authenticated.super-admin.schools'
 import { Route as AuthenticatedSuperAdminSchoolAdminsRouteImport } from './routes/_authenticated.super-admin.school-admins'
+import { Route as AuthenticatedSuperAdminRolesRouteImport } from './routes/_authenticated.super-admin.roles'
 import { Route as AuthenticatedSuperAdminDashboardRouteImport } from './routes/_authenticated.super-admin.dashboard'
 import { Route as AuthenticatedSuperAdminAssignSchoolRouteImport } from './routes/_authenticated.super-admin.assign-school'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
@@ -209,6 +210,12 @@ const AuthenticatedSuperAdminSchoolAdminsRoute =
   AuthenticatedSuperAdminSchoolAdminsRouteImport.update({
     id: '/school-admins',
     path: '/school-admins',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
+  } as any)
+const AuthenticatedSuperAdminRolesRoute =
+  AuthenticatedSuperAdminRolesRouteImport.update({
+    id: '/roles',
+    path: '/roles',
     getParentRoute: () => AuthenticatedSuperAdminRoute,
   } as any)
 const AuthenticatedSuperAdminDashboardRoute =
@@ -489,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
+  '/super-admin/roles': typeof AuthenticatedSuperAdminRolesRoute
   '/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
@@ -553,6 +561,7 @@ export interface FileRoutesByTo {
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
+  '/super-admin/roles': typeof AuthenticatedSuperAdminRolesRoute
   '/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
@@ -619,6 +628,7 @@ export interface FileRoutesById {
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/_authenticated/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/_authenticated/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
+  '/_authenticated/super-admin/roles': typeof AuthenticatedSuperAdminRolesRoute
   '/_authenticated/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/_authenticated/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/_authenticated/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
@@ -685,6 +695,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/super-admin/assign-school'
     | '/super-admin/dashboard'
+    | '/super-admin/roles'
     | '/super-admin/school-admins'
     | '/super-admin/schools'
     | '/super-admin/settings'
@@ -749,6 +760,7 @@ export interface FileRouteTypes {
     | '/student/rewards'
     | '/super-admin/assign-school'
     | '/super-admin/dashboard'
+    | '/super-admin/roles'
     | '/super-admin/school-admins'
     | '/super-admin/schools'
     | '/super-admin/settings'
@@ -814,6 +826,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/rewards'
     | '/_authenticated/super-admin/assign-school'
     | '/_authenticated/super-admin/dashboard'
+    | '/_authenticated/super-admin/roles'
     | '/_authenticated/super-admin/school-admins'
     | '/_authenticated/super-admin/schools'
     | '/_authenticated/super-admin/settings'
@@ -1012,6 +1025,13 @@ declare module '@tanstack/react-router' {
       path: '/school-admins'
       fullPath: '/super-admin/school-admins'
       preLoaderRoute: typeof AuthenticatedSuperAdminSchoolAdminsRouteImport
+      parentRoute: typeof AuthenticatedSuperAdminRoute
+    }
+    '/_authenticated/super-admin/roles': {
+      id: '/_authenticated/super-admin/roles'
+      path: '/roles'
+      fullPath: '/super-admin/roles'
+      preLoaderRoute: typeof AuthenticatedSuperAdminRolesRouteImport
       parentRoute: typeof AuthenticatedSuperAdminRoute
     }
     '/_authenticated/super-admin/dashboard': {
@@ -1419,6 +1439,7 @@ const AuthenticatedStudentRouteWithChildren =
 interface AuthenticatedSuperAdminRouteChildren {
   AuthenticatedSuperAdminAssignSchoolRoute: typeof AuthenticatedSuperAdminAssignSchoolRoute
   AuthenticatedSuperAdminDashboardRoute: typeof AuthenticatedSuperAdminDashboardRoute
+  AuthenticatedSuperAdminRolesRoute: typeof AuthenticatedSuperAdminRolesRoute
   AuthenticatedSuperAdminSchoolAdminsRoute: typeof AuthenticatedSuperAdminSchoolAdminsRoute
   AuthenticatedSuperAdminSchoolsRoute: typeof AuthenticatedSuperAdminSchoolsRoute
   AuthenticatedSuperAdminSettingsRoute: typeof AuthenticatedSuperAdminSettingsRoute
@@ -1430,6 +1451,7 @@ const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren
       AuthenticatedSuperAdminAssignSchoolRoute,
     AuthenticatedSuperAdminDashboardRoute:
       AuthenticatedSuperAdminDashboardRoute,
+    AuthenticatedSuperAdminRolesRoute: AuthenticatedSuperAdminRolesRoute,
     AuthenticatedSuperAdminSchoolAdminsRoute:
       AuthenticatedSuperAdminSchoolAdminsRoute,
     AuthenticatedSuperAdminSchoolsRoute: AuthenticatedSuperAdminSchoolsRoute,

@@ -1064,6 +1064,7 @@ export type Database = {
         Returns: boolean
       }
       has_tenant_role: { Args: { _role: string }; Returns: boolean }
+      is_school_admin_safe: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_super_admin_safe: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }

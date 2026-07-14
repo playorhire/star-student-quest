@@ -23,6 +23,7 @@ import { Route as AuthenticatedSchoolAdminRouteImport } from './routes/_authenti
 import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated.parent'
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as AuthenticatedVendorRedeemedRouteImport } from './routes/_authenticated.vendor.redeemed'
 import { Route as AuthenticatedVendorProductsRouteImport } from './routes/_authenticated.vendor.products'
 import { Route as AuthenticatedVendorOrdersRouteImport } from './routes/_authenticated.vendor.orders'
 import { Route as AuthenticatedVendorDashboardRouteImport } from './routes/_authenticated.vendor.dashboard'
@@ -149,6 +150,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedVendorRedeemedRoute =
+  AuthenticatedVendorRedeemedRouteImport.update({
+    id: '/redeemed',
+    path: '/redeemed',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
 const AuthenticatedVendorProductsRoute =
   AuthenticatedVendorProductsRouteImport.update({
     id: '/products',
@@ -540,6 +547,7 @@ export interface FileRoutesByFullPath {
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -609,6 +617,7 @@ export interface FileRoutesByTo {
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -680,6 +689,7 @@ export interface FileRoutesById {
   '/_authenticated/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/_authenticated/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/_authenticated/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/_authenticated/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -751,6 +761,7 @@ export interface FileRouteTypes {
     | '/vendor/dashboard'
     | '/vendor/orders'
     | '/vendor/products'
+    | '/vendor/redeemed'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -820,6 +831,7 @@ export interface FileRouteTypes {
     | '/vendor/dashboard'
     | '/vendor/orders'
     | '/vendor/products'
+    | '/vendor/redeemed'
   id:
     | '__root__'
     | '/'
@@ -890,6 +902,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendor/dashboard'
     | '/_authenticated/vendor/orders'
     | '/_authenticated/vendor/products'
+    | '/_authenticated/vendor/redeemed'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1000,6 +1013,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/vendor/redeemed': {
+      id: '/_authenticated/vendor/redeemed'
+      path: '/redeemed'
+      fullPath: '/vendor/redeemed'
+      preLoaderRoute: typeof AuthenticatedVendorRedeemedRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
     }
     '/_authenticated/vendor/products': {
       id: '/_authenticated/vendor/products'
@@ -1574,12 +1594,14 @@ interface AuthenticatedVendorRouteChildren {
   AuthenticatedVendorDashboardRoute: typeof AuthenticatedVendorDashboardRoute
   AuthenticatedVendorOrdersRoute: typeof AuthenticatedVendorOrdersRoute
   AuthenticatedVendorProductsRoute: typeof AuthenticatedVendorProductsRoute
+  AuthenticatedVendorRedeemedRoute: typeof AuthenticatedVendorRedeemedRoute
 }
 
 const AuthenticatedVendorRouteChildren: AuthenticatedVendorRouteChildren = {
   AuthenticatedVendorDashboardRoute: AuthenticatedVendorDashboardRoute,
   AuthenticatedVendorOrdersRoute: AuthenticatedVendorOrdersRoute,
   AuthenticatedVendorProductsRoute: AuthenticatedVendorProductsRoute,
+  AuthenticatedVendorRedeemedRoute: AuthenticatedVendorRedeemedRoute,
 }
 
 const AuthenticatedVendorRouteWithChildren =

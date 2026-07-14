@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedVendorRouteImport } from './routes/_authenticated.vendor'
 import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated.teacher'
 import { Route as AuthenticatedSuperAdminRouteImport } from './routes/_authenticated.super-admin'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated.student'
@@ -22,6 +23,11 @@ import { Route as AuthenticatedSchoolAdminRouteImport } from './routes/_authenti
 import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated.parent'
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
+import { Route as AuthenticatedVendorRedeemedRouteImport } from './routes/_authenticated.vendor.redeemed'
+import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authenticated.vendor.profile'
+import { Route as AuthenticatedVendorProductsRouteImport } from './routes/_authenticated.vendor.products'
+import { Route as AuthenticatedVendorOrdersRouteImport } from './routes/_authenticated.vendor.orders'
+import { Route as AuthenticatedVendorDashboardRouteImport } from './routes/_authenticated.vendor.dashboard'
 import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_authenticated.teacher.students'
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherRewardsRouteImport } from './routes/_authenticated.teacher.rewards'
@@ -31,6 +37,7 @@ import { Route as AuthenticatedTeacherMessagesRouteImport } from './routes/_auth
 import { Route as AuthenticatedTeacherHistoryRouteImport } from './routes/_authenticated.teacher.history'
 import { Route as AuthenticatedTeacherHelpRouteImport } from './routes/_authenticated.teacher.help'
 import { Route as AuthenticatedTeacherDashboardRouteImport } from './routes/_authenticated.teacher.dashboard'
+import { Route as AuthenticatedSuperAdminVendorsRouteImport } from './routes/_authenticated.super-admin.vendors'
 import { Route as AuthenticatedSuperAdminSettingsRouteImport } from './routes/_authenticated.super-admin.settings'
 import { Route as AuthenticatedSuperAdminSchoolsRouteImport } from './routes/_authenticated.super-admin.schools'
 import { Route as AuthenticatedSuperAdminSchoolAdminsRouteImport } from './routes/_authenticated.super-admin.school-admins'
@@ -103,6 +110,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedVendorRoute = AuthenticatedVendorRouteImport.update({
+  id: '/vendor',
+  path: '/vendor',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
   id: '/teacher',
   path: '/teacher',
@@ -140,6 +152,36 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedVendorRedeemedRoute =
+  AuthenticatedVendorRedeemedRouteImport.update({
+    id: '/redeemed',
+    path: '/redeemed',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorProfileRoute =
+  AuthenticatedVendorProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorProductsRoute =
+  AuthenticatedVendorProductsRouteImport.update({
+    id: '/products',
+    path: '/products',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorOrdersRoute =
+  AuthenticatedVendorOrdersRouteImport.update({
+    id: '/orders',
+    path: '/orders',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorDashboardRoute =
+  AuthenticatedVendorDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
 const AuthenticatedTeacherStudentsRoute =
   AuthenticatedTeacherStudentsRouteImport.update({
     id: '/students',
@@ -193,6 +235,12 @@ const AuthenticatedTeacherDashboardRoute =
     id: '/dashboard',
     path: '/dashboard',
     getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedSuperAdminVendorsRoute =
+  AuthenticatedSuperAdminVendorsRouteImport.update({
+    id: '/vendors',
+    path: '/vendors',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
   } as any)
 const AuthenticatedSuperAdminSettingsRoute =
   AuthenticatedSuperAdminSettingsRouteImport.update({
@@ -458,6 +506,7 @@ export interface FileRoutesByFullPath {
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/vendor': typeof AuthenticatedVendorRouteWithChildren
   '/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -500,6 +549,7 @@ export interface FileRoutesByFullPath {
   '/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
+  '/super-admin/vendors': typeof AuthenticatedSuperAdminVendorsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/help': typeof AuthenticatedTeacherHelpRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
@@ -509,6 +559,11 @@ export interface FileRoutesByFullPath {
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
+  '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
+  '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/profile': typeof AuthenticatedVendorProfileRoute
+  '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -523,6 +578,7 @@ export interface FileRoutesByTo {
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/vendor': typeof AuthenticatedVendorRouteWithChildren
   '/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -565,6 +621,7 @@ export interface FileRoutesByTo {
   '/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
+  '/super-admin/vendors': typeof AuthenticatedSuperAdminVendorsRoute
   '/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/teacher/help': typeof AuthenticatedTeacherHelpRoute
   '/teacher/history': typeof AuthenticatedTeacherHistoryRoute
@@ -574,6 +631,11 @@ export interface FileRoutesByTo {
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
+  '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
+  '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/profile': typeof AuthenticatedVendorProfileRoute
+  '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -590,6 +652,7 @@ export interface FileRoutesById {
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/_authenticated/super-admin': typeof AuthenticatedSuperAdminRouteWithChildren
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/_authenticated/vendor': typeof AuthenticatedVendorRouteWithChildren
   '/_authenticated/admin/badges': typeof AuthenticatedAdminBadgesRoute
   '/_authenticated/admin/classes': typeof AuthenticatedAdminClassesRoute
   '/_authenticated/admin/dashboard': typeof AuthenticatedAdminDashboardRoute
@@ -632,6 +695,7 @@ export interface FileRoutesById {
   '/_authenticated/super-admin/school-admins': typeof AuthenticatedSuperAdminSchoolAdminsRoute
   '/_authenticated/super-admin/schools': typeof AuthenticatedSuperAdminSchoolsRoute
   '/_authenticated/super-admin/settings': typeof AuthenticatedSuperAdminSettingsRoute
+  '/_authenticated/super-admin/vendors': typeof AuthenticatedSuperAdminVendorsRoute
   '/_authenticated/teacher/dashboard': typeof AuthenticatedTeacherDashboardRoute
   '/_authenticated/teacher/help': typeof AuthenticatedTeacherHelpRoute
   '/_authenticated/teacher/history': typeof AuthenticatedTeacherHistoryRoute
@@ -641,6 +705,11 @@ export interface FileRoutesById {
   '/_authenticated/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRoute
+  '/_authenticated/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/_authenticated/vendor/orders': typeof AuthenticatedVendorOrdersRoute
+  '/_authenticated/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/_authenticated/vendor/profile': typeof AuthenticatedVendorProfileRoute
+  '/_authenticated/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -657,6 +726,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/super-admin'
     | '/teacher'
+    | '/vendor'
     | '/admin/badges'
     | '/admin/classes'
     | '/admin/dashboard'
@@ -699,6 +769,7 @@ export interface FileRouteTypes {
     | '/super-admin/school-admins'
     | '/super-admin/schools'
     | '/super-admin/settings'
+    | '/super-admin/vendors'
     | '/teacher/dashboard'
     | '/teacher/help'
     | '/teacher/history'
@@ -708,6 +779,11 @@ export interface FileRouteTypes {
     | '/teacher/rewards'
     | '/teacher/scan'
     | '/teacher/students'
+    | '/vendor/dashboard'
+    | '/vendor/orders'
+    | '/vendor/products'
+    | '/vendor/profile'
+    | '/vendor/redeemed'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -722,6 +798,7 @@ export interface FileRouteTypes {
     | '/student'
     | '/super-admin'
     | '/teacher'
+    | '/vendor'
     | '/admin/badges'
     | '/admin/classes'
     | '/admin/dashboard'
@@ -764,6 +841,7 @@ export interface FileRouteTypes {
     | '/super-admin/school-admins'
     | '/super-admin/schools'
     | '/super-admin/settings'
+    | '/super-admin/vendors'
     | '/teacher/dashboard'
     | '/teacher/help'
     | '/teacher/history'
@@ -773,6 +851,11 @@ export interface FileRouteTypes {
     | '/teacher/rewards'
     | '/teacher/scan'
     | '/teacher/students'
+    | '/vendor/dashboard'
+    | '/vendor/orders'
+    | '/vendor/products'
+    | '/vendor/profile'
+    | '/vendor/redeemed'
   id:
     | '__root__'
     | '/'
@@ -788,6 +871,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student'
     | '/_authenticated/super-admin'
     | '/_authenticated/teacher'
+    | '/_authenticated/vendor'
     | '/_authenticated/admin/badges'
     | '/_authenticated/admin/classes'
     | '/_authenticated/admin/dashboard'
@@ -830,6 +914,7 @@ export interface FileRouteTypes {
     | '/_authenticated/super-admin/school-admins'
     | '/_authenticated/super-admin/schools'
     | '/_authenticated/super-admin/settings'
+    | '/_authenticated/super-admin/vendors'
     | '/_authenticated/teacher/dashboard'
     | '/_authenticated/teacher/help'
     | '/_authenticated/teacher/history'
@@ -839,6 +924,11 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/rewards'
     | '/_authenticated/teacher/scan'
     | '/_authenticated/teacher/students'
+    | '/_authenticated/vendor/dashboard'
+    | '/_authenticated/vendor/orders'
+    | '/_authenticated/vendor/products'
+    | '/_authenticated/vendor/profile'
+    | '/_authenticated/vendor/redeemed'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -894,6 +984,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/vendor': {
+      id: '/_authenticated/vendor'
+      path: '/vendor'
+      fullPath: '/vendor'
+      preLoaderRoute: typeof AuthenticatedVendorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/teacher': {
       id: '/_authenticated/teacher'
       path: '/teacher'
@@ -942,6 +1039,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/vendor/redeemed': {
+      id: '/_authenticated/vendor/redeemed'
+      path: '/redeemed'
+      fullPath: '/vendor/redeemed'
+      preLoaderRoute: typeof AuthenticatedVendorRedeemedRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/profile': {
+      id: '/_authenticated/vendor/profile'
+      path: '/profile'
+      fullPath: '/vendor/profile'
+      preLoaderRoute: typeof AuthenticatedVendorProfileRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/products': {
+      id: '/_authenticated/vendor/products'
+      path: '/products'
+      fullPath: '/vendor/products'
+      preLoaderRoute: typeof AuthenticatedVendorProductsRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/orders': {
+      id: '/_authenticated/vendor/orders'
+      path: '/orders'
+      fullPath: '/vendor/orders'
+      preLoaderRoute: typeof AuthenticatedVendorOrdersRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/dashboard': {
+      id: '/_authenticated/vendor/dashboard'
+      path: '/dashboard'
+      fullPath: '/vendor/dashboard'
+      preLoaderRoute: typeof AuthenticatedVendorDashboardRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
     }
     '/_authenticated/teacher/students': {
       id: '/_authenticated/teacher/students'
@@ -1005,6 +1137,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/teacher/dashboard'
       preLoaderRoute: typeof AuthenticatedTeacherDashboardRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/super-admin/vendors': {
+      id: '/_authenticated/super-admin/vendors'
+      path: '/vendors'
+      fullPath: '/super-admin/vendors'
+      preLoaderRoute: typeof AuthenticatedSuperAdminVendorsRouteImport
+      parentRoute: typeof AuthenticatedSuperAdminRoute
     }
     '/_authenticated/super-admin/settings': {
       id: '/_authenticated/super-admin/settings'
@@ -1443,6 +1582,7 @@ interface AuthenticatedSuperAdminRouteChildren {
   AuthenticatedSuperAdminSchoolAdminsRoute: typeof AuthenticatedSuperAdminSchoolAdminsRoute
   AuthenticatedSuperAdminSchoolsRoute: typeof AuthenticatedSuperAdminSchoolsRoute
   AuthenticatedSuperAdminSettingsRoute: typeof AuthenticatedSuperAdminSettingsRoute
+  AuthenticatedSuperAdminVendorsRoute: typeof AuthenticatedSuperAdminVendorsRoute
 }
 
 const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren =
@@ -1456,6 +1596,7 @@ const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren
       AuthenticatedSuperAdminSchoolAdminsRoute,
     AuthenticatedSuperAdminSchoolsRoute: AuthenticatedSuperAdminSchoolsRoute,
     AuthenticatedSuperAdminSettingsRoute: AuthenticatedSuperAdminSettingsRoute,
+    AuthenticatedSuperAdminVendorsRoute: AuthenticatedSuperAdminVendorsRoute,
   }
 
 const AuthenticatedSuperAdminRouteWithChildren =
@@ -1491,6 +1632,25 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
 const AuthenticatedTeacherRouteWithChildren =
   AuthenticatedTeacherRoute._addFileChildren(AuthenticatedTeacherRouteChildren)
 
+interface AuthenticatedVendorRouteChildren {
+  AuthenticatedVendorDashboardRoute: typeof AuthenticatedVendorDashboardRoute
+  AuthenticatedVendorOrdersRoute: typeof AuthenticatedVendorOrdersRoute
+  AuthenticatedVendorProductsRoute: typeof AuthenticatedVendorProductsRoute
+  AuthenticatedVendorProfileRoute: typeof AuthenticatedVendorProfileRoute
+  AuthenticatedVendorRedeemedRoute: typeof AuthenticatedVendorRedeemedRoute
+}
+
+const AuthenticatedVendorRouteChildren: AuthenticatedVendorRouteChildren = {
+  AuthenticatedVendorDashboardRoute: AuthenticatedVendorDashboardRoute,
+  AuthenticatedVendorOrdersRoute: AuthenticatedVendorOrdersRoute,
+  AuthenticatedVendorProductsRoute: AuthenticatedVendorProductsRoute,
+  AuthenticatedVendorProfileRoute: AuthenticatedVendorProfileRoute,
+  AuthenticatedVendorRedeemedRoute: AuthenticatedVendorRedeemedRoute,
+}
+
+const AuthenticatedVendorRouteWithChildren =
+  AuthenticatedVendorRoute._addFileChildren(AuthenticatedVendorRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedBranchAdminRoute: typeof AuthenticatedBranchAdminRouteWithChildren
@@ -1499,6 +1659,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
   AuthenticatedSuperAdminRoute: typeof AuthenticatedSuperAdminRouteWithChildren
   AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
+  AuthenticatedVendorRoute: typeof AuthenticatedVendorRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -1509,6 +1670,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
   AuthenticatedSuperAdminRoute: AuthenticatedSuperAdminRouteWithChildren,
   AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
+  AuthenticatedVendorRoute: AuthenticatedVendorRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

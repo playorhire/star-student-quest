@@ -11,7 +11,8 @@ type TenantRole =
   | "branch_admin"
   | "teacher"
   | "student"
-  | "parent";
+  | "parent"
+  | "vendor";
 
 type UserRoleRow = {
   role: string;
@@ -21,12 +22,13 @@ type UserRoleRow = {
 };
 
 const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
-  super_admin: ["school_admin"],
+  super_admin: ["school_admin", "vendor"],
   school_admin: ["branch_admin", "teacher"],
   branch_admin: ["teacher", "student", "parent"],
   teacher: [],
   student: [],
   parent: [],
+  vendor: [],
 };
 
 const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
@@ -36,6 +38,7 @@ const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
   teacher: "teacher",
   student: "student",
   parent: "parent",
+  vendor: "student",
 };
 
 Deno.serve(async (req) => {
@@ -110,13 +113,13 @@ Deno.serve(async (req) => {
     const callerScope = roleCheck as UserRoleRow;
 
     if (callerRole === "super_admin") {
-      if (requestedTenantRole !== "school_admin") {
-        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin users" }), {
+      if (!["school_admin", "vendor"].includes(requestedTenantRole)) {
+        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin or vendor users" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (!school_id) {
+      if (requestedTenantRole === "school_admin" && !school_id) {
         return new Response(JSON.stringify({ error: "school_id is required for schooladmin users" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -255,6 +258,19 @@ Deno.serve(async (req) => {
         if (teacherError) {
           throw new Error(`Failed to insert teacher: ${teacherError.message}`);
         }
+      } else if (requestedTenantRole === "vendor") {
+        const { error: vendorError } = await supabase.from("vendors").insert({
+          user_id: userId,
+          shop_name: meta?.shop_name || meta?.name || email,
+          owner_name: meta?.owner_name || meta?.name || email,
+          email,
+          phone: meta?.phone || null,
+          address: meta?.address || null,
+          city: meta?.city || null,
+          logo_url: meta?.logo_url || null,
+          status: meta?.status || "active",
+        });
+        if (vendorError) throw new Error(`Failed to insert vendor: ${vendorError.message}`);
       } else if (normalizedRole === "student") {
       if (!meta?.rollNumber || !meta?.classId) {
         throw new Error("Student creation requires meta.studentId or both meta.rollNumber and meta.classId");

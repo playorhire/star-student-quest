@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
-export type TenantRole = "super_admin" | "school_admin" | "branch_admin" | "teacher" | "student" | "parent" | "admin";
+export type TenantRole = "super_admin" | "school_admin" | "branch_admin" | "teacher" | "student" | "parent" | "vendor" | "admin";
 
 export interface AuthUser {
   id: string;

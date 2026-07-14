@@ -28,6 +28,7 @@ function Index() {
       else if (user.role === "branch_admin") navigate({ to: "/branch-admin/dashboard" as any });
       else if (user.role === "teacher") navigate({ to: "/teacher/dashboard" });
       else if (user.role === "parent") navigate({ to: "/parent/dashboard" });
+      else if (user.role === "vendor") navigate({ to: "/vendor/dashboard" as any });
       else navigate({ to: "/student/dashboard" });
     }
   }, [isAuthenticated, user, loading, navigate]);

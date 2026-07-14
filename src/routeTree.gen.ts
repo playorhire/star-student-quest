@@ -24,6 +24,7 @@ import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedVendorRedeemedRouteImport } from './routes/_authenticated.vendor.redeemed'
+import { Route as AuthenticatedVendorProfileRouteImport } from './routes/_authenticated.vendor.profile'
 import { Route as AuthenticatedVendorProductsRouteImport } from './routes/_authenticated.vendor.products'
 import { Route as AuthenticatedVendorOrdersRouteImport } from './routes/_authenticated.vendor.orders'
 import { Route as AuthenticatedVendorDashboardRouteImport } from './routes/_authenticated.vendor.dashboard'
@@ -154,6 +155,12 @@ const AuthenticatedVendorRedeemedRoute =
   AuthenticatedVendorRedeemedRouteImport.update({
     id: '/redeemed',
     path: '/redeemed',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorProfileRoute =
+  AuthenticatedVendorProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
     getParentRoute: () => AuthenticatedVendorRoute,
   } as any)
 const AuthenticatedVendorProductsRoute =
@@ -547,6 +554,7 @@ export interface FileRoutesByFullPath {
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesByTo {
@@ -617,6 +625,7 @@ export interface FileRoutesByTo {
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRoutesById {
@@ -689,6 +698,7 @@ export interface FileRoutesById {
   '/_authenticated/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
   '/_authenticated/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/_authenticated/vendor/products': typeof AuthenticatedVendorProductsRoute
+  '/_authenticated/vendor/profile': typeof AuthenticatedVendorProfileRoute
   '/_authenticated/vendor/redeemed': typeof AuthenticatedVendorRedeemedRoute
 }
 export interface FileRouteTypes {
@@ -761,6 +771,7 @@ export interface FileRouteTypes {
     | '/vendor/dashboard'
     | '/vendor/orders'
     | '/vendor/products'
+    | '/vendor/profile'
     | '/vendor/redeemed'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -831,6 +842,7 @@ export interface FileRouteTypes {
     | '/vendor/dashboard'
     | '/vendor/orders'
     | '/vendor/products'
+    | '/vendor/profile'
     | '/vendor/redeemed'
   id:
     | '__root__'
@@ -902,6 +914,7 @@ export interface FileRouteTypes {
     | '/_authenticated/vendor/dashboard'
     | '/_authenticated/vendor/orders'
     | '/_authenticated/vendor/products'
+    | '/_authenticated/vendor/profile'
     | '/_authenticated/vendor/redeemed'
   fileRoutesById: FileRoutesById
 }
@@ -1019,6 +1032,13 @@ declare module '@tanstack/react-router' {
       path: '/redeemed'
       fullPath: '/vendor/redeemed'
       preLoaderRoute: typeof AuthenticatedVendorRedeemedRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/profile': {
+      id: '/_authenticated/vendor/profile'
+      path: '/profile'
+      fullPath: '/vendor/profile'
+      preLoaderRoute: typeof AuthenticatedVendorProfileRouteImport
       parentRoute: typeof AuthenticatedVendorRoute
     }
     '/_authenticated/vendor/products': {
@@ -1594,6 +1614,7 @@ interface AuthenticatedVendorRouteChildren {
   AuthenticatedVendorDashboardRoute: typeof AuthenticatedVendorDashboardRoute
   AuthenticatedVendorOrdersRoute: typeof AuthenticatedVendorOrdersRoute
   AuthenticatedVendorProductsRoute: typeof AuthenticatedVendorProductsRoute
+  AuthenticatedVendorProfileRoute: typeof AuthenticatedVendorProfileRoute
   AuthenticatedVendorRedeemedRoute: typeof AuthenticatedVendorRedeemedRoute
 }
 
@@ -1601,6 +1622,7 @@ const AuthenticatedVendorRouteChildren: AuthenticatedVendorRouteChildren = {
   AuthenticatedVendorDashboardRoute: AuthenticatedVendorDashboardRoute,
   AuthenticatedVendorOrdersRoute: AuthenticatedVendorOrdersRoute,
   AuthenticatedVendorProductsRoute: AuthenticatedVendorProductsRoute,
+  AuthenticatedVendorProfileRoute: AuthenticatedVendorProfileRoute,
   AuthenticatedVendorRedeemedRoute: AuthenticatedVendorRedeemedRoute,
 }
 

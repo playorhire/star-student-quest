@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/super-admin/vendors")({
 });
 
 function SuperAdminVendors() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<"vendors" | "products">("vendors");
   const [vendors, setVendors] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -22,18 +24,26 @@ function SuperAdminVendors() {
   const [form, setForm] = useState<any>({});
   const [assigning, setAssigning] = useState<any>(null);
   const [assignedSchools, setAssignedSchools] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (user) load();
+  }, [user]);
 
   async function load() {
+    setLoading(true);
     const [v, p, s] = await Promise.all([
       (supabase as any).from("vendors").select("*").order("created_at", { ascending: false }),
       (supabase as any).from("vendor_products").select("*, vendors(shop_name)").order("created_at", { ascending: false }),
       (supabase as any).from("schools").select("id, name").order("name"),
     ]);
+    if (v.error || p.error || s.error) {
+      toast.error(v.error?.message || p.error?.message || s.error?.message || "Failed to load vendor data");
+    }
     setVendors(v.data || []);
     setProducts(p.data || []);
     setSchools(s.data || []);
+    setLoading(false);
   }
 
   async function createVendor(e: React.FormEvent) {
@@ -124,8 +134,13 @@ function SuperAdminVendors() {
 
       {tab === "vendors" && (
         <div className="grid gap-2">
-          {vendors.map((v) => (
-            <Card key={v.id} className="border-0 shadow-sm">
+          {loading ? (
+            <p className="text-sm text-center text-muted-foreground py-6">Loading vendors...</p>
+          ) : vendors.length === 0 ? (
+            <p className="text-sm text-center text-muted-foreground py-6">No vendors yet</p>
+          ) : (
+            vendors.map((v) => (
+              <Card key={v.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-3 p-3">
                 <Store className="h-8 w-8 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -144,8 +159,13 @@ function SuperAdminVendors() {
 
       {tab === "products" && (
         <div className="grid gap-2">
-          {products.map((p) => (
-            <Card key={p.id} className="border-0 shadow-sm">
+          {loading ? (
+            <p className="text-sm text-center text-muted-foreground py-6">Loading products...</p>
+          ) : products.length === 0 ? (
+            <p className="text-sm text-center text-muted-foreground py-6">No products yet</p>
+          ) : (
+            products.map((p) => (
+              <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start gap-3">
                   <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">

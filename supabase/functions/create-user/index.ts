@@ -11,7 +11,8 @@ type TenantRole =
   | "branch_admin"
   | "teacher"
   | "student"
-  | "parent";
+  | "parent"
+  | "vendor";
 
 type UserRoleRow = {
   role: string;
@@ -21,12 +22,13 @@ type UserRoleRow = {
 };
 
 const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
-  super_admin: ["school_admin"],
+  super_admin: ["school_admin", "vendor"],
   school_admin: ["branch_admin", "teacher"],
   branch_admin: ["teacher", "student", "parent"],
   teacher: [],
   student: [],
   parent: [],
+  vendor: [],
 };
 
 const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
@@ -36,6 +38,7 @@ const BASE_ROLE_BY_TENANT_ROLE: Record<TenantRole, string> = {
   teacher: "teacher",
   student: "student",
   parent: "parent",
+  vendor: "student",
 };
 
 Deno.serve(async (req) => {
@@ -110,13 +113,13 @@ Deno.serve(async (req) => {
     const callerScope = roleCheck as UserRoleRow;
 
     if (callerRole === "super_admin") {
-      if (requestedTenantRole !== "school_admin") {
-        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin users" }), {
+      if (!["school_admin", "vendor"].includes(requestedTenantRole)) {
+        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin or vendor users" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (!school_id) {
+      if (requestedTenantRole === "school_admin" && !school_id) {
         return new Response(JSON.stringify({ error: "school_id is required for schooladmin users" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -24,6 +24,7 @@ import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedVendorProductsRouteImport } from './routes/_authenticated.vendor.products'
+import { Route as AuthenticatedVendorOrdersRouteImport } from './routes/_authenticated.vendor.orders'
 import { Route as AuthenticatedVendorDashboardRouteImport } from './routes/_authenticated.vendor.dashboard'
 import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_authenticated.teacher.students'
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
@@ -152,6 +153,12 @@ const AuthenticatedVendorProductsRoute =
   AuthenticatedVendorProductsRouteImport.update({
     id: '/products',
     path: '/products',
+    getParentRoute: () => AuthenticatedVendorRoute,
+  } as any)
+const AuthenticatedVendorOrdersRoute =
+  AuthenticatedVendorOrdersRouteImport.update({
+    id: '/orders',
+    path: '/orders',
     getParentRoute: () => AuthenticatedVendorRoute,
   } as any)
 const AuthenticatedVendorDashboardRoute =
@@ -531,6 +538,7 @@ export interface FileRoutesByFullPath {
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
 }
 export interface FileRoutesByTo {
@@ -599,6 +607,7 @@ export interface FileRoutesByTo {
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/vendor/products': typeof AuthenticatedVendorProductsRoute
 }
 export interface FileRoutesById {
@@ -669,6 +678,7 @@ export interface FileRoutesById {
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/_authenticated/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
+  '/_authenticated/vendor/orders': typeof AuthenticatedVendorOrdersRoute
   '/_authenticated/vendor/products': typeof AuthenticatedVendorProductsRoute
 }
 export interface FileRouteTypes {
@@ -739,6 +749,7 @@ export interface FileRouteTypes {
     | '/teacher/scan'
     | '/teacher/students'
     | '/vendor/dashboard'
+    | '/vendor/orders'
     | '/vendor/products'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -807,6 +818,7 @@ export interface FileRouteTypes {
     | '/teacher/scan'
     | '/teacher/students'
     | '/vendor/dashboard'
+    | '/vendor/orders'
     | '/vendor/products'
   id:
     | '__root__'
@@ -876,6 +888,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/scan'
     | '/_authenticated/teacher/students'
     | '/_authenticated/vendor/dashboard'
+    | '/_authenticated/vendor/orders'
     | '/_authenticated/vendor/products'
   fileRoutesById: FileRoutesById
 }
@@ -993,6 +1006,13 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/vendor/products'
       preLoaderRoute: typeof AuthenticatedVendorProductsRouteImport
+      parentRoute: typeof AuthenticatedVendorRoute
+    }
+    '/_authenticated/vendor/orders': {
+      id: '/_authenticated/vendor/orders'
+      path: '/orders'
+      fullPath: '/vendor/orders'
+      preLoaderRoute: typeof AuthenticatedVendorOrdersRouteImport
       parentRoute: typeof AuthenticatedVendorRoute
     }
     '/_authenticated/vendor/dashboard': {
@@ -1552,11 +1572,13 @@ const AuthenticatedTeacherRouteWithChildren =
 
 interface AuthenticatedVendorRouteChildren {
   AuthenticatedVendorDashboardRoute: typeof AuthenticatedVendorDashboardRoute
+  AuthenticatedVendorOrdersRoute: typeof AuthenticatedVendorOrdersRoute
   AuthenticatedVendorProductsRoute: typeof AuthenticatedVendorProductsRoute
 }
 
 const AuthenticatedVendorRouteChildren: AuthenticatedVendorRouteChildren = {
   AuthenticatedVendorDashboardRoute: AuthenticatedVendorDashboardRoute,
+  AuthenticatedVendorOrdersRoute: AuthenticatedVendorOrdersRoute,
   AuthenticatedVendorProductsRoute: AuthenticatedVendorProductsRoute,
 }
 

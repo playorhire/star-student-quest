@@ -544,6 +544,80 @@ export type Database = {
           },
         ]
       }
+      reward_redemptions: {
+        Row: {
+          collected_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          points_used: number
+          product_id: string
+          redeemed_at: string
+          school_id: string
+          status: Database["public"]["Enums"]["redemption_status"]
+          student_id: string
+          vendor_id: string
+          voucher_code: string
+        }
+        Insert: {
+          collected_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          points_used: number
+          product_id: string
+          redeemed_at?: string
+          school_id: string
+          status?: Database["public"]["Enums"]["redemption_status"]
+          student_id: string
+          vendor_id: string
+          voucher_code: string
+        }
+        Update: {
+          collected_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          points_used?: number
+          product_id?: string
+          redeemed_at?: string
+          school_id?: string
+          status?: Database["public"]["Enums"]["redemption_status"]
+          student_id?: string
+          vendor_id?: string
+          voucher_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_redemptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_redemptions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rewards: {
         Row: {
           branch_id: string | null
@@ -1004,6 +1078,152 @@ export type Database = {
           },
         ]
       }
+      vendor_product_schools: {
+        Row: {
+          approved: boolean
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          id: string
+          product_id: string
+          school_id: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          school_id: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_product_schools_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_product_schools_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_products: {
+        Row: {
+          admin_status: Database["public"]["Enums"]["product_admin_status"]
+          cash_price: number | null
+          category: Database["public"]["Enums"]["product_category"]
+          created_at: string
+          description: string | null
+          id: string
+          image_urls: string[]
+          is_active: boolean
+          product_name: string
+          required_points: number
+          stock_quantity: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_status?: Database["public"]["Enums"]["product_admin_status"]
+          cash_price?: number | null
+          category?: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_urls?: string[]
+          is_active?: boolean
+          product_name: string
+          required_points: number
+          stock_quantity?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_status?: Database["public"]["Enums"]["product_admin_status"]
+          cash_price?: number | null
+          category?: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_urls?: string[]
+          is_active?: boolean
+          product_name?: string
+          required_points?: number
+          stock_quantity?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          email: string
+          id: string
+          logo_url: string | null
+          owner_name: string
+          phone: string | null
+          shop_name: string
+          status: Database["public"]["Enums"]["vendor_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          logo_url?: string | null
+          owner_name: string
+          phone?: string | null
+          shop_name: string
+          status?: Database["public"]["Enums"]["vendor_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          logo_url?: string | null
+          owner_name?: string
+          phone?: string | null
+          shop_name?: string
+          status?: Database["public"]["Enums"]["vendor_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1011,12 +1231,14 @@ export type Database = {
     Functions: {
       belongs_to_branch: { Args: { _branch_id: string }; Returns: boolean }
       belongs_to_school: { Args: { _school_id: string }; Returns: boolean }
+      collect_voucher: { Args: { p_code: string }; Returns: Json }
       create_notification: {
         Args: { _body: string; _title: string; _user_id: string }
         Returns: undefined
       }
       current_user_school_id: { Args: never; Returns: string }
       generate_student_code: { Args: never; Returns: string }
+      generate_voucher_code: { Args: never; Returns: string }
       get_my_branch_id: { Args: never; Returns: string }
       get_my_branch_id_safe: { Args: never; Returns: string }
       get_my_linked_children: {
@@ -1041,6 +1263,7 @@ export type Database = {
       get_my_school_id_safe: { Args: never; Returns: string }
       get_my_teacher_id: { Args: never; Returns: string }
       get_my_tenant_role: { Args: never; Returns: string }
+      get_my_vendor_id: { Args: never; Returns: string }
       get_parents_for_branch_admin: {
         Args: { p_branch_id: string }
         Returns: {
@@ -1068,6 +1291,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       is_super_admin_safe: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }
+      is_vendor_safe: { Args: never; Returns: boolean }
       redeem_reward: {
         Args: {
           p_points_spent: number
@@ -1076,6 +1300,7 @@ export type Database = {
         }
         Returns: Json
       }
+      redeem_vendor_product: { Args: { p_product_id: string }; Returns: Json }
       search_student_for_parent: {
         Args: { p_name: string; p_roll: string }
         Returns: {
@@ -1107,6 +1332,19 @@ export type Database = {
         | "super_admin"
         | "school_admin"
         | "branch_admin"
+      product_admin_status: "pending" | "approved" | "rejected"
+      product_category:
+        | "Books"
+        | "Stationery"
+        | "SchoolBags"
+        | "WaterBottles"
+        | "LunchBoxes"
+        | "Toys"
+        | "Sports"
+        | "GiftCards"
+        | "Electronics"
+        | "Others"
+      redemption_status: "pending" | "approved" | "collected" | "cancelled"
       tenant_role:
         | "super_admin"
         | "school_admin"
@@ -1114,12 +1352,14 @@ export type Database = {
         | "teacher"
         | "student"
         | "parent"
+        | "vendor"
       user_role:
         | "super_admin"
         | "school_admin"
         | "branch_admin"
         | "teacher"
         | "student"
+      vendor_status: "active" | "inactive" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1256,6 +1496,20 @@ export const Constants = {
         "school_admin",
         "branch_admin",
       ],
+      product_admin_status: ["pending", "approved", "rejected"],
+      product_category: [
+        "Books",
+        "Stationery",
+        "SchoolBags",
+        "WaterBottles",
+        "LunchBoxes",
+        "Toys",
+        "Sports",
+        "GiftCards",
+        "Electronics",
+        "Others",
+      ],
+      redemption_status: ["pending", "approved", "collected", "cancelled"],
       tenant_role: [
         "super_admin",
         "school_admin",
@@ -1263,6 +1517,7 @@ export const Constants = {
         "teacher",
         "student",
         "parent",
+        "vendor",
       ],
       user_role: [
         "super_admin",
@@ -1271,6 +1526,7 @@ export const Constants = {
         "teacher",
         "student",
       ],
+      vendor_status: ["active", "inactive", "suspended"],
     },
   },
 } as const

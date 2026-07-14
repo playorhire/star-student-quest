@@ -258,6 +258,19 @@ Deno.serve(async (req) => {
         if (teacherError) {
           throw new Error(`Failed to insert teacher: ${teacherError.message}`);
         }
+      } else if (requestedTenantRole === "vendor") {
+        const { error: vendorError } = await supabase.from("vendors").insert({
+          user_id: userId,
+          shop_name: meta?.shop_name || meta?.name || email,
+          owner_name: meta?.owner_name || meta?.name || email,
+          email,
+          phone: meta?.phone || null,
+          address: meta?.address || null,
+          city: meta?.city || null,
+          logo_url: meta?.logo_url || null,
+          status: meta?.status || "active",
+        });
+        if (vendorError) throw new Error(`Failed to insert vendor: ${vendorError.message}`);
       } else if (normalizedRole === "student") {
       if (!meta?.rollNumber || !meta?.classId) {
         throw new Error("Student creation requires meta.studentId or both meta.rollNumber and meta.classId");

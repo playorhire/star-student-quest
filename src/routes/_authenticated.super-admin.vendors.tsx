@@ -138,8 +138,7 @@ function SuperAdminVendors() {
             <p className="text-sm text-center text-muted-foreground py-6">Loading vendors...</p>
           ) : vendors.length === 0 ? (
             <p className="text-sm text-center text-muted-foreground py-6">No vendors yet</p>
-          ) : (
-            vendors.map((v) => (
+          ) : vendors.map((v) => (
               <Card key={v.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-3 p-3">
                 <Store className="h-8 w-8 text-primary shrink-0" />
@@ -163,8 +162,7 @@ function SuperAdminVendors() {
             <p className="text-sm text-center text-muted-foreground py-6">Loading products...</p>
           ) : products.length === 0 ? (
             <p className="text-sm text-center text-muted-foreground py-6">No products yet</p>
-          ) : (
-            products.map((p) => (
+          ) : products.map((p) => (
               <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start gap-3">

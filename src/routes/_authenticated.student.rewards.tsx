@@ -23,6 +23,7 @@ function StudentRewards() {
   const [vendorRedemptions, setVendorRedemptions] = useState<any[]>([]);
   const [mpBusy, setMpBusy] = useState<string | null>(null);
   const [mpSearch, setMpSearch] = useState("");
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
 
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -30,7 +31,7 @@ function StudentRewards() {
     console.log('Loading fresh data from database...');
     const { data: s } = await supabase
       .from("students")
-      .select("id, total_points")
+      .select("id, total_points, school_id")
       .eq("user_id", user!.id)
       .single();
     
@@ -56,12 +57,57 @@ function StudentRewards() {
     setRewards(r.data || []);
     setRedemptions(red.data || []);
 
-    const [mp, mpRed] = await Promise.all([
-      (supabase as any).from("vendor_products").select("*, vendors(shop_name)").eq("is_active", true).eq("admin_status", "approved").gt("stock_quantity", 0).order("required_points"),
+    const [mpRed] = await Promise.all([
       s ? (supabase as any).from("reward_redemptions").select("*, vendor_products(product_name), vendors(shop_name)").eq("student_id", s.id).order("redeemed_at", { ascending: false }) : Promise.resolve({ data: [] }),
     ]);
-    setMarketplace(mp.data || []);
     setVendorRedemptions(mpRed.data || []);
+    await loadMarketplaceProducts(s?.school_id || user?.schoolId);
+  }
+
+  async function loadMarketplaceProducts(schoolId?: string | null) {
+    if (!schoolId) {
+      setMarketplace([]);
+      setMarketplaceLoading(false);
+      return;
+    }
+
+    setMarketplaceLoading(true);
+    const { data: schoolLinks, error: schoolLinksError } = await (supabase as any)
+      .from("vendor_product_schools")
+      .select("product_id")
+      .eq("school_id", schoolId)
+      .eq("approved", true);
+
+    if (schoolLinksError) {
+      console.error("Failed to load marketplace school links", schoolLinksError);
+      setMarketplace([]);
+      setMarketplaceLoading(false);
+      return;
+    }
+
+    const productIds = (schoolLinks || []).map((entry: any) => entry.product_id).filter(Boolean);
+    if (!productIds.length) {
+      setMarketplace([]);
+      setMarketplaceLoading(false);
+      return;
+    }
+
+    const { data: products, error: productsError } = await (supabase as any)
+      .from("vendor_products")
+      .select("*, vendors(shop_name)")
+      .in("id", productIds)
+      .eq("is_active", true)
+      .eq("admin_status", "approved")
+      .gt("stock_quantity", 0)
+      .order("required_points");
+
+    if (productsError) {
+      console.error("Failed to load marketplace products", productsError);
+      setMarketplace([]);
+    } else {
+      setMarketplace(products || []);
+    }
+    setMarketplaceLoading(false);
   }
 
   async function redeemVendor(productId: string) {
@@ -233,6 +279,7 @@ function StudentRewards() {
       <div>
         <h3 className="text-lg font-bold text-foreground mb-2 mt-4">Marketplace</h3>
         <input value={mpSearch} onChange={(e) => setMpSearch(e.target.value)} placeholder="Search products..." className="w-full rounded-xl border bg-background p-2 text-sm mb-2" />
+        {marketplaceLoading ? <p className="text-sm text-muted-foreground text-center py-3">Loading marketplace…</p> : (
         <div className="grid gap-2">
           {marketplace.filter((p) => !mpSearch || p.product_name.toLowerCase().includes(mpSearch.toLowerCase()) || p.vendors?.shop_name?.toLowerCase().includes(mpSearch.toLowerCase())).map((p) => {
             const canAfford = student.total_points >= p.required_points;
@@ -257,6 +304,7 @@ function StudentRewards() {
           })}
           {marketplace.length === 0 && <p className="text-sm text-muted-foreground text-center py-3">No marketplace products available for your school yet.</p>}
         </div>
+        )}
       </div>
 
       {vendorRedemptions.length > 0 && (

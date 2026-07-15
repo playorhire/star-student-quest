@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { Gift, Plus, Trash2, Pencil, Loader2, X } from "lucide-react";
+import { Gift, Plus, Trash2, Pencil, Loader2, X, Package } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { categoryEmoji } from "../lib/vendor-categories";
 
 export const Route = createFileRoute("/_authenticated/branch-admin/rewards")({
   component: BranchAdminRewards,
@@ -21,9 +22,13 @@ function BranchAdminRewards() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", emoji: "🎁", point_cost: 0, stock: 0, category: "Items" });
   const [submitting, setSubmitting] = useState(false);
+  const [vendorProducts, setVendorProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user?.branchId) loadRewards();
+    if (user?.branchId) {
+      loadRewards();
+      loadVendorProducts();
+    }
   }, [user]);
 
   async function loadRewards() {
@@ -41,6 +46,47 @@ function BranchAdminRewards() {
       setRewards(data || []);
     }
     setLoading(false);
+  }
+
+  async function loadVendorProducts() {
+    if (!user?.schoolId) {
+      setVendorProducts([]);
+      return;
+    }
+
+    const { data: schoolLinks, error: schoolLinksError } = await (supabase as any)
+      .from("vendor_product_schools")
+      .select("product_id")
+      .eq("school_id", user.schoolId)
+      .eq("approved", true);
+
+    if (schoolLinksError) {
+      console.error(schoolLinksError);
+      setVendorProducts([]);
+      return;
+    }
+
+    const productIds = (schoolLinks || []).map((entry: any) => entry.product_id).filter(Boolean);
+    if (!productIds.length) {
+      setVendorProducts([]);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("vendor_products")
+      .select("*, vendors(shop_name)")
+      .in("id", productIds)
+      .eq("is_active", true)
+      .eq("admin_status", "approved")
+      .gt("stock_quantity", 0)
+      .order("required_points");
+
+    if (error) {
+      console.error(error);
+      setVendorProducts([]);
+    } else {
+      setVendorProducts(data || []);
+    }
   }
 
   function openCreate() {
@@ -121,6 +167,36 @@ function BranchAdminRewards() {
           <strong>Error:</strong> {error}
         </div>
       )}
+
+      <div>
+        <h2 className="text-lg font-black">Vendor Products for Your School</h2>
+        <p className="text-sm text-muted-foreground">Approved marketplace items available to students in this branch</p>
+      </div>
+
+      <div className="grid gap-2">
+        {vendorProducts.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-3">No vendor products are available for this school yet.</p>
+        ) : (
+          vendorProducts.map((product) => (
+            <Card key={product.id} className="border-0 shadow-sm">
+              <CardContent className="flex items-center gap-3 p-3">
+                <div className="h-12 w-12 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">
+                  {product.image_urls?.[0] ? <img src={product.image_urls[0]} alt={product.product_name} className="h-full w-full object-cover" loading="lazy" /> : categoryEmoji(product.category)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm truncate">{product.product_name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{product.vendors?.shop_name} · {product.stock_quantity} left</div>
+                  <div className="text-xs font-bold text-primary mt-0.5">{product.required_points} pts</div>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  <span className="text-xs font-semibold">Available</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {showForm && (
         <Card><CardContent className="p-4 space-y-3">

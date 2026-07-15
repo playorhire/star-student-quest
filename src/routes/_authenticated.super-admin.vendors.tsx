@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Store, Power, KeyRound, CheckSquare, Square } from "lucide-react";
+import { Plus, Store, Power, KeyRound, CheckSquare, Square, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/super-admin/vendors")({
   component: SuperAdminVendors,
 });
+
+const PAGE_SIZE = 20;
 
 function SuperAdminVendors() {
   const { user } = useAuth();
@@ -25,25 +27,73 @@ function SuperAdminVendors() {
   const [assigning, setAssigning] = useState<any>(null);
   const [assignedSchools, setAssignedSchools] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsCount, setProductsCount] = useState(0);
+  const [productsPage, setProductsPage] = useState(0);
+  const [productsSearch, setProductsSearch] = useState("");
+  const [productsSearchDebounced, setProductsSearchDebounced] = useState("");
+  const [productsStatus, setProductsStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => {
-    if (user) load();
+    if (user) loadSidebars();
   }, [user]);
 
-  async function load() {
+  // Debounce the search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setProductsSearchDebounced(productsSearch.trim());
+      setProductsPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [productsSearch]);
+
+  // Reload paginated products server-side whenever filters/page change and tab is products
+  useEffect(() => {
+    if (!user) return;
+    if (tab !== "products") return;
+    loadProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, tab, productsPage, productsSearchDebounced, productsStatus]);
+
+  async function loadSidebars() {
     setLoading(true);
-    const [v, p, s] = await Promise.all([
+    const [v, s] = await Promise.all([
       (supabase as any).from("vendors").select("*").order("created_at", { ascending: false }),
-      (supabase as any).from("vendor_products").select("*, vendors(shop_name)").order("created_at", { ascending: false }),
       (supabase as any).from("schools").select("id, name").order("name"),
     ]);
-    if (v.error || p.error || s.error) {
-      toast.error(v.error?.message || p.error?.message || s.error?.message || "Failed to load vendor data");
+    if (v.error || s.error) {
+      toast.error(v.error?.message || s.error?.message || "Failed to load vendor data");
     }
     setVendors(v.data || []);
-    setProducts(p.data || []);
     setSchools(s.data || []);
     setLoading(false);
+  }
+
+  async function loadProducts() {
+    setProductsLoading(true);
+    const from = productsPage * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    let q = (supabase as any)
+      .from("vendor_products")
+      .select("*, vendors(shop_name)", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (productsSearchDebounced) {
+      q = q.ilike("product_name", `%${productsSearchDebounced}%`);
+    }
+    if (productsStatus !== "all") {
+      q = q.eq("admin_status", productsStatus);
+    }
+    const { data, error, count } = await q;
+    if (error) {
+      toast.error(error.message);
+      setProducts([]);
+      setProductsCount(0);
+    } else {
+      setProducts(data || []);
+      setProductsCount(count || 0);
+    }
+    setProductsLoading(false);
   }
 
   async function createVendor(e: React.FormEvent) {
@@ -70,13 +120,13 @@ function SuperAdminVendors() {
       return;
     }
     toast.success("Vendor created");
-    setCreating(false); setForm({}); load();
+    setCreating(false); setForm({}); loadSidebars();
   }
 
   async function toggleStatus(v: any) {
     const next = v.status === "active" ? "suspended" : "active";
     const { error } = await (supabase as any).from("vendors").update({ status: next }).eq("id", v.id);
-    if (error) toast.error(error.message); else { toast.success(`Status: ${next}`); load(); }
+    if (error) toast.error(error.message); else { toast.success(`Status: ${next}`); loadSidebars(); }
   }
 
   async function resetPassword(v: any) {
@@ -90,7 +140,7 @@ function SuperAdminVendors() {
 
   async function setApproval(id: string, admin_status: "approved" | "rejected") {
     const { error } = await (supabase as any).from("vendor_products").update({ admin_status }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success(admin_status); load(); }
+    if (error) toast.error(error.message); else { toast.success(admin_status); loadProducts(); }
   }
 
   async function openAssign(p: any) {
@@ -158,10 +208,34 @@ function SuperAdminVendors() {
 
       {tab === "products" && (
         <div className="grid gap-2">
-          {loading ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={productsSearch}
+                onChange={(e) => setProductsSearch(e.target.value)}
+                placeholder="Search products…"
+                className="pl-8 rounded-xl h-9"
+              />
+            </div>
+            <select
+              value={productsStatus}
+              onChange={(e) => { setProductsStatus(e.target.value as any); setProductsPage(0); }}
+              className="h-9 rounded-xl border bg-background px-2 text-sm"
+              aria-label="Filter status"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          {productsLoading ? (
             <p className="text-sm text-center text-muted-foreground py-6">Loading products...</p>
           ) : products.length === 0 ? (
-            <p className="text-sm text-center text-muted-foreground py-6">No products yet</p>
+            <p className="text-sm text-center text-muted-foreground py-6">
+              {productsSearchDebounced || productsStatus !== "all" ? "No matching products" : "No products yet"}
+            </p>
           ) : products.map((p) => (
               <Card key={p.id} className="border-0 shadow-sm">
               <CardContent className="p-3 space-y-2">
@@ -183,7 +257,23 @@ function SuperAdminVendors() {
               </CardContent>
             </Card>
           ))}
-          {products.length === 0 && <p className="text-sm text-center text-muted-foreground py-6">No products yet</p>}
+          {productsCount > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-2">
+              <Button size="sm" variant="outline" className="rounded-xl h-8"
+                disabled={productsPage === 0 || productsLoading}
+                onClick={() => setProductsPage((p) => Math.max(0, p - 1))}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {productsPage * PAGE_SIZE + 1}–{Math.min((productsPage + 1) * PAGE_SIZE, productsCount)} of {productsCount}
+              </span>
+              <Button size="sm" variant="outline" className="rounded-xl h-8"
+                disabled={(productsPage + 1) * PAGE_SIZE >= productsCount || productsLoading}
+                onClick={() => setProductsPage((p) => p + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

@@ -1292,6 +1292,14 @@ export type Database = {
       is_super_admin_safe: { Args: never; Returns: boolean }
       is_teacher: { Args: never; Returns: boolean }
       is_vendor_safe: { Args: never; Returns: boolean }
+      product_available_at_my_school: {
+        Args: { _product_id: string }
+        Returns: boolean
+      }
+      product_belongs_to_my_vendor: {
+        Args: { _product_id: string }
+        Returns: boolean
+      }
       redeem_reward: {
         Args: {
           p_points_spent: number

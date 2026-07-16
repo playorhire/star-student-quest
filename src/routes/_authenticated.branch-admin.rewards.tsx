@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { Gift, Plus, Trash2, Pencil, Loader2, X, Package } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, X, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { categoryEmoji } from "../lib/vendor-categories";
+import { VendorProductGrid } from "@/components/VendorProductGrid";
 
 export const Route = createFileRoute("/_authenticated/branch-admin/rewards")({
   component: BranchAdminRewards,
@@ -23,6 +23,7 @@ function BranchAdminRewards() {
   const [form, setForm] = useState({ name: "", description: "", emoji: "🎁", point_cost: 0, stock: 0, category: "Items" });
   const [submitting, setSubmitting] = useState(false);
   const [vendorProducts, setVendorProducts] = useState<any[]>([]);
+  const [vendorLoading, setVendorLoading] = useState(true);
 
   useEffect(() => {
     if (user?.branchId) {
@@ -51,8 +52,10 @@ function BranchAdminRewards() {
   async function loadVendorProducts() {
     if (!user?.schoolId) {
       setVendorProducts([]);
+      setVendorLoading(false);
       return;
     }
+    setVendorLoading(true);
 
     const { data: schoolLinks, error: schoolLinksError } = await (supabase as any)
       .from("vendor_product_schools")
@@ -63,12 +66,14 @@ function BranchAdminRewards() {
     if (schoolLinksError) {
       console.error(schoolLinksError);
       setVendorProducts([]);
+      setVendorLoading(false);
       return;
     }
 
     const productIds = (schoolLinks || []).map((entry: any) => entry.product_id).filter(Boolean);
     if (!productIds.length) {
       setVendorProducts([]);
+      setVendorLoading(false);
       return;
     }
 
@@ -87,6 +92,7 @@ function BranchAdminRewards() {
     } else {
       setVendorProducts(data || []);
     }
+    setVendorLoading(false);
   }
 
   function openCreate() {
@@ -168,35 +174,22 @@ function BranchAdminRewards() {
         </div>
       )}
 
-      <div>
-        <h2 className="text-lg font-black">Vendor Products for Your School</h2>
-        <p className="text-sm text-muted-foreground">Approved marketplace items available to students in this branch</p>
-      </div>
-
-      <div className="grid gap-2">
-        {vendorProducts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-3">No vendor products are available for this school yet.</p>
-        ) : (
-          vendorProducts.map((product) => (
-            <Card key={product.id} className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="h-12 w-12 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                  {product.image_urls?.[0] ? <img src={product.image_urls[0]} alt={product.product_name} className="h-full w-full object-cover" loading="lazy" /> : categoryEmoji(product.category)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{product.product_name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{product.vendors?.shop_name} · {product.stock_quantity} left</div>
-                  <div className="text-xs font-bold text-primary mt-0.5">{product.required_points} pts</div>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span className="text-xs font-semibold">Available</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <section className="rounded-2xl bg-gradient-to-br from-primary/5 to-transparent p-4 border">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-foreground">Vendor Marketplace</h2>
+            <p className="text-[11px] text-muted-foreground">Approved items available to students in this branch</p>
+          </div>
+        </div>
+        <VendorProductGrid
+          products={vendorProducts}
+          loading={vendorLoading}
+          emptyMessage="No vendor products are available for this school yet."
+        />
+      </section>
 
       {showForm && (
         <Card><CardContent className="p-4 space-y-3">

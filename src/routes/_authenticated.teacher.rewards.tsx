@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { RewardsManager } from "@/components/RewardsManager";
-import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
-import { categoryEmoji } from "@/lib/vendor-categories";
-import { Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { VendorProductGrid } from "@/components/VendorProductGrid";
+import { ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/teacher/rewards")({
   component: TeacherRewards,
@@ -14,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/teacher/rewards")({
 function TeacherRewards() {
   const { user } = useAuth();
   const [vendorProducts, setVendorProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user?.schoolId) loadVendorProducts();
@@ -22,8 +22,10 @@ function TeacherRewards() {
   async function loadVendorProducts() {
     if (!user?.schoolId) {
       setVendorProducts([]);
+      setLoading(false);
       return;
     }
+    setLoading(true);
 
     const { data: schoolLinks, error: schoolLinksError } = await (supabase as any)
       .from("vendor_product_schools")
@@ -58,6 +60,7 @@ function TeacherRewards() {
     } else {
       setVendorProducts(data || []);
     }
+    setLoading(false);
   }
 
   return (
@@ -66,35 +69,22 @@ function TeacherRewards() {
         <h1 className="text-2xl font-black text-foreground">Rewards</h1>
         <p className="text-sm text-muted-foreground">Add, edit, and set points for rewards</p>
       </div>
-      <div>
-        <h2 className="text-lg font-black text-foreground">Vendor Products for Your School</h2>
-        <p className="text-sm text-muted-foreground">Approved marketplace items that students can redeem with points</p>
-      </div>
-
-      <div className="grid gap-2">
-        {vendorProducts.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-3">No vendor products are available for this school yet.</p>
-        ) : (
-          vendorProducts.map((product) => (
-            <Card key={product.id} className="border-0 shadow-sm">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="h-12 w-12 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                  {product.image_urls?.[0] ? <img src={product.image_urls[0]} alt={product.product_name} className="h-full w-full object-cover" loading="lazy" /> : categoryEmoji(product.category)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{product.product_name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{product.vendors?.shop_name} · {product.stock_quantity} left</div>
-                  <div className="text-xs font-bold text-primary mt-0.5">{product.required_points} pts</div>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span className="text-xs font-semibold">Available</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <section className="rounded-2xl bg-gradient-to-br from-primary/5 to-transparent p-4 border">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-foreground">Vendor Marketplace</h2>
+            <p className="text-[11px] text-muted-foreground">Products students can redeem with points</p>
+          </div>
+        </div>
+        <VendorProductGrid
+          products={vendorProducts}
+          loading={loading}
+          emptyMessage="No vendor products are available for this school yet."
+        />
+      </section>
 
       <RewardsManager branchId={user?.branchId || undefined} />
     </div>

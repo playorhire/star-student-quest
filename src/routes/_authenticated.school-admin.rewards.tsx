@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { Gift, Plus, Trash2, Pencil, Loader2, X } from "lucide-react";
+import { Plus, Trash2, Pencil, Loader2, X, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { VendorProductGrid } from "@/components/VendorProductGrid";
 
 export const Route = createFileRoute("/_authenticated/school-admin/rewards")({
   component: SchoolAdminRewards,
@@ -21,10 +22,37 @@ function SchoolAdminRewards() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", emoji: "🎁", point_cost: 0, stock: 0, category: "Items" });
   const [submitting, setSubmitting] = useState(false);
+  const [vendorProducts, setVendorProducts] = useState<any[]>([]);
+  const [vendorLoading, setVendorLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.schoolId) loadRewards();
+    if (user?.schoolId) {
+      loadRewards();
+      loadVendorProducts();
+    }
   }, [user]);
+
+  async function loadVendorProducts() {
+    if (!user?.schoolId) { setVendorProducts([]); setVendorLoading(false); return; }
+    setVendorLoading(true);
+    const { data: links } = await (supabase as any)
+      .from("vendor_product_schools")
+      .select("product_id")
+      .eq("school_id", user.schoolId)
+      .eq("approved", true);
+    const ids = (links || []).map((l: any) => l.product_id).filter(Boolean);
+    if (!ids.length) { setVendorProducts([]); setVendorLoading(false); return; }
+    const { data } = await (supabase as any)
+      .from("vendor_products")
+      .select("*, vendors(shop_name)")
+      .in("id", ids)
+      .eq("is_active", true)
+      .eq("admin_status", "approved")
+      .gt("stock_quantity", 0)
+      .order("required_points");
+    setVendorProducts(data || []);
+    setVendorLoading(false);
+  }
 
   async function loadRewards() {
     setLoading(true);
@@ -120,6 +148,23 @@ function SchoolAdminRewards() {
           <strong>Error:</strong> {error}
         </div>
       )}
+
+      <section className="rounded-2xl bg-gradient-to-br from-primary/5 to-transparent p-4 border">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-foreground">Vendor Marketplace</h2>
+            <p className="text-[11px] text-muted-foreground">Approved vendor items available to students at this school</p>
+          </div>
+        </div>
+        <VendorProductGrid
+          products={vendorProducts}
+          loading={vendorLoading}
+          emptyMessage="No vendor products are available for this school yet."
+        />
+      </section>
 
       {showForm && (
         <Card><CardContent className="p-4 space-y-3">

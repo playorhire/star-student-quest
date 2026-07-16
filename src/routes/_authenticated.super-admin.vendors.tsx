@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Store, Power, KeyRound, CheckSquare, Square, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Store, Power, KeyRound, CheckSquare, Square, Search, ChevronLeft, ChevronRight, Package, Clock, CheckCircle2, XCircle, Eye, School } from "lucide-react";
+import { categoryEmoji, categoryLabel } from "@/lib/vendor-categories";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/super-admin/vendors")({
@@ -33,9 +35,14 @@ function SuperAdminVendors() {
   const [productsSearch, setProductsSearch] = useState("");
   const [productsSearchDebounced, setProductsSearchDebounced] = useState("");
   const [productsStatus, setProductsStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [detail, setDetail] = useState<any>(null);
+  const [detailImgIdx, setDetailImgIdx] = useState(0);
+  const [rejectReason, setRejectReason] = useState("");
+  const [stats, setStats] = useState({ pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0, activeVendors: 0 });
+  const [vendorPendingCounts, setVendorPendingCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (user) loadSidebars();
+    if (user) { loadSidebars(); loadStats(); }
   }, [user]);
 
   // Debounce the search input
@@ -67,6 +74,25 @@ function SuperAdminVendors() {
     setVendors(v.data || []);
     setSchools(s.data || []);
     setLoading(false);
+  }
+
+  async function loadStats() {
+    const [pending, approved, rejected, activeV, pendingByVendor] = await Promise.all([
+      (supabase as any).from("vendor_products").select("id", { count: "exact", head: true }).eq("admin_status", "pending"),
+      (supabase as any).from("vendor_products").select("id", { count: "exact", head: true }).eq("admin_status", "approved"),
+      (supabase as any).from("vendor_products").select("id", { count: "exact", head: true }).eq("admin_status", "rejected"),
+      (supabase as any).from("vendors").select("id", { count: "exact", head: true }).eq("status", "active"),
+      (supabase as any).from("vendor_products").select("vendor_id").eq("admin_status", "pending"),
+    ]);
+    setStats({
+      pendingProducts: pending.count || 0,
+      approvedProducts: approved.count || 0,
+      rejectedProducts: rejected.count || 0,
+      activeVendors: activeV.count || 0,
+    });
+    const counts: Record<string, number> = {};
+    (pendingByVendor.data || []).forEach((r: any) => { counts[r.vendor_id] = (counts[r.vendor_id] || 0) + 1; });
+    setVendorPendingCounts(counts);
   }
 
   async function loadProducts() {
@@ -140,7 +166,13 @@ function SuperAdminVendors() {
 
   async function setApproval(id: string, admin_status: "approved" | "rejected") {
     const { error } = await (supabase as any).from("vendor_products").update({ admin_status }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success(admin_status); loadProducts(); }
+    if (error) toast.error(error.message); else {
+      toast.success(`Product ${admin_status}`);
+      loadProducts();
+      loadStats();
+      setDetail(null);
+      setRejectReason("");
+    }
   }
 
   async function openAssign(p: any) {
@@ -177,9 +209,21 @@ function SuperAdminVendors() {
         )}
       </div>
 
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatTile icon={<Store className="h-4 w-4" />} label="Active vendors" value={stats.activeVendors} tone="primary" />
+        <StatTile icon={<Clock className="h-4 w-4" />} label="Pending" value={stats.pendingProducts} tone="amber" onClick={() => { setTab("products"); setProductsStatus("pending"); setProductsPage(0); }} />
+        <StatTile icon={<CheckCircle2 className="h-4 w-4" />} label="Approved" value={stats.approvedProducts} tone="emerald" onClick={() => { setTab("products"); setProductsStatus("approved"); setProductsPage(0); }} />
+        <StatTile icon={<XCircle className="h-4 w-4" />} label="Rejected" value={stats.rejectedProducts} tone="red" onClick={() => { setTab("products"); setProductsStatus("rejected"); setProductsPage(0); }} />
+      </div>
+
       <div className="flex gap-2">
         <Button size="sm" variant={tab === "vendors" ? "default" : "outline"} onClick={() => setTab("vendors")} className="rounded-xl">Vendors</Button>
-        <Button size="sm" variant={tab === "products" ? "default" : "outline"} onClick={() => setTab("products")} className="rounded-xl">Products</Button>
+        <Button size="sm" variant={tab === "products" ? "default" : "outline"} onClick={() => setTab("products")} className="rounded-xl">
+          Products
+          {stats.pendingProducts > 0 && (
+            <span className="ml-2 rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 min-w-[18px] text-center">{stats.pendingProducts}</span>
+          )}
+        </Button>
       </div>
 
       {tab === "vendors" && (
@@ -191,11 +235,20 @@ function SuperAdminVendors() {
           ) : vendors.map((v) => (
               <Card key={v.id} className="border-0 shadow-sm">
               <CardContent className="flex items-center gap-3 p-3">
-                <Store className="h-8 w-8 text-primary shrink-0" />
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+                  <Store className="h-5 w-5 text-primary" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm truncate">{v.shop_name}</div>
                   <div className="text-xs text-muted-foreground truncate">{v.email} · {v.city || "—"}</div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>{v.status}</span>
+                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${v.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>{v.status}</span>
+                    {vendorPendingCounts[v.id] > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600">
+                        {vendorPendingCounts[v.id]} pending
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleStatus(v)} aria-label="Toggle"><Power className="h-4 w-4" /></Button>
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => resetPassword(v)} aria-label="Reset password"><KeyRound className="h-4 w-4" /></Button>
@@ -237,22 +290,32 @@ function SuperAdminVendors() {
               {productsSearchDebounced || productsStatus !== "all" ? "No matching products" : "No products yet"}
             </p>
           ) : products.map((p) => (
-              <Card key={p.id} className="border-0 shadow-sm">
+              <Card key={p.id} className="border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-3 space-y-2">
-                <div className="flex items-start gap-3">
-                  <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                    {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="h-full w-full object-cover" /> : "📦"}
+                <button type="button" onClick={() => { setDetail(p); setDetailImgIdx(0); setRejectReason(""); }} className="w-full flex items-start gap-3 text-left">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden flex items-center justify-center text-2xl shrink-0">
+                    {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt="" className="h-full w-full object-cover" /> : categoryEmoji(p.category)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm truncate">{p.product_name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.vendors?.shop_name} · {p.required_points} pts</div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.admin_status === "approved" ? "bg-emerald-500/10 text-emerald-600" : p.admin_status === "rejected" ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"}`}>{p.admin_status}</span>
+                    <div className="text-xs text-muted-foreground truncate">{p.vendors?.shop_name || "—"}</div>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.admin_status === "approved" ? "bg-emerald-500/10 text-emerald-600" : p.admin_status === "rejected" ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"}`}>{p.admin_status}</span>
+                      <span className="rounded-full bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5">{p.required_points}✨</span>
+                      <span className="rounded-full bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5">{categoryEmoji(p.category)} {categoryLabel(p.category)}</span>
+                      <span className="rounded-full bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5">Stock: {p.stock_quantity}</span>
+                    </div>
                   </div>
-                </div>
+                  <Eye className="h-4 w-4 text-muted-foreground shrink-0" />
+                </button>
                 <div className="flex gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={() => setApproval(p.id, "approved")} className="rounded-lg text-xs h-7">Approve</Button>
-                  <Button size="sm" variant="outline" onClick={() => setApproval(p.id, "rejected")} className="rounded-lg text-xs h-7">Reject</Button>
-                  <Button size="sm" onClick={() => openAssign(p)} className="rounded-lg text-xs h-7">Assign Schools</Button>
+                  {p.admin_status !== "approved" && (
+                    <Button size="sm" variant="outline" onClick={() => setApproval(p.id, "approved")} className="rounded-lg text-xs h-7 border-emerald-500/40 text-emerald-600 hover:bg-emerald-500/10"><CheckCircle2 className="h-3 w-3 mr-1" />Approve</Button>
+                  )}
+                  {p.admin_status !== "rejected" && (
+                    <Button size="sm" variant="outline" onClick={() => setApproval(p.id, "rejected")} className="rounded-lg text-xs h-7 border-red-500/40 text-red-600 hover:bg-red-500/10"><XCircle className="h-3 w-3 mr-1" />Reject</Button>
+                  )}
+                  <Button size="sm" onClick={() => openAssign(p)} className="rounded-lg text-xs h-7"><School className="h-3 w-3 mr-1" />Schools</Button>
                 </div>
               </CardContent>
             </Card>
@@ -317,6 +380,88 @@ function SuperAdminVendors() {
           <Button onClick={saveAssign} className="w-full rounded-xl">Save</Button>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{detail?.product_name}</DialogTitle></DialogHeader>
+          {detail && (
+            <div className="space-y-3">
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-6xl">
+                {detail.image_urls?.length ? (
+                  <img src={detail.image_urls[detailImgIdx]} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  categoryEmoji(detail.category)
+                )}
+                <span className="absolute top-2 right-2 rounded-full bg-background/90 backdrop-blur px-3 py-1 text-sm font-black text-primary shadow">
+                  {detail.required_points}✨
+                </span>
+              </div>
+              {(detail.image_urls?.length || 0) > 1 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {detail.image_urls.map((u: string, i: number) => (
+                    <button key={i} onClick={() => setDetailImgIdx(i)} className={`h-14 w-14 shrink-0 rounded-lg overflow-hidden border-2 ${i === detailImgIdx ? "border-primary" : "border-transparent"}`}>
+                      <img src={u} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <InfoRow label="Vendor" value={detail.vendors?.shop_name || "—"} />
+                <InfoRow label="Category" value={`${categoryEmoji(detail.category)} ${categoryLabel(detail.category)}`} />
+                <InfoRow label="Points" value={`${detail.required_points}`} />
+                <InfoRow label="Cash price" value={detail.cash_price ? `Rs ${detail.cash_price}` : "—"} />
+                <InfoRow label="Stock" value={`${detail.stock_quantity}`} />
+                <InfoRow label="Status" value={detail.admin_status} />
+              </div>
+              {detail.description && (
+                <div className="rounded-xl bg-muted/50 p-3 text-sm text-foreground/90 whitespace-pre-wrap">
+                  {detail.description}
+                </div>
+              )}
+              {detail.admin_status !== "rejected" && (
+                <div>
+                  <Label className="text-xs">Rejection reason (optional, shown in log)</Label>
+                  <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Why is this being rejected?" className="rounded-xl min-h-[60px]" />
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                {detail.admin_status !== "approved" && (
+                  <Button onClick={() => setApproval(detail.id, "approved")} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700"><CheckCircle2 className="h-4 w-4 mr-1" />Approve</Button>
+                )}
+                {detail.admin_status !== "rejected" && (
+                  <Button onClick={() => setApproval(detail.id, "rejected")} variant="outline" className="flex-1 rounded-xl border-red-500/40 text-red-600 hover:bg-red-500/10"><XCircle className="h-4 w-4 mr-1" />Reject</Button>
+                )}
+                <Button onClick={() => { setDetail(null); openAssign(detail); }} variant="outline" className="rounded-xl"><School className="h-4 w-4 mr-1" />Schools</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function StatTile({ icon, label, value, tone, onClick }: { icon: React.ReactNode; label: string; value: number; tone: "primary" | "amber" | "emerald" | "red"; onClick?: () => void }) {
+  const tones: Record<string, string> = {
+    primary: "bg-primary/10 text-primary",
+    amber: "bg-amber-500/10 text-amber-600",
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    red: "bg-red-500/10 text-red-600",
+  };
+  return (
+    <button type="button" onClick={onClick} disabled={!onClick} className={`rounded-2xl border bg-card p-3 text-left transition-all ${onClick ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer" : ""}`}>
+      <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${tones[tone]}`}>{icon}</div>
+      <div className="mt-2 text-xl font-black text-foreground leading-none">{value}</div>
+      <div className="text-[10px] text-muted-foreground mt-1">{label}</div>
+    </button>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/40 p-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-bold">{label}</div>
+      <div className="text-sm font-semibold text-foreground truncate">{value}</div>
     </div>
   );
 }

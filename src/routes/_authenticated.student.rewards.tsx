@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { categoryEmoji } from "@/lib/vendor-categories";
+import { VendorProductGrid } from "@/components/VendorProductGrid";
 
 export const Route = createFileRoute("/_authenticated/student/rewards")({
   component: StudentRewards,
@@ -22,7 +22,6 @@ function StudentRewards() {
   const [marketplace, setMarketplace] = useState<any[]>([]);
   const [vendorRedemptions, setVendorRedemptions] = useState<any[]>([]);
   const [mpBusy, setMpBusy] = useState<string | null>(null);
-  const [mpSearch, setMpSearch] = useState("");
   const [marketplaceLoading, setMarketplaceLoading] = useState(false);
 
   useEffect(() => { if (user) load(); }, [user]);
@@ -199,14 +198,20 @@ function StudentRewards() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-foreground">Rewards</h1>
-          <p className="text-sm text-muted-foreground">Redeem your points</p>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-black text-primary">{student.total_points}</div>
-          <div className="text-[10px] text-muted-foreground">points available</div>
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 p-4 text-primary-foreground shadow-lg">
+        <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black">Rewards</h1>
+            <p className="text-xs opacity-90">Redeem your points for cool stuff</p>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center gap-1 justify-end">
+              <Sparkles className="h-5 w-5" />
+              <span className="text-3xl font-black leading-none">{student.total_points}</span>
+            </div>
+            <div className="text-[10px] opacity-90 mt-0.5">points available</div>
+          </div>
         </div>
       </div>
 
@@ -276,36 +281,37 @@ function StudentRewards() {
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-bold text-foreground mb-2 mt-4">Marketplace</h3>
-        <input value={mpSearch} onChange={(e) => setMpSearch(e.target.value)} placeholder="Search products..." className="w-full rounded-xl border bg-background p-2 text-sm mb-2" />
-        {marketplaceLoading ? <p className="text-sm text-muted-foreground text-center py-3">Loading marketplace…</p> : (
-        <div className="grid gap-2">
-          {marketplace.filter((p) => !mpSearch || p.product_name.toLowerCase().includes(mpSearch.toLowerCase()) || p.vendors?.shop_name?.toLowerCase().includes(mpSearch.toLowerCase())).map((p) => {
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-foreground">Marketplace</h2>
+            <p className="text-[11px] text-muted-foreground">Redeem points at partner vendors</p>
+          </div>
+        </div>
+        <VendorProductGrid
+          products={marketplace}
+          loading={marketplaceLoading}
+          studentPoints={student.total_points}
+          emptyMessage="No marketplace products available for your school yet."
+          renderAction={(p) => {
             const canAfford = student.total_points >= p.required_points;
             const busy = mpBusy === p.id;
             return (
-              <Card key={p.id} className={`border-0 shadow-sm ${!canAfford ? "opacity-60" : ""}`}>
-                <CardContent className="flex items-center gap-3 p-3">
-                  <div className="h-14 w-14 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                    {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt={p.product_name} className="h-full w-full object-cover" loading="lazy" /> : categoryEmoji(p.category)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm truncate">{p.product_name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.vendors?.shop_name} · {p.stock_quantity} left</div>
-                    <div className="text-xs font-bold text-primary mt-0.5">{p.required_points} pts{p.cash_price ? ` · Rs ${p.cash_price}` : ""}</div>
-                  </div>
-                  <Button size="sm" className="rounded-xl" disabled={!canAfford || busy} onClick={() => redeemVendor(p.id)}>
-                    {busy ? "..." : "Redeem"}
-                  </Button>
-                </CardContent>
-              </Card>
+              <Button
+                size="sm"
+                className="w-full rounded-xl h-8 text-xs"
+                disabled={!canAfford || busy || p.stock_quantity <= 0}
+                onClick={() => redeemVendor(p.id)}
+              >
+                {busy ? "…" : !canAfford ? `Need ${p.required_points - student.total_points} more` : (<><ShoppingCart className="h-3 w-3 mr-1" />Redeem</>)}
+              </Button>
             );
-          })}
-          {marketplace.length === 0 && <p className="text-sm text-muted-foreground text-center py-3">No marketplace products available for your school yet.</p>}
-        </div>
-        )}
-      </div>
+          }}
+        />
+      </section>
 
       {vendorRedemptions.length > 0 && (
         <div>

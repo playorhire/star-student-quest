@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, ImagePlus, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ImagePlus, X, Package, Eye, EyeOff, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PRODUCT_CATEGORIES, categoryEmoji, type ProductCategory } from "@/lib/vendor-categories";
 
@@ -35,6 +35,7 @@ function VendorProducts() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   useEffect(() => { load(); }, []);
 
@@ -124,30 +125,59 @@ function VendorProducts() {
         </Button>
       </div>
 
+      <div className="grid grid-cols-4 gap-2">
+        {([
+          { key: "all", label: "All", icon: Package, count: products.length, color: "text-foreground" },
+          { key: "pending", label: "Pending", icon: Clock, count: products.filter(p => p.admin_status === "pending").length, color: "text-amber-600" },
+          { key: "approved", label: "Live", icon: CheckCircle2, count: products.filter(p => p.admin_status === "approved").length, color: "text-emerald-600" },
+          { key: "rejected", label: "Rejected", icon: XCircle, count: products.filter(p => p.admin_status === "rejected").length, color: "text-red-600" },
+        ] as const).map((t) => {
+          const Icon = t.icon;
+          const active = filter === t.key;
+          return (
+            <button key={t.key} onClick={() => setFilter(t.key)} className={`rounded-2xl border p-2 text-center transition-all ${active ? "bg-primary text-primary-foreground border-primary shadow" : "bg-card hover:bg-muted"}`}>
+              <Icon className={`h-4 w-4 mx-auto ${active ? "" : t.color}`} />
+              <div className={`text-lg font-black leading-none mt-1 ${active ? "" : t.color}`}>{t.count}</div>
+              <div className={`text-[10px] mt-0.5 ${active ? "opacity-90" : "text-muted-foreground"}`}>{t.label}</div>
+            </button>
+          );
+        })}
+      </div>
+
       {loading ? (
         <div className="text-center py-6 text-sm text-muted-foreground">Loading...</div>
-      ) : products.length === 0 ? (
-        <Card className="border-dashed"><CardContent className="p-6 text-center text-sm text-muted-foreground">No products yet. Add your first product to get started.</CardContent></Card>
+      ) : products.filter(p => filter === "all" || p.admin_status === filter).length === 0 ? (
+        <Card className="border-dashed border-2"><CardContent className="p-8 text-center">
+          <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{filter === "all" ? "No products yet. Add your first product to get started." : `No ${filter} products.`}</p>
+        </CardContent></Card>
       ) : (
         <div className="grid gap-3">
-          {products.map((p) => (
-            <Card key={p.id} className="border-0 shadow-sm">
+          {products.filter(p => filter === "all" || p.admin_status === filter).map((p) => (
+            <Card key={p.id} className="border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="flex gap-3 p-3">
-                <div className="h-16 w-16 flex-shrink-0 rounded-xl bg-muted overflow-hidden flex items-center justify-center text-2xl">
+                <div className="relative h-20 w-20 flex-shrink-0 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden flex items-center justify-center text-3xl">
                   {p.image_urls?.[0] ? <img src={p.image_urls[0]} alt={p.product_name} className="h-full w-full object-cover" loading="lazy" /> : categoryEmoji(p.category)}
+                  <span className="absolute bottom-1 left-1 rounded-full bg-background/90 backdrop-blur px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                    {p.required_points}✨
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-foreground truncate">{p.product_name}</div>
-                  <div className="text-xs text-muted-foreground">{p.required_points} pts · {p.stock_quantity} in stock</div>
+                  <div className="font-bold text-sm text-foreground line-clamp-1">{p.product_name}</div>
+                  <div className="text-xs text-muted-foreground">{p.stock_quantity} in stock{p.cash_price ? ` · Rs ${p.cash_price}` : ""}</div>
                   <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.admin_status === "approved" ? "bg-emerald-500/10 text-emerald-600" : p.admin_status === "rejected" ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"}`}>{p.admin_status}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{p.is_active ? "active" : "disabled"}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5 ${p.admin_status === "approved" ? "bg-emerald-500/10 text-emerald-600" : p.admin_status === "rejected" ? "bg-red-500/10 text-red-600" : "bg-amber-500/10 text-amber-600"}`}>
+                      {p.admin_status === "approved" ? <CheckCircle2 className="h-2.5 w-2.5" /> : p.admin_status === "rejected" ? <XCircle className="h-2.5 w-2.5" /> : <Clock className="h-2.5 w-2.5" />}
+                      {p.admin_status}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{p.is_active ? "active" : "hidden"}</span>
+                    <span className="rounded-full bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5">{categoryEmoji(p.category)} {p.category}</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(p)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggle(p)}><X className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => del(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditing(p)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggle(p)} title={p.is_active ? "Hide" : "Show"}>{p.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => del(p.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </CardContent>
             </Card>

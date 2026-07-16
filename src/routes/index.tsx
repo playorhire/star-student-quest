@@ -162,6 +162,26 @@ function Index() {
         </div>
       </section>
 
+      {/* Supporting Organizations */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-8">
+        <div className="rounded-[2rem] border border-white/60 bg-white/60 p-6 shadow-lg shadow-primary/10 backdrop-blur-xl sm:p-8">
+          <p className="text-center text-sm font-bold uppercase tracking-[0.25em] text-muted-foreground">
+            Proudly supporting organizations
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {[
+              { name: "Knorr", src: "/logos/knorr.svg" },
+              { name: "EBM", src: "/logos/ebm.svg" },
+              { name: "Candyland", src: "/logos/candyland.svg" },
+            ].map((logo) => (
+              <div key={logo.name} className="flex items-center justify-center rounded-2xl border border-primary/10 bg-white/80 p-3 shadow-sm">
+                <img src={logo.src} alt={logo.name} className="h-20 w-full max-w-[180px] object-contain" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="relative z-10 mx-auto max-w-6xl px-5 pb-20">
         <div className="text-center mb-12">

@@ -40,8 +40,13 @@ function RegisterSchool() {
       const { data, error } = await supabase.functions.invoke("register-school", {
         body: form,
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+
+      const functionError = error instanceof Error ? error.message : undefined;
+      const payloadError = (data as any)?.error;
+      const message = functionError || payloadError || "Registration failed";
+
+      if (error) throw new Error(message);
+      if (payloadError) throw new Error(payloadError);
 
       toast.success("School registered! Signing you in...");
 
@@ -56,7 +61,8 @@ function RegisterSchool() {
       }
       navigate({ to: "/school-admin/dashboard" as any });
     } catch (err: any) {
-      toast.error(err.message || "Registration failed");
+      const message = err?.message || "Registration failed";
+      toast.error(message.includes("HTTPError") ? "The registration service is unavailable right now. Please try again shortly." : message);
     } finally {
       setLoading(false);
     }

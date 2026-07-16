@@ -23,6 +23,94 @@ function createSupabaseClient() {
   });
 }
 
+function getFunctionErrorMessage(error: unknown, data: unknown): string {
+  if (error && typeof error === 'object') {
+    const maybe = error as { message?: string; details?: string; error?: unknown };
+    if (typeof maybe.message === 'string' && maybe.message && !/httperror/i.test(maybe.message)) {
+      return maybe.message;
+    }
+    if (typeof maybe.details === 'string' && maybe.details) {
+      return maybe.details;
+    }
+    if (typeof maybe.error === 'string' && maybe.error) {
+      return maybe.error;
+    }
+  }
+
+  if (data && typeof data === 'object') {
+    const payload = data as { error?: unknown; message?: unknown };
+    if (typeof payload.error === 'string' && payload.error) return payload.error;
+    if (typeof payload.message === 'string' && payload.message) return payload.message;
+  }
+
+  if (typeof data === 'string' && data) {
+    return data;
+  }
+
+  return 'The request could not be completed. Please try again.';
+}
+
+async function getFunctionErrorPayload(error: unknown): Promise<unknown> {
+  if (!error || typeof error !== 'object') return undefined;
+
+  // Supabase stores the non-2xx function response in `context`, rather than
+  // in `data`. Read a clone so callers can still inspect the original response.
+  const context = (error as { context?: unknown }).context;
+  if (!context || typeof context !== 'object' || !('clone' in context)) return undefined;
+
+  try {
+    const response = (context as Response).clone();
+    const contentType = response.headers.get('content-type') || '';
+    return contentType.includes('application/json') ? await response.json() : await response.text();
+  } catch {
+    return undefined;
+  }
+}
+
+async function normalizeFunctionError(error: unknown, data: unknown) {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (/httperror/i.test(message) || /unexpected end of json input/i.test(message)) {
+      const payload = data ?? await getFunctionErrorPayload(error);
+      return new Error(getFunctionErrorMessage(error, payload));
+    }
+  }
+
+  return error;
+}
+
+function wrapFunctions(functions: any) {
+  return new Proxy(functions, {
+    get(target, prop, receiver) {
+      if (prop === 'invoke') {
+        return async (name: string, options?: Record<string, unknown>) => {
+          const result = await target.invoke(name, options);
+          if (result?.error) {
+            return {
+              ...result,
+              error: await normalizeFunctionError(result.error, result.data),
+            };
+          }
+
+          if (result?.data && typeof result.data === 'object' && 'error' in result.data) {
+            const payload = result.data as { error?: unknown };
+            if (typeof payload.error === 'string' && payload.error) {
+              return {
+                ...result,
+                error: new Error(payload.error),
+              };
+            }
+          }
+
+          return result;
+        };
+      }
+
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+}
+
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 
 // Import the supabase client like this:
@@ -30,7 +118,11 @@ let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
   get(_, prop, receiver) {
     if (!_supabase) _supabase = createSupabaseClient();
-    return Reflect.get(_supabase, prop, receiver);
+    const value = Reflect.get(_supabase, prop, receiver);
+    if (prop === 'functions') {
+      return wrapFunctions(value);
+    }
+    return value;
   },
 });
 

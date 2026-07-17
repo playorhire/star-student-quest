@@ -1,8 +1,12 @@
 import { N as NullProtoObj } from "./rou3.mjs";
-import { a as FastURL, b as NodeResponse } from "./srvx.mjs";
+import { F as FastURL, N as NodeResponse } from "./srvx.mjs";
+function decodePathname(pathname) {
+  return decodeURI(pathname.includes("%25") ? pathname.replace(/%25/g, "%2525") : pathname);
+}
 const kEventNS = "h3.internal.event.";
 const kEventRes = /* @__PURE__ */ Symbol.for(`${kEventNS}res`);
 const kEventResHeaders = /* @__PURE__ */ Symbol.for(`${kEventNS}res.headers`);
+const kEventResErrHeaders = /* @__PURE__ */ Symbol.for(`${kEventNS}res.err.headers`);
 var H3Event = class {
   app;
   req;
@@ -14,7 +18,9 @@ var H3Event = class {
     this.req = req;
     this.app = app;
     const _url = req._url;
-    this.url = _url && _url instanceof URL ? _url : new FastURL(req.url);
+    const url = _url && _url instanceof URL ? _url : new FastURL(req.url);
+    if (url.pathname.includes("%")) url.pathname = decodePathname(url.pathname);
+    this.url = url;
   }
   get res() {
     return this[kEventRes] ||= new H3EventResponse();
@@ -49,6 +55,9 @@ var H3EventResponse = class {
   statusText;
   get headers() {
     return this[kEventResHeaders] ||= new Headers();
+  }
+  get errHeaders() {
+    return this[kEventResErrHeaders] ||= new Headers();
   }
 };
 const DISALLOWED_STATUS_CHARS = /[^\u0009\u0020-\u007E]/g;
@@ -89,8 +98,8 @@ var HTTPError = class HTTPError2 extends Error {
       messageInput = arg1;
       details = arg2;
     } else details = arg1;
-    const status = sanitizeStatusCode(details?.status || details?.cause?.status || details?.status || details?.statusCode, 500);
-    const statusText = sanitizeStatusMessage(details?.statusText || details?.cause?.statusText || details?.statusText || details?.statusMessage);
+    const status = sanitizeStatusCode(details?.status || details?.statusCode || details?.cause?.status || details?.cause?.statusCode, 500);
+    const statusText = sanitizeStatusMessage(details?.statusText || details?.statusMessage || details?.cause?.statusText || details?.cause?.statusMessage);
     const message = messageInput || details?.message || details?.cause?.message || details?.statusText || details?.statusMessage || [
       "HTTPError",
       status,
@@ -176,7 +185,8 @@ function prepareResponse(val, event, config, nested) {
     }
     if (error.unhandled && !config.silent) console.error(error);
     const { onError } = config;
-    return onError && !nested ? Promise.resolve(onError(error, event)).catch((error2) => error2).then((newVal) => prepareResponse(newVal ?? val, event, config, true)) : errorResponse(error, config.debug);
+    const errHeaders = event[kEventRes]?.[kEventResErrHeaders];
+    return onError && !nested ? Promise.resolve(onError(error, event)).catch((error2) => error2).then((newVal) => prepareResponse(newVal ?? val, event, config, true)) : errorResponse(error, config.debug, errHeaders);
   }
   const preparedRes = event[kEventRes];
   const preparedHeaders = preparedRes?.[kEventResHeaders];
@@ -259,17 +269,18 @@ function prepareResponseBody(val, event, config) {
 function nullBody(method, status) {
   return method === "HEAD" || status === 100 || status === 101 || status === 102 || status === 204 || status === 205 || status === 304;
 }
-function errorResponse(error, debug) {
+function errorResponse(error, debug, errHeaders) {
+  let headers = error.headers ? mergeHeaders$1(jsonHeaders, error.headers) : new Headers(jsonHeaders);
+  if (errHeaders) headers = mergeHeaders$1(headers, errHeaders);
   return new NodeResponse(JSON.stringify({
     ...error.toJSON(),
     stack: debug && error.stack ? error.stack.split("\n").map((l) => l.trim()) : void 0
   }, void 0, debug ? 2 : void 0), {
     status: error.status,
     statusText: error.statusText,
-    headers: error.headers ? mergeHeaders$1(jsonHeaders, error.headers) : new Headers(jsonHeaders)
+    headers
   });
 }
-new TextEncoder();
 export {
   H3Event as H,
   toResponse as t

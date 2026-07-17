@@ -109,7 +109,7 @@ Suggested solution: ${env.workaround}`;
     }
   }
 }
-const version = "2.103.0";
+const version = "2.103.2";
 const DEFAULT_VERSION = `realtime-js/${version}`;
 const VSN_1_0_0 = "1.0.0";
 const VSN_2_0_0 = "2.0.0";

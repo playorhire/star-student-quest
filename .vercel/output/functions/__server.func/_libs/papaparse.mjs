@@ -6,7 +6,7 @@ var hasRequiredPapaparse;
 function requirePapaparse() {
   if (hasRequiredPapaparse) return papaparse$1.exports;
   hasRequiredPapaparse = 1;
-  (function(module, exports$1) {
+  (function(module, exports) {
     (function(root, factory) {
       {
         module.exports = factory();

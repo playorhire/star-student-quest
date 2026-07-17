@@ -1140,7 +1140,7 @@ function encodePathParam(value, decoder) {
   return decoder?.(encoded) ?? encoded;
 }
 function isNotFound(obj) {
-  return !!obj?.isNotFound;
+  return obj?.isNotFound === true;
 }
 function getSafeSessionStorage() {
   try {
@@ -1317,24 +1317,24 @@ function executeRewriteOutput(rewrite, url) {
 function createNonReactiveMutableStore(initialValue) {
   let value = initialValue;
   return {
-    get state() {
+    get() {
       return value;
     },
-    setState(updater) {
-      value = updater(value);
+    set(nextOrUpdater) {
+      value = functionalUpdate(nextOrUpdater, value);
     }
   };
 }
 function createNonReactiveReadonlyStore(read) {
-  return { get state() {
+  return { get() {
     return read();
   } };
 }
 function createRouterStores(initialState, config) {
   const { createMutableStore, createReadonlyStore, batch, init } = config;
-  const activeMatchStoresById = /* @__PURE__ */ new Map();
-  const pendingMatchStoresById = /* @__PURE__ */ new Map();
-  const cachedMatchStoresById = /* @__PURE__ */ new Map();
+  const matchStores = /* @__PURE__ */ new Map();
+  const pendingMatchStores = /* @__PURE__ */ new Map();
+  const cachedMatchStores = /* @__PURE__ */ new Map();
   const status = createMutableStore(initialState.status);
   const loadedAt = createMutableStore(initialState.loadedAt);
   const isLoading = createMutableStore(initialState.isLoading);
@@ -1344,40 +1344,40 @@ function createRouterStores(initialState, config) {
   const statusCode = createMutableStore(initialState.statusCode);
   const redirect2 = createMutableStore(initialState.redirect);
   const matchesId = createMutableStore([]);
-  const pendingMatchesId = createMutableStore([]);
-  const cachedMatchesId = createMutableStore([]);
-  const activeMatchesSnapshot = createReadonlyStore(() => readPoolMatches(activeMatchStoresById, matchesId.state));
-  const pendingMatchesSnapshot = createReadonlyStore(() => readPoolMatches(pendingMatchStoresById, pendingMatchesId.state));
-  const cachedMatchesSnapshot = createReadonlyStore(() => readPoolMatches(cachedMatchStoresById, cachedMatchesId.state));
-  const firstMatchId = createReadonlyStore(() => matchesId.state[0]);
-  const hasPendingMatches = createReadonlyStore(() => matchesId.state.some((matchId) => {
-    return activeMatchStoresById.get(matchId)?.state.status === "pending";
+  const pendingIds = createMutableStore([]);
+  const cachedIds = createMutableStore([]);
+  const matches = createReadonlyStore(() => readPoolMatches(matchStores, matchesId.get()));
+  const pendingMatches = createReadonlyStore(() => readPoolMatches(pendingMatchStores, pendingIds.get()));
+  const cachedMatches = createReadonlyStore(() => readPoolMatches(cachedMatchStores, cachedIds.get()));
+  const firstId = createReadonlyStore(() => matchesId.get()[0]);
+  const hasPending = createReadonlyStore(() => matchesId.get().some((matchId) => {
+    return matchStores.get(matchId)?.get().status === "pending";
   }));
-  const matchRouteReactivity = createReadonlyStore(() => ({
-    locationHref: location.state.href,
-    resolvedLocationHref: resolvedLocation.state?.href,
-    status: status.state
+  const matchRouteDeps = createReadonlyStore(() => ({
+    locationHref: location.get().href,
+    resolvedLocationHref: resolvedLocation.get()?.href,
+    status: status.get()
   }));
   const __store = createReadonlyStore(() => ({
-    status: status.state,
-    loadedAt: loadedAt.state,
-    isLoading: isLoading.state,
-    isTransitioning: isTransitioning.state,
-    matches: activeMatchesSnapshot.state,
-    location: location.state,
-    resolvedLocation: resolvedLocation.state,
-    statusCode: statusCode.state,
-    redirect: redirect2.state
+    status: status.get(),
+    loadedAt: loadedAt.get(),
+    isLoading: isLoading.get(),
+    isTransitioning: isTransitioning.get(),
+    matches: matches.get(),
+    location: location.get(),
+    resolvedLocation: resolvedLocation.get(),
+    statusCode: statusCode.get(),
+    redirect: redirect2.get()
   }));
   const matchStoreByRouteIdCache = createLRUCache(64);
-  function getMatchStoreByRouteId(routeId) {
+  function getRouteMatchStore(routeId) {
     let cached = matchStoreByRouteIdCache.get(routeId);
     if (!cached) {
       cached = createReadonlyStore(() => {
-        const ids = matchesId.state;
+        const ids = matchesId.get();
         for (const id of ids) {
-          const matchStore = activeMatchStoresById.get(id);
-          if (matchStore && matchStore.routeId === routeId) return matchStore.state;
+          const matchStore = matchStores.get(id);
+          if (matchStore && matchStore.routeId === routeId) return matchStore.get();
         }
       });
       matchStoreByRouteIdCache.set(routeId, cached);
@@ -1394,33 +1394,33 @@ function createRouterStores(initialState, config) {
     statusCode,
     redirect: redirect2,
     matchesId,
-    pendingMatchesId,
-    cachedMatchesId,
-    activeMatchesSnapshot,
-    pendingMatchesSnapshot,
-    cachedMatchesSnapshot,
-    firstMatchId,
-    hasPendingMatches,
-    matchRouteReactivity,
-    activeMatchStoresById,
-    pendingMatchStoresById,
-    cachedMatchStoresById,
+    pendingIds,
+    cachedIds,
+    matches,
+    pendingMatches,
+    cachedMatches,
+    firstId,
+    hasPending,
+    matchRouteDeps,
+    matchStores,
+    pendingMatchStores,
+    cachedMatchStores,
     __store,
-    getMatchStoreByRouteId,
-    setActiveMatches,
-    setPendingMatches,
-    setCachedMatches
+    getRouteMatchStore,
+    setMatches,
+    setPending,
+    setCached
   };
-  setActiveMatches(initialState.matches);
+  setMatches(initialState.matches);
   init?.(store);
-  function setActiveMatches(nextMatches) {
-    reconcileMatchPool(nextMatches, activeMatchStoresById, matchesId, createMutableStore, batch);
+  function setMatches(nextMatches) {
+    reconcileMatchPool(nextMatches, matchStores, matchesId, createMutableStore, batch);
   }
-  function setPendingMatches(nextMatches) {
-    reconcileMatchPool(nextMatches, pendingMatchStoresById, pendingMatchesId, createMutableStore, batch);
+  function setPending(nextMatches) {
+    reconcileMatchPool(nextMatches, pendingMatchStores, pendingIds, createMutableStore, batch);
   }
-  function setCachedMatches(nextMatches) {
-    reconcileMatchPool(nextMatches, cachedMatchStoresById, cachedMatchesId, createMutableStore, batch);
+  function setCached(nextMatches) {
+    reconcileMatchPool(nextMatches, cachedMatchStores, cachedIds, createMutableStore, batch);
   }
   return store;
 }
@@ -1428,7 +1428,7 @@ function readPoolMatches(pool, ids) {
   const matches = [];
   for (const id of ids) {
     const matchStore = pool.get(id);
-    if (matchStore) matches.push(matchStore.state);
+    if (matchStore) matches.push(matchStore.get());
   }
   return matches;
 }
@@ -1446,9 +1446,9 @@ function reconcileMatchPool(nextMatches, pool, idStore, createMutableStore, batc
         continue;
       }
       existing.routeId = nextMatch.routeId;
-      if (existing.state !== nextMatch) existing.setState(() => nextMatch);
+      if (existing.get() !== nextMatch) existing.set(nextMatch);
     }
-    if (!arraysEqual(idStore.state, nextIds)) idStore.setState(() => nextIds);
+    if (!arraysEqual(idStore.get(), nextIds)) idStore.set(nextIds);
   });
 }
 var triggerOnReady = (inner) => {
@@ -1458,7 +1458,7 @@ var triggerOnReady = (inner) => {
   }
 };
 var resolvePreload = (inner, matchId) => {
-  return !!(inner.preload && !inner.router.stores.activeMatchStoresById.has(matchId));
+  return !!(inner.preload && !inner.router.stores.matchStores.has(matchId));
 };
 var buildMatchContext = (inner, index, includeCurrentMatch = true) => {
   const context = { ...inner.router.options.context ?? {} };
@@ -1496,7 +1496,7 @@ var handleRedirectAndNotFound = (inner, match, err) => {
     match._nonReactive.error = err;
     inner.updateMatch(match.id, (prev) => ({
       ...prev,
-      status: isRedirect(err) ? "redirected" : prev.status === "pending" ? "success" : prev.status,
+      status: isRedirect(err) ? "redirected" : isNotFound(err) ? "notFound" : prev.status === "pending" ? "success" : prev.status,
       context: buildMatchContext(inner, match.index),
       isFetching: false,
       error: err
@@ -1900,8 +1900,8 @@ var loadRouteMatch = async (inner, matchPromises, index) => {
     return inner.router.getMatch(matchId);
   } else {
     const prevMatch = inner.router.getMatch(matchId);
-    const activeIdAtIndex = inner.router.stores.matchesId.state[index];
-    const previousRouteMatchId = (activeIdAtIndex && inner.router.stores.activeMatchStoresById.get(activeIdAtIndex) || null)?.routeId === routeId ? activeIdAtIndex : inner.router.stores.activeMatchesSnapshot.state.find((d) => d.routeId === routeId)?.id;
+    const activeIdAtIndex = inner.router.stores.matchesId.get()[index];
+    const previousRouteMatchId = (activeIdAtIndex && inner.router.stores.matchStores.get(activeIdAtIndex) || null)?.routeId === routeId ? activeIdAtIndex : inner.router.stores.matches.get().find((d) => d.routeId === routeId)?.id;
     const preload = resolvePreload(inner, matchId);
     if (prevMatch._nonReactive.loaderPromise) {
       if (prevMatch.status === "success" && !inner.sync && !prevMatch.preload && shouldReloadInBackground) return prevMatch;
@@ -1911,7 +1911,7 @@ var loadRouteMatch = async (inner, matchPromises, index) => {
       if (error) handleRedirectAndNotFound(inner, match2, error);
       if (match2.status === "pending") await handleLoader(preload, prevMatch, previousRouteMatchId, match2, route);
     } else {
-      const nextPreload = preload && !inner.router.stores.activeMatchStoresById.has(matchId);
+      const nextPreload = preload && !inner.router.stores.matchStores.has(matchId);
       const match2 = inner.router.getMatch(matchId);
       match2._nonReactive.loaderPromise = createControlledPromise();
       if (nextPreload !== match2.preload) inner.updateMatch(matchId, (prev) => ({
@@ -2163,7 +2163,7 @@ var RouterCore = class {
         if (this.history) this.updateLatestLocation();
         needsLocationUpdate = true;
       }
-      if (needsLocationUpdate && this.stores) this.stores.location.setState(() => this.latestLocation);
+      if (needsLocationUpdate && this.stores) this.stores.location.set(this.latestLocation);
       if (typeof window !== "undefined" && "CSS" in window && typeof window.CSS?.supports === "function") this.isViewTransitionTypesSupported = window.CSS.supports("selector(:active-view-transition-type(a)");
     };
     this.updateLatestLocation = () => {
@@ -2267,12 +2267,12 @@ var RouterCore = class {
       match._nonReactive.pendingTimeout = void 0;
     };
     this.cancelMatches = () => {
-      this.stores.pendingMatchesId.state.forEach((matchId) => {
+      this.stores.pendingIds.get().forEach((matchId) => {
         this.cancelMatch(matchId);
       });
-      this.stores.matchesId.state.forEach((matchId) => {
-        if (this.stores.pendingMatchStoresById.has(matchId)) return;
-        const match = this.stores.activeMatchStoresById.get(matchId)?.state;
+      this.stores.matchesId.get().forEach((matchId) => {
+        if (this.stores.pendingMatchStores.has(matchId)) return;
+        const match = this.stores.matchStores.get(matchId)?.get();
         if (!match) return;
         if (match.status === "pending" || match.isFetching === "loader") this.cancelMatch(matchId);
       });
@@ -2533,29 +2533,28 @@ var RouterCore = class {
         }
       }
       const pendingMatches = this.matchRoutes(this.latestLocation);
-      const nextCachedMatches = this.stores.cachedMatchesSnapshot.state.filter((d) => !pendingMatches.some((e) => e.id === d.id));
+      const nextCachedMatches = this.stores.cachedMatches.get().filter((d) => !pendingMatches.some((e) => e.id === d.id));
       this.batch(() => {
-        this.stores.status.setState(() => "pending");
-        this.stores.statusCode.setState(() => 200);
-        this.stores.isLoading.setState(() => true);
-        this.stores.location.setState(() => this.latestLocation);
-        this.stores.setPendingMatches(pendingMatches);
-        this.stores.setCachedMatches(nextCachedMatches);
+        this.stores.status.set("pending");
+        this.stores.statusCode.set(200);
+        this.stores.isLoading.set(true);
+        this.stores.location.set(this.latestLocation);
+        this.stores.setPending(pendingMatches);
+        this.stores.setCached(nextCachedMatches);
       });
     };
     this.load = async (opts) => {
       let redirect2;
       let notFound;
       let loadPromise;
-      const previousLocation = this.stores.resolvedLocation.state ?? this.stores.location.state;
+      const previousLocation = this.stores.resolvedLocation.get() ?? this.stores.location.get();
       loadPromise = new Promise((resolve) => {
         this.startTransition(async () => {
           try {
             this.beforeLoad();
             const next = this.latestLocation;
-            const prevLocation = this.stores.resolvedLocation.state;
-            const locationChangeInfo = getLocationChangeInfo(next, prevLocation);
-            if (!this.stores.redirect.state) this.emit({
+            const locationChangeInfo = getLocationChangeInfo(next, this.stores.resolvedLocation.get());
+            if (!this.stores.redirect.get()) this.emit({
               type: "onBeforeNavigate",
               ...locationChangeInfo
             });
@@ -2567,7 +2566,7 @@ var RouterCore = class {
               router: this,
               sync: opts?.sync,
               forceStaleReload: previousLocation.href === next.href,
-              matches: this.stores.pendingMatchesSnapshot.state,
+              matches: this.stores.pendingMatches.get(),
               location: next,
               updateMatch: this.updateMatch,
               onReady: async () => {
@@ -2578,23 +2577,23 @@ var RouterCore = class {
                     let hookEnteringMatches = null;
                     let hookStayingMatches = null;
                     this.batch(() => {
-                      const pendingMatches = this.stores.pendingMatchesSnapshot.state;
+                      const pendingMatches = this.stores.pendingMatches.get();
                       const mountPending = pendingMatches.length;
-                      const currentMatches = this.stores.activeMatchesSnapshot.state;
-                      exitingMatches = mountPending ? currentMatches.filter((match) => !this.stores.pendingMatchStoresById.has(match.id)) : null;
+                      const currentMatches = this.stores.matches.get();
+                      exitingMatches = mountPending ? currentMatches.filter((match) => !this.stores.pendingMatchStores.has(match.id)) : null;
                       const pendingRouteIds = /* @__PURE__ */ new Set();
-                      for (const s of this.stores.pendingMatchStoresById.values()) if (s.routeId) pendingRouteIds.add(s.routeId);
+                      for (const s of this.stores.pendingMatchStores.values()) if (s.routeId) pendingRouteIds.add(s.routeId);
                       const activeRouteIds = /* @__PURE__ */ new Set();
-                      for (const s of this.stores.activeMatchStoresById.values()) if (s.routeId) activeRouteIds.add(s.routeId);
+                      for (const s of this.stores.matchStores.values()) if (s.routeId) activeRouteIds.add(s.routeId);
                       hookExitingMatches = mountPending ? currentMatches.filter((match) => !pendingRouteIds.has(match.routeId)) : null;
                       hookEnteringMatches = mountPending ? pendingMatches.filter((match) => !activeRouteIds.has(match.routeId)) : null;
                       hookStayingMatches = mountPending ? pendingMatches.filter((match) => activeRouteIds.has(match.routeId)) : currentMatches;
-                      this.stores.isLoading.setState(() => false);
-                      this.stores.loadedAt.setState(() => Date.now());
+                      this.stores.isLoading.set(false);
+                      this.stores.loadedAt.set(Date.now());
                       if (mountPending) {
-                        this.stores.setActiveMatches(pendingMatches);
-                        this.stores.setPendingMatches([]);
-                        this.stores.setCachedMatches([...this.stores.cachedMatchesSnapshot.state, ...exitingMatches.filter((d) => d.status !== "error" && d.status !== "notFound" && d.status !== "redirected")]);
+                        this.stores.setMatches(pendingMatches);
+                        this.stores.setPending([]);
+                        this.stores.setCached([...this.stores.cachedMatches.get(), ...exitingMatches.filter((d) => d.status !== "error" && d.status !== "notFound" && d.status !== "redirected")]);
                         this.clearExpiredCache();
                       }
                     });
@@ -2614,10 +2613,10 @@ var RouterCore = class {
             if (isRedirect(err)) {
               redirect2 = err;
             } else if (isNotFound(err)) notFound = err;
-            const nextStatusCode = redirect2 ? redirect2.status : notFound ? 404 : this.stores.activeMatchesSnapshot.state.some((d) => d.status === "error") ? 500 : 200;
+            const nextStatusCode = redirect2 ? redirect2.status : notFound ? 404 : this.stores.matches.get().some((d) => d.status === "error") ? 500 : 200;
             this.batch(() => {
-              this.stores.statusCode.setState(() => nextStatusCode);
-              this.stores.redirect.setState(() => redirect2);
+              this.stores.statusCode.set(nextStatusCode);
+              this.stores.redirect.set(redirect2);
             });
           }
           if (this.latestLoadPromise === loadPromise) {
@@ -2633,8 +2632,8 @@ var RouterCore = class {
       while (this.latestLoadPromise && loadPromise !== this.latestLoadPromise) await this.latestLoadPromise;
       let newStatusCode = void 0;
       if (this.hasNotFoundMatch()) newStatusCode = 404;
-      else if (this.stores.activeMatchesSnapshot.state.some((d) => d.status === "error")) newStatusCode = 500;
-      if (newStatusCode !== void 0) this.stores.statusCode.setState(() => newStatusCode);
+      else if (this.stores.matches.get().some((d) => d.status === "error")) newStatusCode = 500;
+      if (newStatusCode !== void 0) this.stores.statusCode.set(newStatusCode);
     };
     this.startViewTransition = (fn) => {
       const shouldViewTransition = this.shouldViewTransition ?? this.options.defaultViewTransition;
@@ -2643,7 +2642,7 @@ var RouterCore = class {
         let startViewTransitionParams;
         if (typeof shouldViewTransition === "object" && this.isViewTransitionTypesSupported) {
           const next = this.latestLocation;
-          const prevLocation = this.stores.resolvedLocation.state;
+          const prevLocation = this.stores.resolvedLocation.get();
           const resolvedViewTransitionTypes = typeof shouldViewTransition.types === "function" ? shouldViewTransition.types(getLocationChangeInfo(next, prevLocation)) : shouldViewTransition.types;
           if (resolvedViewTransitionTypes === false) {
             fn();
@@ -2659,27 +2658,27 @@ var RouterCore = class {
     };
     this.updateMatch = (id, updater) => {
       this.startTransition(() => {
-        const pendingMatch = this.stores.pendingMatchStoresById.get(id);
+        const pendingMatch = this.stores.pendingMatchStores.get(id);
         if (pendingMatch) {
-          pendingMatch.setState(updater);
+          pendingMatch.set(updater);
           return;
         }
-        const activeMatch = this.stores.activeMatchStoresById.get(id);
+        const activeMatch = this.stores.matchStores.get(id);
         if (activeMatch) {
-          activeMatch.setState(updater);
+          activeMatch.set(updater);
           return;
         }
-        const cachedMatch = this.stores.cachedMatchStoresById.get(id);
+        const cachedMatch = this.stores.cachedMatchStores.get(id);
         if (cachedMatch) {
-          const next = updater(cachedMatch.state);
+          const next = updater(cachedMatch.get());
           if (next.status === "redirected") {
-            if (this.stores.cachedMatchStoresById.delete(id)) this.stores.cachedMatchesId.setState((prev) => prev.filter((matchId) => matchId !== id));
-          } else cachedMatch.setState(() => next);
+            if (this.stores.cachedMatchStores.delete(id)) this.stores.cachedIds.set((prev) => prev.filter((matchId) => matchId !== id));
+          } else cachedMatch.set(next);
         }
       });
     };
     this.getMatch = (matchId) => {
-      return this.stores.cachedMatchStoresById.get(matchId)?.state ?? this.stores.pendingMatchStoresById.get(matchId)?.state ?? this.stores.activeMatchStoresById.get(matchId)?.state;
+      return this.stores.cachedMatchStores.get(matchId)?.get() ?? this.stores.pendingMatchStores.get(matchId)?.get() ?? this.stores.matchStores.get(matchId)?.get();
     };
     this.invalidate = (opts) => {
       const invalidate = (d) => {
@@ -2694,9 +2693,9 @@ var RouterCore = class {
         return d;
       };
       this.batch(() => {
-        this.stores.setActiveMatches(this.stores.activeMatchesSnapshot.state.map(invalidate));
-        this.stores.setCachedMatches(this.stores.cachedMatchesSnapshot.state.map(invalidate));
-        this.stores.setPendingMatches(this.stores.pendingMatchesSnapshot.state.map(invalidate));
+        this.stores.setMatches(this.stores.matches.get().map(invalidate));
+        this.stores.setCached(this.stores.cachedMatches.get().map(invalidate));
+        this.stores.setPending(this.stores.pendingMatches.get().map(invalidate));
       });
       this.shouldViewTransition = false;
       return this.load({ sync: opts?.sync });
@@ -2726,8 +2725,8 @@ var RouterCore = class {
     };
     this.clearCache = (opts) => {
       const filter = opts?.filter;
-      if (filter !== void 0) this.stores.setCachedMatches(this.stores.cachedMatchesSnapshot.state.filter((m) => !filter(m)));
-      else this.stores.setCachedMatches([]);
+      if (filter !== void 0) this.stores.setCached(this.stores.cachedMatches.get().filter((m) => !filter(m)));
+      else this.stores.setCached([]);
     };
     this.clearExpiredCache = () => {
       const now = Date.now();
@@ -2748,12 +2747,12 @@ var RouterCore = class {
         preload: true,
         dest: opts
       });
-      const activeMatchIds = /* @__PURE__ */ new Set([...this.stores.matchesId.state, ...this.stores.pendingMatchesId.state]);
-      const loadedMatchIds = /* @__PURE__ */ new Set([...activeMatchIds, ...this.stores.cachedMatchesId.state]);
+      const activeMatchIds = /* @__PURE__ */ new Set([...this.stores.matchesId.get(), ...this.stores.pendingIds.get()]);
+      const loadedMatchIds = /* @__PURE__ */ new Set([...activeMatchIds, ...this.stores.cachedIds.get()]);
       const matchesToCache = matches.filter((match) => !loadedMatchIds.has(match.id));
       if (matchesToCache.length) {
-        const cachedMatches = this.stores.cachedMatchesSnapshot.state;
-        this.stores.setCachedMatches([...cachedMatches, ...matchesToCache]);
+        const cachedMatches = this.stores.cachedMatches.get();
+        this.stores.setCached([...cachedMatches, ...matchesToCache]);
       }
       try {
         matches = await loadMatches({
@@ -2787,8 +2786,8 @@ var RouterCore = class {
         leaveParams: true
       };
       const next = this.buildLocation(matchLocation);
-      if (opts?.pending && this.stores.status.state !== "pending") return false;
-      const baseLocation = (opts?.pending === void 0 ? !this.stores.isLoading.state : opts.pending) ? this.latestLocation : this.stores.resolvedLocation.state || this.stores.location.state;
+      if (opts?.pending && this.stores.status.get() !== "pending") return false;
+      const baseLocation = (opts?.pending === void 0 ? !this.stores.isLoading.get() : opts.pending) ? this.latestLocation : this.stores.resolvedLocation.get() || this.stores.location.get();
       const match = findSingleMatch(next.pathname, opts?.caseSensitive ?? false, opts?.fuzzy ?? false, baseLocation.pathname, this.processedTree);
       if (!match) return false;
       if (location.params) {
@@ -2798,7 +2797,7 @@ var RouterCore = class {
       return match.rawParams;
     };
     this.hasNotFoundMatch = () => {
-      return this.stores.activeMatchesSnapshot.state.some((d) => d.status === "notFound" || d.globalNotFound);
+      return this.stores.matches.get().some((d) => d.status === "notFound" || d.globalNotFound);
     };
     this.getStoreConfig = getStoreConfig;
     this.update({
@@ -2822,7 +2821,7 @@ var RouterCore = class {
     return !!this.options.isPrerendering;
   }
   get state() {
-    return this.stores.__store.state;
+    return this.stores.__store.get();
   }
   setRoutes({ routesById, routesByPath, processedTree }) {
     this.routesById = routesById;
@@ -2850,7 +2849,7 @@ var RouterCore = class {
     const globalNotFoundRouteId = isGlobalNotFound ? findGlobalNotFoundRouteId(this.options.notFoundMode, matchedRoutes) : void 0;
     const matches = new Array(matchedRoutes.length);
     const previousActiveMatchesByRouteId = /* @__PURE__ */ new Map();
-    for (const store of this.stores.activeMatchStoresById.values()) if (store.routeId) previousActiveMatchesByRouteId.set(store.routeId, store.state);
+    for (const store of this.stores.matchStores.values()) if (store.routeId) previousActiveMatchesByRouteId.set(store.routeId, store.get());
     for (let index = 0; index < matchedRoutes.length; index++) {
       const route = matchedRoutes[index];
       const parentMatch = matches[index - 1];
@@ -3007,8 +3006,8 @@ var RouterCore = class {
       Object.assign(accumulatedSearch, validateSearch(route.options.validateSearch, accumulatedSearch));
     } catch {
     }
-    const lastStateMatchId = last(this.stores.matchesId.state);
-    const lastStateMatch = lastStateMatchId && this.stores.activeMatchStoresById.get(lastStateMatchId)?.state;
+    const lastStateMatchId = last(this.stores.matchesId.get());
+    const lastStateMatch = lastStateMatchId && this.stores.matchStores.get(lastStateMatchId)?.get();
     const canReuseParams = lastStateMatch && lastStateMatch.routeId === lastRoute.id && lastStateMatch.pathname === location.pathname;
     let params;
     if (canReuseParams) params = lastStateMatch.params;
@@ -3241,38 +3240,40 @@ var TSR_SCRIPT_BARRIER_ID = "$tsr-stream-barrier";
 function createSerializationAdapter(opts) {
   return opts;
 }
+// @__NO_SIDE_EFFECTS__
 function makeSsrSerovalPlugin(serializationAdapter, options) {
-  return ni({
+  return /* @__PURE__ */ ni({
     tag: "$TSR/t/" + serializationAdapter.key,
     test: serializationAdapter.test,
-    parse: { stream(value, ctx) {
-      return ctx.parse(serializationAdapter.toSerializable(value));
+    parse: { stream(value, ctx, _data) {
+      return { v: ctx.parse(serializationAdapter.toSerializable(value)) };
     } },
-    serialize(node, ctx) {
+    serialize(node, ctx, _data) {
       options.didRun = true;
-      return GLOBAL_TSR + '.t.get("' + serializationAdapter.key + '")(' + ctx.serialize(node) + ")";
+      return GLOBAL_TSR + '.t.get("' + serializationAdapter.key + '")(' + ctx.serialize(node.v) + ")";
     },
     deserialize: void 0
   });
 }
+// @__NO_SIDE_EFFECTS__
 function makeSerovalPlugin(serializationAdapter) {
-  return ni({
+  return /* @__PURE__ */ ni({
     tag: "$TSR/t/" + serializationAdapter.key,
     test: serializationAdapter.test,
     parse: {
-      sync(value, ctx) {
-        return ctx.parse(serializationAdapter.toSerializable(value));
+      sync(value, ctx, _data) {
+        return { v: ctx.parse(serializationAdapter.toSerializable(value)) };
       },
-      async async(value, ctx) {
-        return await ctx.parse(serializationAdapter.toSerializable(value));
+      async async(value, ctx, _data) {
+        return { v: await ctx.parse(serializationAdapter.toSerializable(value)) };
       },
-      stream(value, ctx) {
-        return ctx.parse(serializationAdapter.toSerializable(value));
+      stream(value, ctx, _data) {
+        return { v: ctx.parse(serializationAdapter.toSerializable(value)) };
       }
     },
     serialize: void 0,
-    deserialize(node, ctx) {
-      return serializationAdapter.fromSerializable(ctx.deserialize(node));
+    deserialize(node, ctx, _data) {
+      return serializationAdapter.fromSerializable(ctx.deserialize(node.v));
     }
   });
 }
@@ -3405,46 +3406,50 @@ function toTextStream(readable) {
   })();
   return stream;
 }
-var RawStreamSSRPlugin = ni({
+var RawStreamSSRPlugin = /* @__PURE__ */ ni({
   tag: "tss/RawStream",
-  extends: [ni({
+  extends: [/* @__PURE__ */ ni({
     tag: "tss/RawStreamFactory",
     test(value) {
       return value === RAW_STREAM_FACTORY_BINARY;
     },
     parse: {
-      sync() {
+      sync(_value, _ctx, _data) {
+        return {};
       },
-      async() {
-        return Promise.resolve(void 0);
+      async async(_value, _ctx, _data) {
+        return {};
       },
-      stream() {
+      stream(_value, _ctx, _data) {
+        return {};
       }
     },
-    serialize() {
+    serialize(_node, _ctx, _data) {
       return FACTORY_BINARY;
     },
-    deserialize() {
+    deserialize(_node, _ctx, _data) {
       return RAW_STREAM_FACTORY_BINARY;
     }
-  }), ni({
+  }), /* @__PURE__ */ ni({
     tag: "tss/RawStreamFactoryText",
     test(value) {
       return value === RAW_STREAM_FACTORY_TEXT;
     },
     parse: {
-      sync() {
+      sync(_value, _ctx, _data) {
+        return {};
       },
-      async() {
-        return Promise.resolve(void 0);
+      async async(_value, _ctx, _data) {
+        return {};
       },
-      stream() {
+      stream(_value, _ctx, _data) {
+        return {};
       }
     },
-    serialize() {
+    serialize(_node, _ctx, _data) {
       return FACTORY_TEXT;
     },
-    deserialize() {
+    deserialize(_node, _ctx, _data) {
       return RAW_STREAM_FACTORY_TEXT;
     }
   })],
@@ -3452,58 +3457,59 @@ var RawStreamSSRPlugin = ni({
     return value instanceof RawStream;
   },
   parse: {
-    sync(value, ctx) {
+    sync(value, ctx, _data) {
       const factory = value.hint === "text" ? RAW_STREAM_FACTORY_TEXT : RAW_STREAM_FACTORY_BINARY;
       return {
-        hint: value.hint,
+        hint: ctx.parse(value.hint),
         factory: ctx.parse(factory),
         stream: ctx.parse(te())
       };
     },
-    async async(value, ctx) {
+    async async(value, ctx, _data) {
       const factory = value.hint === "text" ? RAW_STREAM_FACTORY_TEXT : RAW_STREAM_FACTORY_BINARY;
       const encodedStream = value.hint === "text" ? toTextStream(value.stream) : toBinaryStream(value.stream);
       return {
-        hint: value.hint,
+        hint: await ctx.parse(value.hint),
         factory: await ctx.parse(factory),
         stream: await ctx.parse(encodedStream)
       };
     },
-    stream(value, ctx) {
+    stream(value, ctx, _data) {
       const factory = value.hint === "text" ? RAW_STREAM_FACTORY_TEXT : RAW_STREAM_FACTORY_BINARY;
       const encodedStream = value.hint === "text" ? toTextStream(value.stream) : toBinaryStream(value.stream);
       return {
-        hint: value.hint,
+        hint: ctx.parse(value.hint),
         factory: ctx.parse(factory),
         stream: ctx.parse(encodedStream)
       };
     }
   },
-  serialize(node, ctx) {
+  serialize(node, ctx, _data) {
     return "(" + ctx.serialize(node.factory) + ")(" + ctx.serialize(node.stream) + ")";
   },
-  deserialize(node, ctx) {
+  deserialize(node, ctx, _data) {
     const stream = ctx.deserialize(node.stream);
-    return node.hint === "text" ? RAW_STREAM_FACTORY_CONSTRUCTOR_TEXT(stream) : RAW_STREAM_FACTORY_CONSTRUCTOR_BINARY(stream);
+    return ctx.deserialize(node.hint) === "text" ? RAW_STREAM_FACTORY_CONSTRUCTOR_TEXT(stream) : RAW_STREAM_FACTORY_CONSTRUCTOR_BINARY(stream);
   }
 });
+// @__NO_SIDE_EFFECTS__
 function createRawStreamRPCPlugin(onRawStream) {
   let nextStreamId = 1;
-  return ni({
+  return /* @__PURE__ */ ni({
     tag: "tss/RawStream",
     test(value) {
       return value instanceof RawStream;
     },
     parse: {
-      async(value) {
+      async async(value, ctx, _data) {
         const streamId = nextStreamId++;
         onRawStream(streamId, value.stream);
-        return Promise.resolve({ streamId });
+        return { streamId: await ctx.parse(streamId) };
       },
-      stream(value) {
+      stream(value, ctx, _data) {
         const streamId = nextStreamId++;
         onRawStream(streamId, value.stream);
-        return { streamId };
+        return { streamId: ctx.parse(streamId) };
       }
     },
     serialize() {
@@ -3653,8 +3659,21 @@ function getManifestCache(manifest) {
   manifestCaches.set(manifest, newCache);
   return newCache;
 }
-function attachRouterServerSsrUtils({ router, manifest }) {
-  router.ssr = { manifest };
+function attachRouterServerSsrUtils({ router, manifest, getRequestAssets, includeUnmatchedRouteAssets = true }) {
+  router.ssr = { get manifest() {
+    const requestAssets = getRequestAssets?.();
+    if (!requestAssets?.length) return manifest;
+    return {
+      ...manifest,
+      routes: {
+        ...manifest?.routes,
+        [rootRouteId]: {
+          ...manifest?.routes?.[rootRouteId],
+          assets: [...requestAssets, ...manifest?.routes?.["__root__"]?.assets ?? []]
+        }
+      }
+    };
+  } };
   let _dehydrated = false;
   let _serializationFinished = false;
   const renderFinishedListeners = [];
@@ -3672,17 +3691,17 @@ function attachRouterServerSsrUtils({ router, manifest }) {
       const html = `<script${router.options.ssr?.nonce ? ` nonce='${router.options.ssr.nonce}'` : ""}>${script}<\/script>`;
       router.serverSsr.injectHtml(html);
     },
-    dehydrate: async () => {
+    dehydrate: async (opts) => {
       if (_dehydrated) {
         invariant();
       }
-      let matchesToDehydrate = router.stores.activeMatchesSnapshot.state;
+      let matchesToDehydrate = router.stores.matches.get();
       if (router.isShell()) matchesToDehydrate = matchesToDehydrate.slice(0, 1);
       const matches = matchesToDehydrate.map(dehydrateMatch);
       let manifestToDehydrate = void 0;
       if (manifest) {
         const currentRouteIdsList = matchesToDehydrate.map((m) => m.routeId);
-        const manifestCacheKey = currentRouteIdsList.join("\0");
+        const manifestCacheKey = `${currentRouteIdsList.join("\0")}\0includeUnmatchedRouteAssets=${includeUnmatchedRouteAssets}`;
         let filteredRoutes;
         filteredRoutes = getManifestCache(manifest).get(manifestCacheKey);
         if (!filteredRoutes) {
@@ -3691,12 +3710,19 @@ function attachRouterServerSsrUtils({ router, manifest }) {
           for (const routeId in manifest.routes) {
             const routeManifest = manifest.routes[routeId];
             if (currentRouteIds.has(routeId)) nextFilteredRoutes[routeId] = routeManifest;
-            else if (routeManifest.assets && routeManifest.assets.length > 0) nextFilteredRoutes[routeId] = { assets: routeManifest.assets };
+            else if (includeUnmatchedRouteAssets && routeManifest.assets && routeManifest.assets.length > 0) nextFilteredRoutes[routeId] = { assets: routeManifest.assets };
           }
           getManifestCache(manifest).set(manifestCacheKey, nextFilteredRoutes);
           filteredRoutes = nextFilteredRoutes;
         }
         manifestToDehydrate = { routes: filteredRoutes };
+        if (opts?.requestAssets?.length) {
+          const existingRoot = manifestToDehydrate.routes[rootRouteId];
+          manifestToDehydrate.routes[rootRouteId] = {
+            ...existingRoot,
+            assets: [...opts.requestAssets, ...existingRoot?.assets ?? []]
+          };
+        }
       }
       const dehydratedRouter = {
         manifest: manifestToDehydrate,
@@ -3709,7 +3735,7 @@ function attachRouterServerSsrUtils({ router, manifest }) {
       _dehydrated = true;
       const trackPlugins = { didRun: false };
       const serializationAdapters = router.options.serializationAdapters;
-      const plugins = serializationAdapters ? serializationAdapters.map((t) => makeSsrSerovalPlugin(t, trackPlugins)).concat(defaultSerovalPlugins) : defaultSerovalPlugins;
+      const plugins = serializationAdapters ? serializationAdapters.map((t) => /* @__PURE__ */ makeSsrSerovalPlugin(t, trackPlugins)).concat(defaultSerovalPlugins) : defaultSerovalPlugins;
       const signalSerializationComplete = () => {
         _serializationFinished = true;
         try {
@@ -3730,14 +3756,15 @@ function attachRouterServerSsrUtils({ router, manifest }) {
           if (trackPlugins.didRun) serialized = P_PREFIX + serialized + P_SUFFIX;
           scriptBuffer.enqueue(serialized);
         },
+        onError: (err) => {
+          console.error("Serialization error:", err);
+          if (err && err.stack) console.error(err.stack);
+          signalSerializationComplete();
+        },
         scopeId: SCOPE_ID,
         onDone: () => {
           scriptBuffer.enqueue(GLOBAL_TSR + ".e()");
           scriptBuffer.flush();
-          signalSerializationComplete();
-        },
-        onError: (err) => {
-          console.error("Serialization error:", err);
           signalSerializationComplete();
         }
       });
@@ -4034,7 +4061,10 @@ function transformStreamWithRouter(router, appStream, opts) {
       const html = router.serverSsr?.takeBufferedHtml();
       if (!html) return;
       if (isAppRendering || leftover || pendingClosingTags) appendRouterHtml(html);
-      else safeEnqueue(html);
+      else {
+        flushPendingRouterHtml();
+        safeEnqueue(html);
+      }
     });
     stopListeningToSerializationFinished = router.subscribe("onSerializationFinished", () => {
       serializationFinished = true;

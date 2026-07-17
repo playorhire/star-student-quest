@@ -1,5 +1,5 @@
 import { __rest } from "tslib";
-const version = "2.103.0";
+const version = "2.103.2";
 const AUTO_REFRESH_TICK_DURATION_MS = 30 * 1e3;
 const AUTO_REFRESH_TICK_THRESHOLD = 3;
 const EXPIRY_MARGIN_MS = AUTO_REFRESH_TICK_THRESHOLD * AUTO_REFRESH_TICK_DURATION_MS;
@@ -22,6 +22,14 @@ class AuthError extends Error {
     this.name = "AuthError";
     this.status = status;
     this.code = code;
+  }
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      status: this.status,
+      code: this.code
+    };
   }
 }
 function isAuthError(error) {
@@ -77,12 +85,7 @@ class AuthImplicitGrantRedirectError extends CustomAuthError {
     this.details = details;
   }
   toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
-      status: this.status,
-      details: this.details
-    };
+    return Object.assign(Object.assign({}, super.toJSON()), { details: this.details });
   }
 }
 function isAuthImplicitGrantRedirectError(error) {
@@ -95,12 +98,7 @@ class AuthPKCEGrantCodeExchangeError extends CustomAuthError {
     this.details = details;
   }
   toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
-      status: this.status,
-      details: this.details
-    };
+    return Object.assign(Object.assign({}, super.toJSON()), { details: this.details });
   }
 }
 class AuthPKCECodeVerifierMissingError extends CustomAuthError {
@@ -120,6 +118,9 @@ class AuthWeakPasswordError extends CustomAuthError {
   constructor(message, status, reasons) {
     super(message, "AuthWeakPasswordError", status, "weak_password");
     this.reasons = reasons;
+  }
+  toJSON() {
+    return Object.assign(Object.assign({}, super.toJSON()), { reasons: this.reasons });
   }
 }
 class AuthInvalidJwtError extends CustomAuthError {
@@ -565,7 +566,7 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 const _getErrorMessage = (err) => err.msg || err.message || err.error_description || err.error || JSON.stringify(err);
-const NETWORK_ERROR_CODES = [502, 503, 504];
+const NETWORK_ERROR_CODES = [502, 503, 504, 520, 521, 522, 523, 524, 530];
 async function handleError(error) {
   var _a;
   if (!looksLikeFetchResponse(error)) {

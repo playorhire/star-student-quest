@@ -6,8 +6,6 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "postbuild": "node scripts/copy-tslib.js",
-    "test:build-output": "node scripts/check-tslib-output.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint ."
@@ -58,7 +56,6 @@
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
-    "nitro": "^3.0.260429-beta",
     "papaparse": "^5.5.3",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",

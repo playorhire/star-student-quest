@@ -28,13 +28,8 @@ var CatchBoundaryImpl = class extends reactExports.Component {
     super(..._args);
     this.state = { error: null };
   }
-  static getDerivedStateFromProps(props, state) {
-    const resetKey = props.getResetKey();
-    if (state.error && state.resetKey !== resetKey) return {
-      resetKey,
-      error: null
-    };
-    return { resetKey };
+  static getDerivedStateFromProps(props) {
+    return { resetKey: props.getResetKey() };
   }
   static getDerivedStateFromError(error) {
     return { error };
@@ -42,12 +37,15 @@ var CatchBoundaryImpl = class extends reactExports.Component {
   reset() {
     this.setState({ error: null });
   }
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.error && prevState.resetKey !== this.state.resetKey) this.reset();
+  }
   componentDidCatch(error, errorInfo) {
     if (this.props.onCatch) this.props.onCatch(error, errorInfo);
   }
   render() {
     return this.props.children({
-      error: this.state.error,
+      error: this.state.resetKey !== this.props.getResetKey() ? null : this.state.error,
       reset: () => {
         this.reset();
       }
@@ -120,9 +118,9 @@ function useMatch(opts) {
   const router = useRouter();
   const nearestMatchId = reactExports.useContext(opts.from ? dummyMatchContext : matchContext);
   const key = opts.from ?? nearestMatchId;
-  const matchStore = key ? opts.from ? router.stores.getRouteMatchStore(key) : router.stores.matchStores.get(key) : void 0;
+  const matchStore = key ? opts.from ? router.stores.getMatchStoreByRouteId(key) : router.stores.activeMatchStoresById.get(key) : void 0;
   {
-    const match = matchStore?.get();
+    const match = matchStore?.state;
     if ((opts.shouldThrow ?? true) && !match) {
       invariant();
     }
@@ -190,7 +188,7 @@ function useRouteContext(opts) {
 function useLinkProps(options, forwardedRef) {
   const router = useRouter();
   const innerRef = useForwardedRef(forwardedRef);
-  const { activeProps, inactiveProps, activeOptions, to, preload: userPreload, preloadDelay: userPreloadDelay, preloadIntentProximity: _preloadIntentProximity, hashScrollIntoView, replace, startTransition, resetScroll, viewTransition, children, target, disabled, style, className, onClick, onBlur, onFocus, onMouseEnter, onMouseLeave, onTouchStart, ignoreBlocker, params: _params, search: _search, hash: _hash, state: _state, mask: _mask, reloadDocument: _reloadDocument, unsafeRelative: _unsafeRelative, from: _from, _fromLocation, ...propsSafeToSpread } = options;
+  const { activeProps, inactiveProps, activeOptions, to, preload: userPreload, preloadDelay: userPreloadDelay, hashScrollIntoView, replace, startTransition, resetScroll, viewTransition, children, target, disabled, style, className, onClick, onBlur, onFocus, onMouseEnter, onMouseLeave, onTouchStart, ignoreBlocker, params: _params, search: _search, hash: _hash, state: _state, mask: _mask, reloadDocument: _reloadDocument, unsafeRelative: _unsafeRelative, from: _from, _fromLocation, ...propsSafeToSpread } = options;
   {
     const safeInternal = isSafeInternal(to);
     if (typeof to === "string" && !safeInternal && to.indexOf(":") > -1) try {
@@ -245,7 +243,7 @@ function useLinkProps(options, forwardedRef) {
     })();
     const isActive2 = (() => {
       if (externalLink2) return false;
-      const currentLocation2 = router.stores.location.get();
+      const currentLocation2 = router.stores.location.state;
       const exact = activeOptions?.exact ?? false;
       if (exact) {
         if (!exactPathTest(currentLocation2.pathname, next2.pathname, router.basepath)) return false;
@@ -479,6 +477,7 @@ function createRootRoute(options) {
   return new RootRoute(options);
 }
 function createFileRoute(path) {
+  if (typeof path === "object") return new FileRoute(path, { silent: true }).createRoute(path);
   return new FileRoute(path, { silent: true }).createRoute;
 }
 var FileRoute = class {
@@ -532,7 +531,7 @@ function lazyRouteComponent(importer, exportName) {
 function CatchNotFound(props) {
   const router = useRouter();
   {
-    const resetKey = `not-found-${router.stores.location.get().pathname}-${router.stores.status.get()}`;
+    const resetKey = `not-found-${router.stores.location.state.pathname}-${router.stores.status.state}`;
     return /* @__PURE__ */ jsxRuntimeExports.jsx(CatchBoundary, {
       getResetKey: () => resetKey,
       onCatch: (error, errorInfo) => {
@@ -575,7 +574,7 @@ function ScrollRestoration() {
 var Match = reactExports.memo(function MatchImpl({ matchId }) {
   const router = useRouter();
   {
-    const match2 = router.stores.matchStores.get(matchId)?.get();
+    const match2 = router.stores.activeMatchStoresById.get(matchId)?.state;
     if (!match2) {
       invariant();
     }
@@ -584,7 +583,7 @@ var Match = reactExports.memo(function MatchImpl({ matchId }) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(MatchView, {
       router,
       matchId,
-      resetKey: router.stores.loadedAt.get(),
+      resetKey: router.stores.loadedAt.state,
       matchState: {
         routeId,
         ssr: match2.ssr,
@@ -640,11 +639,8 @@ function OnRendered({ resetKey }) {
 }
 var MatchInner = reactExports.memo(function MatchInnerImpl({ matchId }) {
   const router = useRouter();
-  const getMatchPromise = (match2, key2) => {
-    return router.getMatch(match2.id)?._nonReactive[key2] ?? match2._nonReactive[key2];
-  };
   {
-    const match2 = router.stores.matchStores.get(matchId)?.get();
+    const match2 = router.stores.activeMatchStoresById.get(matchId)?.state;
     if (!match2) {
       invariant();
     }
@@ -659,9 +655,9 @@ var MatchInner = reactExports.memo(function MatchInnerImpl({ matchId }) {
     const key2 = remountDeps ? JSON.stringify(remountDeps) : void 0;
     const Comp = route2.options.component ?? router.options.defaultComponent;
     const out2 = Comp ? /* @__PURE__ */ jsxRuntimeExports.jsx(Comp, {}, key2) : /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {});
-    if (match2._displayPending) throw getMatchPromise(match2, "displayPendingPromise");
-    if (match2._forcePending) throw getMatchPromise(match2, "minPendingPromise");
-    if (match2.status === "pending") throw getMatchPromise(match2, "loadPromise");
+    if (match2._displayPending) throw router.getMatch(match2.id)?._nonReactive.displayPendingPromise;
+    if (match2._forcePending) throw router.getMatch(match2.id)?._nonReactive.minPendingPromise;
+    if (match2.status === "pending") throw router.getMatch(match2.id)?._nonReactive.loadPromise;
     if (match2.status === "notFound") {
       if (!isNotFound(match2.error)) {
         invariant();
@@ -672,7 +668,7 @@ var MatchInner = reactExports.memo(function MatchInnerImpl({ matchId }) {
       if (!isRedirect(match2.error)) {
         invariant();
       }
-      throw getMatchPromise(match2, "loadPromise");
+      throw router.getMatch(match2.id)?._nonReactive.loadPromise;
     }
     if (match2.status === "error") return /* @__PURE__ */ jsxRuntimeExports.jsx((route2.options.errorComponent ?? router.options.defaultErrorComponent) || ErrorComponent, {
       error: match2.error,
@@ -689,7 +685,7 @@ var Outlet = reactExports.memo(function OutletImpl() {
   let parentGlobalNotFound = false;
   let childMatchId;
   {
-    const matches = router.stores.matches.get();
+    const matches = router.stores.activeMatchesSnapshot.state;
     const parentIndex = matchId ? matches.findIndex((match) => match.id === matchId) : -1;
     const parentMatch = parentIndex >= 0 ? matches[parentIndex] : void 0;
     routeId = parentMatch?.routeId;
@@ -724,8 +720,8 @@ function Matches() {
 }
 function MatchesInner() {
   const router = useRouter();
-  const matchId = router.stores.firstId.get();
-  const resetKey = router.stores.loadedAt.get();
+  const matchId = router.stores.firstMatchId.state;
+  const resetKey = router.stores.loadedAt.state;
   const matchComponent = matchId ? /* @__PURE__ */ jsxRuntimeExports.jsx(Match, { matchId }) : null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(matchContext.Provider, {
     value: matchId,
@@ -778,7 +774,7 @@ function RouterProvider({ router, ...rest }) {
 function useLocation(opts) {
   const router = useRouter();
   {
-    const location = router.stores.location.get();
+    const location = router.stores.location.state;
     return location;
   }
 }
@@ -798,7 +794,6 @@ function Asset({ tag, attrs, children, nonce }) {
     case "link":
       return /* @__PURE__ */ jsxRuntimeExports.jsx("link", {
         ...attrs,
-        precedence: attrs?.precedence ?? (attrs?.rel === "stylesheet" ? "default" : void 0),
         nonce,
         suppressHydrationWarning: true
       });
@@ -982,7 +977,7 @@ function buildTagsFromMatches(router, nonce, matches, assetCrossOrigin) {
 var useTags = (assetCrossOrigin) => {
   const router = useRouter();
   const nonce = router.options.ssr?.nonce;
-  return buildTagsFromMatches(router, nonce, router.stores.matches.get(), assetCrossOrigin);
+  return buildTagsFromMatches(router, nonce, router.stores.activeMatchesSnapshot.state, assetCrossOrigin);
 };
 function uniqBy(arr, fn) {
   const seen = /* @__PURE__ */ new Set();
@@ -1031,9 +1026,8 @@ var Scripts = () => {
     children
   }));
   {
-    const activeMatches = router.stores.matches.get();
-    const assetScripts = getAssetScripts(activeMatches);
-    return renderScripts(router, getScripts(activeMatches), assetScripts);
+    const assetScripts = getAssetScripts(router.stores.activeMatchesSnapshot.state);
+    return renderScripts(router, getScripts(router.stores.activeMatchesSnapshot.state), assetScripts);
   }
 };
 function renderScripts(router, scripts, assetScripts) {
@@ -1056,7 +1050,7 @@ var renderRouterToStream = async ({ request, router, responseHeaders, children }
     if (isbot(request.headers.get("User-Agent"))) await stream.allReady;
     const responseStream = transformReadableStreamWithRouter(router, stream);
     return new Response(responseStream, {
-      status: router.stores.statusCode.get(),
+      status: router.stores.statusCode.state,
       headers: responseHeaders
     });
   }
@@ -1082,7 +1076,7 @@ var renderRouterToStream = async ({ request, router, responseHeaders, children }
     }
     const responseStream = transformPipeableStreamWithRouter(router, reactAppPassthrough);
     return new Response(responseStream, {
-      status: router.stores.statusCode.get(),
+      status: router.stores.statusCode.state,
       headers: responseHeaders
     });
   }

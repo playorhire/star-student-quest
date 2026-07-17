@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "postbuild": "node scripts/copy-tslib.js",
+    "test:build-output": "node scripts/check-tslib-output.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint ."

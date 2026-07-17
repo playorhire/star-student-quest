@@ -1,6 +1,7 @@
 import { P as PostgrestClient } from "./supabase__postgrest-js.mjs";
 import { R as RealtimeClient } from "./supabase__realtime-js.mjs";
 import { S as StorageClient } from "./supabase__storage-js.mjs";
+import "tslib";
 import { A as AuthClient } from "./supabase__auth-js.mjs";
 import { F as FunctionsClient } from "./supabase__functions-js.mjs";
 const version = "2.103.2";

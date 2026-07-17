@@ -344,13 +344,14 @@ function defineLazyEventHandler(loader) {
 }
 function toEventHandler(handler) {
   if (typeof handler === "function") return handler;
-  if (typeof handler?.handler === "function") return handler.handler;
+  if (typeof handler?.handler === "function" && handler.constructor?.["~h3"]) return handler.handler;
   if (typeof handler?.fetch === "function") return function _fetchHandler(event) {
     return handler.fetch(event.req);
   };
 }
 const NoHandler = () => kNotFound;
 var H3Core = class {
+  static "~h3" = true;
   config;
   "~middleware";
   "~routes" = [];

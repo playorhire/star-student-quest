@@ -5,10 +5,10 @@ var Ce = { 0: "Error", 1: "EvalError", 2: "RangeError", 3: "ReferenceError", 4: 
 function c(e, r, t, n, a, s, i, u, l, g, S, d) {
   return { t: e, i: r, s: t, c: n, m: a, p: s, e: i, a: u, f: l, b: g, o: S, l: d };
 }
-function B(e) {
+function F(e) {
   return c(2, o, e, o, o, o, o, o, o, o, o, o);
 }
-var J = B(2), Z = B(3), Ae = B(1), Ee = B(0), st = B(4), it = B(5), ut = B(6), lt = B(7);
+var J = F(2), Z = F(3), Ae = F(1), Ee = F(0), st = F(4), it = F(5), ut = F(6), lt = F(7);
 function fn(e) {
   switch (e) {
     case '"':
@@ -68,7 +68,7 @@ function Sn(e) {
       return e;
   }
 }
-function D(e) {
+function B(e) {
   return e.replace(/(\\\\|\\"|\\n|\\r|\\b|\\t|\\f|\\u2028|\\u2029|\\x3C)/g, Sn);
 }
 var U = "__SEROVAL_REFS__", ce = "$R", Ie = `self.${ce}`;
@@ -715,7 +715,7 @@ function Fr(e, r, t) {
   throw new h(e);
 }
 function Gn(e, r) {
-  return b(e, r.i, ft(D(r.s)));
+  return b(e, r.i, ft(B(r.s)));
 }
 function Kn(e, r, t) {
   let n = t.a, a = n.length, s = b(e, t.i, new Array(a));
@@ -751,7 +751,7 @@ function Ft(e, r, t) {
   Hn(r) ? e[r] = t : Object.defineProperty(e, r, { value: t, configurable: true, enumerable: true, writable: true });
 }
 function Zn(e, r, t, n, a) {
-  if (typeof n == "string") Ft(t, D(n), p(e, r, a));
+  if (typeof n == "string") Ft(t, n, p(e, r, a));
   else {
     let s = p(e, r, n);
     switch (typeof s) {
@@ -780,7 +780,7 @@ function Xn(e, r) {
 }
 function Qn(e, r) {
   if (e.base.features & 32) {
-    let t = D(r.c);
+    let t = B(r.c);
     if (t.length > jn) throw new h(r);
     return b(e, r.i, new RegExp(t, r.m));
   }
@@ -798,7 +798,7 @@ function ro(e, r, t) {
 }
 function to(e, r) {
   if (r.s.length > Ln) throw new h(r);
-  return b(e, r.i, Or(D(r.s)));
+  return b(e, r.i, Or(B(r.s)));
 }
 function no(e, r, t) {
   var u;
@@ -820,11 +820,11 @@ function Yt(e, r, t, n) {
   return n;
 }
 function ao(e, r, t) {
-  let n = b(e, t.i, new AggregateError([], D(t.m)));
+  let n = b(e, t.i, new AggregateError([], B(t.m)));
   return Yt(e, r, t, n);
 }
 function so(e, r, t) {
-  let n = Fr(t, at, t.s), a = b(e, t.i, new n(D(t.m)));
+  let n = Fr(t, at, t.s), a = b(e, t.i, new n(B(t.m)));
   return Yt(e, r, t, a);
 }
 function io(e, r, t) {
@@ -837,7 +837,7 @@ function uo(e, r, t) {
 function lo(e, r, t) {
   let n = e.base.plugins;
   if (n) {
-    let a = D(t.c);
+    let a = B(t.c);
     for (let s = 0, i = n.length; s < i; s++) {
       let u = n[s];
       if (u.tag === a) return b(e, t.i, u.deserialize(t.s, new Dr(e, r), { id: t.i }));
@@ -907,7 +907,7 @@ function p(e, r, t) {
     case 0:
       return Number(t.s);
     case 1:
-      return D(String(t.s));
+      return B(String(t.s));
     case 3:
       if (String(t.s).length > Un) throw new h(t);
       return BigInt(t.s);
@@ -1094,7 +1094,7 @@ function Ur(e, r, t, n) {
 function Vo(e, r, t, n) {
   Yr(e.base, m(e, r) + ".v[" + t + "]", n);
 }
-function F(e, r) {
+function D(e, r) {
   return r.t === 4 && e.stack.includes(r.i);
 }
 function se(e, r, t) {
@@ -1104,7 +1104,7 @@ function Mo(e) {
   return U + '.get("' + e.s + '")';
 }
 function $t(e, r, t, n) {
-  return t ? F(e.base, t) ? (O(e.base, r), Ne(e, r, n, m(e, t.i)), "") : f(e, t) : "";
+  return t ? D(e.base, t) ? (O(e.base, r), Ne(e, r, n, m(e, t.i)), "") : f(e, t) : "";
 }
 function Lo(e, r) {
   let t = r.i, n = r.a, a = n.length;
@@ -1119,7 +1119,7 @@ function Lo(e, r) {
 function Xt(e, r, t, n) {
   if (typeof t == "string") {
     let a = Number(t), s = a >= 0 && a.toString() === t || Vr(t);
-    if (F(e.base, n)) {
+    if (D(e.base, n)) {
       let i = m(e, n.i);
       return O(e.base, r.i), s && a !== a ? Ur(e, r.i, t, i) : Ne(e, r.i, s ? t : '"' + t + '"', i), "";
     }
@@ -1147,7 +1147,7 @@ function jo(e, r, t, n) {
 }
 function Yo(e, r, t, n, a) {
   let s = e.base, i = f(e, a), u = Number(n), l = u >= 0 && u.toString() === n || Vr(n);
-  if (F(s, a)) l && u !== u ? Ur(e, r.i, n, i) : Ne(e, r.i, l ? n : '"' + n + '"', i);
+  if (D(s, a)) l && u !== u ? Ur(e, r.i, n, i) : Ne(e, r.i, l ? n : '"' + n + '"', i);
   else {
     let g = s.assignments;
     s.assignments = t, l && u !== u ? Ur(e, r.i, n, i) : Ne(e, r.i, l ? n : '"' + n + '"', i), s.assignments = g;
@@ -1198,7 +1198,7 @@ function Ho(e, r) {
 }
 function Qt(e, r, t) {
   let n = e.base;
-  return F(n, t) ? (O(n, r), Bo(e, r, m(e, t.i)), "") : f(e, t);
+  return D(n, t) ? (O(n, r), Bo(e, r, m(e, t.i)), "") : f(e, t);
 }
 function Jo(e, r) {
   let t = Oo, n = r.a, a = n.length, s = r.i;
@@ -1212,9 +1212,9 @@ function Jo(e, r) {
 }
 function en(e, r, t, n, a) {
   let s = e.base;
-  if (F(s, t)) {
+  if (D(s, t)) {
     let i = m(e, t.i);
-    if (O(s, r), F(s, n)) {
+    if (O(s, r), D(s, n)) {
       let l = m(e, n.i);
       return ge(e, r, i, l), "";
     }
@@ -1225,7 +1225,7 @@ function en(e, r, t, n, a) {
     let u = s.stack;
     return s.stack = [], ge(e, r, i, f(e, n)), s.stack = u, "";
   }
-  if (F(s, n)) {
+  if (D(s, n)) {
     let i = m(e, n.i);
     if (O(s, r), t.t !== 4 && t.i != null && Lr(s, t.i)) {
       let l = "(" + f(e, t) + ",[" + a + "," + a + "])";
@@ -1267,7 +1267,7 @@ function ra(e, r) {
 }
 function ta(e, r) {
   let t, n = r.f, a = r.i, s = r.s ? wo : ho, i = e.base;
-  if (F(i, n)) {
+  if (D(i, n)) {
     let u = m(e, n.i);
     t = s + (r.s ? "().then(" + sr([], u) + ")" : "().catch(" + Wt([], "throw " + u) + ")");
   } else {
@@ -1340,7 +1340,7 @@ function da(e, r) {
 }
 function rn(e, r, t, n) {
   let a = e.base;
-  return F(a, n) ? (O(a, r), Vo(e, r, t, m(e, n.i)), "") : f(e, n);
+  return D(a, n) ? (O(a, r), Vo(e, r, t, m(e, n.i)), "") : f(e, n);
 }
 function ga(e, r) {
   let t = r.a, n = t.length, a = r.i;

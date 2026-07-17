@@ -58,16 +58,7 @@ function attachResponseHeaders(value, event) {
 }
 function requestHandler(handler) {
   return (request, requestOpts) => {
-    let h3Event;
-    try {
-      h3Event = new H3Event(request);
-    } catch (error) {
-      if (error instanceof URIError) return new Response(null, {
-        status: 400,
-        statusText: "Bad Request"
-      });
-      throw error;
-    }
+    const h3Event = new H3Event(request);
     return toResponse(attachResponseHeaders(eventStorage.run({ h3Event }, () => handler(request, requestOpts)), h3Event), h3Event);
   };
 }
@@ -81,7 +72,7 @@ function getResponse() {
 }
 var HEADERS = { TSS_SHELL: "X-TSS_SHELL" };
 async function getStartManifest(matchedRoutes) {
-  const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-BjqjZ6dJ.mjs");
+  const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-D5wi4CEt.mjs");
   const startManifest = tsrStartManifest();
   const rootRoute = startManifest.routes[rootRouteId] = startManifest.routes[rootRouteId] || {};
   rootRoute.assets = rootRoute.assets || [];
@@ -106,18 +97,23 @@ async function getStartManifest(matchedRoutes) {
   };
 }
 const manifest = {};
-async function getServerFnById(id, access) {
+async function getServerFnById(id) {
   const serverFnInfo = manifest[id];
   if (!serverFnInfo) {
     throw new Error("Server function info not found for " + id);
   }
-  const fnModule = serverFnInfo.module ?? await serverFnInfo.importer();
+  const fnModule = await serverFnInfo.importer();
   if (!fnModule) {
+    console.info("serverFnInfo", serverFnInfo);
     throw new Error("Server function module not resolved for " + id);
   }
   const action = fnModule[serverFnInfo.functionName];
   if (!action) {
-    throw new Error("Server function module export not resolved for serverFn ID: " + id);
+    console.info("serverFnInfo", serverFnInfo);
+    console.info("fnModule", fnModule);
+    throw new Error(
+      `Server function module export not resolved for serverFn ID: ${id}`
+    );
   }
   return action;
 }
@@ -185,7 +181,7 @@ function flattenMiddlewares(middlewares, maxDepth = 100) {
 function getDefaultSerovalPlugins() {
   return [...getStartOptions()?.serializationAdapters?.map(makeSerovalPlugin) ?? [], ...defaultSerovalPlugins];
 }
-var textEncoder = new TextEncoder();
+var textEncoder$1 = new TextEncoder();
 var EMPTY_PAYLOAD = new Uint8Array(0);
 function encodeFrame(type, streamId, payload) {
   const frame = new Uint8Array(FRAME_HEADER_SIZE + payload.length);
@@ -202,7 +198,7 @@ function encodeFrame(type, streamId, payload) {
   return frame;
 }
 function encodeJSONFrame(json) {
-  return encodeFrame(FrameType.JSON, 0, textEncoder.encode(json));
+  return encodeFrame(FrameType.JSON, 0, textEncoder$1.encode(json));
 }
 function encodeChunkFrame(streamId, chunk) {
   return encodeFrame(FrameType.CHUNK, streamId, chunk);
@@ -212,106 +208,98 @@ function encodeEndFrame(streamId) {
 }
 function encodeErrorFrame(streamId, error) {
   const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
-  return encodeFrame(FrameType.ERROR, streamId, textEncoder.encode(message));
+  return encodeFrame(FrameType.ERROR, streamId, textEncoder$1.encode(message));
 }
-function createMultiplexedStream(jsonStream, rawStreams, lateStreamSource) {
-  let controller;
+function createMultiplexedStream(jsonStream, rawStreams) {
+  let activePumps = 1 + rawStreams.size;
+  let controllerRef = null;
   let cancelled = false;
-  const readers = [];
-  const enqueue = (frame) => {
-    if (cancelled) return false;
+  const cancelReaders = [];
+  const safeEnqueue = (chunk) => {
+    if (cancelled || !controllerRef) return;
     try {
-      controller.enqueue(frame);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  const errorOutput = (error) => {
-    if (cancelled) return;
-    cancelled = true;
-    try {
-      controller.error(error);
+      controllerRef.enqueue(chunk);
     } catch {
     }
-    for (const reader of readers) reader.cancel().catch(() => {
-    });
   };
-  async function pumpRawStream(streamId, stream) {
-    const reader = stream.getReader();
-    readers.push(reader);
+  const safeError = (err) => {
+    if (cancelled || !controllerRef) return;
     try {
-      while (!cancelled) {
-        const { done, value } = await reader.read();
-        if (done) {
-          enqueue(encodeEndFrame(streamId));
-          return;
-        }
-        if (!enqueue(encodeChunkFrame(streamId, value))) return;
-      }
-    } catch (error) {
-      enqueue(encodeErrorFrame(streamId, error));
-    } finally {
-      reader.releaseLock();
+      controllerRef.error(err);
+    } catch {
     }
-  }
-  async function pumpJSON() {
-    const reader = jsonStream.getReader();
-    readers.push(reader);
+  };
+  const safeClose = () => {
+    if (cancelled || !controllerRef) return;
     try {
-      while (!cancelled) {
-        const { done, value } = await reader.read();
-        if (done) return;
-        if (!enqueue(encodeJSONFrame(value))) return;
-      }
-    } catch (error) {
-      errorOutput(error);
-      throw error;
-    } finally {
-      reader.releaseLock();
+      controllerRef.close();
+    } catch {
     }
-  }
-  async function pumpLateStreams() {
-    if (!lateStreamSource) return [];
-    const lateStreamPumps = [];
-    const reader = lateStreamSource.getReader();
-    readers.push(reader);
-    try {
-      while (!cancelled) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        lateStreamPumps.push(pumpRawStream(value.id, value.stream));
-      }
-    } finally {
-      reader.releaseLock();
-    }
-    return lateStreamPumps;
-  }
+  };
+  const checkComplete = () => {
+    activePumps--;
+    if (activePumps === 0) safeClose();
+  };
   return new ReadableStream({
-    async start(ctrl) {
-      controller = ctrl;
-      const pumps = [pumpJSON()];
-      for (const [streamId, stream] of rawStreams) pumps.push(pumpRawStream(streamId, stream));
-      if (lateStreamSource) pumps.push(pumpLateStreams());
-      try {
-        const latePumps = (await Promise.all(pumps)).find(Array.isArray);
-        if (latePumps && latePumps.length > 0) await Promise.all(latePumps);
-        if (!cancelled) try {
-          controller.close();
-        } catch {
+    start(controller) {
+      controllerRef = controller;
+      cancelReaders.length = 0;
+      const pumpJSON = async () => {
+        const reader = jsonStream.getReader();
+        cancelReaders.push(() => {
+          reader.cancel().catch(() => {
+          });
+        });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (cancelled) break;
+            if (done) break;
+            safeEnqueue(encodeJSONFrame(value));
+          }
+        } catch (error) {
+          safeError(error);
+        } finally {
+          reader.releaseLock();
+          checkComplete();
         }
-      } catch {
-      }
+      };
+      const pumpRawStream = async (streamId, stream) => {
+        const reader = stream.getReader();
+        cancelReaders.push(() => {
+          reader.cancel().catch(() => {
+          });
+        });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (cancelled) break;
+            if (done) {
+              safeEnqueue(encodeEndFrame(streamId));
+              break;
+            }
+            safeEnqueue(encodeChunkFrame(streamId, value));
+          }
+        } catch (error) {
+          safeEnqueue(encodeErrorFrame(streamId, error));
+        } finally {
+          reader.releaseLock();
+          checkComplete();
+        }
+      };
+      pumpJSON();
+      for (const [streamId, stream] of rawStreams) pumpRawStream(streamId, stream);
     },
     cancel() {
       cancelled = true;
-      for (const reader of readers) reader.cancel().catch(() => {
-      });
-      readers.length = 0;
+      controllerRef = null;
+      for (const cancelReader of cancelReaders) cancelReader();
+      cancelReaders.length = 0;
     }
   });
 }
 var serovalPlugins = void 0;
+var textEncoder = new TextEncoder();
 var FORM_DATA_CONTENT_TYPES = ["multipart/form-data", "application/x-www-form-urlencoded"];
 var MAX_PAYLOAD_SIZE = 1e6;
 var handleServerAction = async ({ request, context, serverFnId }) => {
@@ -335,27 +323,8 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
         const alsResponse = getResponse();
         if (res2 !== void 0) {
           const rawStreams = /* @__PURE__ */ new Map();
-          let initialPhase = true;
-          let lateStreamWriter;
-          let lateStreamReadable = void 0;
-          const pendingLateStreams = [];
-          const plugins = [createRawStreamRPCPlugin((id, stream) => {
-            if (initialPhase) {
-              rawStreams.set(id, stream);
-              return;
-            }
-            if (lateStreamWriter) {
-              lateStreamWriter.write({
-                id,
-                stream
-              }).catch(() => {
-              });
-              return;
-            }
-            pendingLateStreams.push({
-              id,
-              stream
-            });
+          const plugins = [createRawStreamRPCPlugin((id, stream2) => {
+            rawStreams.set(id, stream2);
           }), ...serovalPlugins || []];
           let done = false;
           const callbacks = {
@@ -382,7 +351,6 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
               callbacks.onError(error);
             }
           });
-          initialPhase = false;
           if (done && rawStreams.size === 0) return new Response(nonStreamingBody ? JSON.stringify(nonStreamingBody) : void 0, {
             status: alsResponse.status,
             statusText: alsResponse.statusText,
@@ -391,14 +359,8 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
               [X_TSS_SERIALIZED]: "true"
             }
           });
-          const { readable, writable } = new TransformStream();
-          lateStreamReadable = readable;
-          lateStreamWriter = writable.getWriter();
-          for (const registration of pendingLateStreams) lateStreamWriter.write(registration).catch(() => {
-          });
-          pendingLateStreams.length = 0;
-          const multiplexedStream = createMultiplexedStream(new ReadableStream({
-            start(controller) {
+          if (rawStreams.size > 0) {
+            const multiplexedStream = createMultiplexedStream(new ReadableStream({ start(controller) {
               callbacks.onParse = (value) => {
                 controller.enqueue(JSON.stringify(value) + "\n");
               };
@@ -407,32 +369,36 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
                   controller.close();
                 } catch {
                 }
-                lateStreamWriter?.close().catch(() => {
-                }).finally(() => {
-                  lateStreamWriter = void 0;
-                });
               };
-              callbacks.onError = (error) => {
-                controller.error(error);
-                lateStreamWriter?.abort(error).catch(() => {
-                }).finally(() => {
-                  lateStreamWriter = void 0;
-                });
-              };
+              callbacks.onError = (error) => controller.error(error);
               if (nonStreamingBody !== void 0) callbacks.onParse(nonStreamingBody);
-              if (done) callbacks.onDone();
-            },
-            cancel() {
-              lateStreamWriter?.abort().catch(() => {
-              });
-              lateStreamWriter = void 0;
-            }
-          }), rawStreams, lateStreamReadable);
-          return new Response(multiplexedStream, {
+            } }), rawStreams);
+            return new Response(multiplexedStream, {
+              status: alsResponse.status,
+              statusText: alsResponse.statusText,
+              headers: {
+                "Content-Type": TSS_CONTENT_TYPE_FRAMED_VERSIONED,
+                [X_TSS_SERIALIZED]: "true"
+              }
+            });
+          }
+          const stream = new ReadableStream({ start(controller) {
+            callbacks.onParse = (value) => controller.enqueue(textEncoder.encode(JSON.stringify(value) + "\n"));
+            callbacks.onDone = () => {
+              try {
+                controller.close();
+              } catch (error) {
+                controller.error(error);
+              }
+            };
+            callbacks.onError = (error) => controller.error(error);
+            if (nonStreamingBody !== void 0) callbacks.onParse(nonStreamingBody);
+          } });
+          return new Response(stream, {
             status: alsResponse.status,
             statusText: alsResponse.statusText,
             headers: {
-              "Content-Type": TSS_CONTENT_TYPE_FRAMED_VERSIONED,
+              "Content-Type": "application/x-ndjson",
               [X_TSS_SERIALIZED]: "true"
             }
           });
@@ -458,7 +424,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
           };
           if (typeof serializedContext === "string") try {
             const deserializedContext = Iu(JSON.parse(serializedContext), { plugins: serovalPlugins });
-            if (typeof deserializedContext === "object" && deserializedContext) params.context = safeObjectMerge(deserializedContext, context);
+            if (typeof deserializedContext === "object" && deserializedContext) params.context = safeObjectMerge(context, deserializedContext);
           } catch (e) {
             if (false) ;
           }
@@ -468,7 +434,7 @@ var handleServerAction = async ({ request, context, serverFnId }) => {
           const payloadParam = url.searchParams.get("payload");
           if (payloadParam && payloadParam.length > MAX_PAYLOAD_SIZE) throw new Error("Payload too large");
           const payload2 = payloadParam ? parsePayload(JSON.parse(payloadParam)) : {};
-          payload2.context = safeObjectMerge(payload2.context, context);
+          payload2.context = safeObjectMerge(context, payload2.context);
           payload2.method = methodUpper;
           return await action(payload2);
         }
@@ -642,9 +608,11 @@ async function transformManifestAssets(source, transformFn, _opts) {
     url: source.clientEntry,
     kind: "clientEntry"
   }));
-  const rootRoute = manifest2.routes[rootRouteId] = manifest2.routes[rootRouteId] || {};
-  rootRoute.assets = rootRoute.assets || [];
-  rootRoute.assets.push(buildClientEntryScriptTag(transformedClientEntry.href, source.injectedHeadScripts));
+  const rootRoute = manifest2.routes[rootRouteId];
+  if (rootRoute) {
+    rootRoute.assets = rootRoute.assets || [];
+    rootRoute.assets.push(buildClientEntryScriptTag(transformedClientEntry.href, source.injectedHeadScripts));
+  }
   return manifest2;
 }
 function buildManifestWithClientEntry(source) {
@@ -652,10 +620,10 @@ function buildManifestWithClientEntry(source) {
   const baseRootRoute = source.manifest.routes[rootRouteId];
   return { routes: {
     ...source.manifest.routes,
-    [rootRouteId]: {
+    ...baseRootRoute ? { [rootRouteId]: {
       ...baseRootRoute,
-      assets: [...baseRootRoute?.assets || [], scriptTag]
-    }
+      assets: [...baseRootRoute.assets || [], scriptTag]
+    } } : {}
   } };
 }
 var ServerFunctionSerializationAdapter = createSerializationAdapter({
@@ -674,7 +642,7 @@ var ServerFunctionSerializationAdapter = createSerializationAdapter({
   }
 });
 function getStartResponseHeaders(opts) {
-  return mergeHeaders({ "Content-Type": "text/html; charset=utf-8" }, ...opts.router.stores.matches.get().map((match) => {
+  return mergeHeaders({ "Content-Type": "text/html; charset=utf-8" }, ...opts.router.stores.activeMatchesSnapshot.state.map((match) => {
     return match.headers;
   }));
 }
@@ -682,15 +650,10 @@ var entriesPromise;
 var baseManifestPromise;
 var cachedFinalManifestPromise;
 async function loadEntries() {
-  const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
-    import("./router-WWTDPtlD.mjs").then((n) => n.r),
-    import("./start-HYkvq4Ni.mjs"),
-    import("../__23tanstack-start-plugin-adapters-Cwee5PKy.mjs")
-  ]);
+  const routerEntry = await import("./router-DuskeiVN.mjs").then((n) => n.r);
   return {
-    routerEntry,
-    startEntry,
-    pluginAdapters
+    startEntry: await import("./start-HYkvq4Ni.mjs"),
+    routerEntry
   };
 }
 function getEntries() {
@@ -820,12 +783,7 @@ function createStartHandler(cbOrOptions) {
       if (handledProtocolRelativeURL) return Response.redirect(url, 308);
       const entries = await getEntries();
       const startOptions = await entries.startEntry.startInstance?.getOptions() || {};
-      const { hasPluginAdapters, pluginSerializationAdapters } = entries.pluginAdapters;
-      const serializationAdapters = [
-        ...startOptions.serializationAdapters || [],
-        ...hasPluginAdapters ? pluginSerializationAdapters : [],
-        ServerFunctionSerializationAdapter
-      ];
+      const serializationAdapters = [...startOptions.serializationAdapters || [], ServerFunctionSerializationAdapter];
       const requestStartOptions = {
         ...startOptions,
         serializationAdapters
@@ -858,8 +816,7 @@ function createStartHandler(cbOrOptions) {
             startOptions: requestStartOptions,
             contextAfterGlobalMiddlewares: context,
             request,
-            executedRequestMiddlewares,
-            handlerType: "serverFn"
+            executedRequestMiddlewares
           }, () => handleServerAction({
             request,
             context: requestOpts?.context,
@@ -882,15 +839,12 @@ function createStartHandler(cbOrOptions) {
         const routerInstance = await getRouter();
         attachRouterServerSsrUtils({
           router: routerInstance,
-          manifest: manifest2,
-          getRequestAssets: () => getStartContext({ throwIfNotFound: false })?.requestAssets,
-          includeUnmatchedRouteAssets: false
+          manifest: manifest2
         });
         routerInstance.update({ additionalContext: { serverContext } });
         await routerInstance.load();
         if (routerInstance.state.redirect) return routerInstance.state.redirect;
-        const ctx = getStartContext({ throwIfNotFound: false });
-        await routerInstance.serverSsr.dehydrate({ requestAssets: ctx?.requestAssets });
+        await routerInstance.serverSsr.dehydrate();
         const responseHeaders = getStartResponseHeaders({ router: routerInstance });
         cbWillCleanup = true;
         return cb({
@@ -905,8 +859,7 @@ function createStartHandler(cbOrOptions) {
           startOptions: requestStartOptions,
           contextAfterGlobalMiddlewares: context,
           request,
-          executedRequestMiddlewares,
-          handlerType: "router"
+          executedRequestMiddlewares
         }, async () => {
           try {
             return await handleServerRoutes({

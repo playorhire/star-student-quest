@@ -7,6 +7,16 @@ import { Button } from "../components/ui/button";
 import { ShoppingCart, ShoppingBag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { VendorProductGrid } from "@/components/VendorProductGrid";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/student/rewards")({
   component: StudentRewards,
@@ -23,6 +33,11 @@ function StudentRewards() {
   const [vendorRedemptions, setVendorRedemptions] = useState<any[]>([]);
   const [mpBusy, setMpBusy] = useState<string | null>(null);
   const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [confirm, setConfirm] = useState<
+    | { kind: "reward"; id: string; name: string; emoji?: string; cost: number; stock: number }
+    | { kind: "vendor"; id: string; name: string; cost: number; stock: number; shop?: string }
+    | null
+  >(null);
 
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -110,12 +125,28 @@ function StudentRewards() {
   }
 
   async function redeemVendor(productId: string) {
+    const product = marketplace.find((p) => p.id === productId);
+    if (!product) { toast.error("Product not found"); return; }
+    if (!product.is_active || product.admin_status !== "approved") {
+      toast.error("This product is no longer available");
+      await load();
+      return;
+    }
+    if ((product.stock_quantity ?? 0) <= 0) {
+      toast.error("This product is out of stock");
+      await load();
+      return;
+    }
+    if ((student?.total_points ?? 0) < product.required_points) {
+      toast.error(`You need ${product.required_points - (student?.total_points ?? 0)} more points`);
+      return;
+    }
     setMpBusy(productId);
     const { data, error } = await (supabase as any).rpc("redeem_vendor_product", { p_product_id: productId });
     setMpBusy(null);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message || "Redemption failed. Please try again."); return; }
     const parsed = typeof data === "string" ? JSON.parse(data) : data;
-    if (!parsed.success) { toast.error(parsed.message); return; }
+    if (!parsed?.success) { toast.error(parsed?.message || "Redemption was rejected"); return; }
     toast.success(`Voucher: ${parsed.voucher}`);
     load();
   }
@@ -125,18 +156,24 @@ function StudentRewards() {
     
     // Validation checks
     if (!student?.id) {
-      setError('Student data not available');
+      setError("We couldn't find your student profile. Please refresh the page.");
       return;
     }
     
     if (student.total_points < cost) {
-      setError('Insufficient points for this reward');
+      setError(`You need ${cost - student.total_points} more points to redeem this reward.`);
       return;
     }
     
     const reward = rewards.find(r => r.id === rewardId);
-    if (!reward || reward.stock <= 0) {
-      setError('This reward is out of stock');
+    if (!reward) {
+      setError("This reward is no longer available.");
+      await load();
+      return;
+    }
+    if (reward.stock <= 0) {
+      setError(`"${reward.name}" is out of stock right now.`);
+      await load();
       return;
     }
     
@@ -187,11 +224,46 @@ function StudentRewards() {
       
     } catch (error) {
       console.error('Redemption failed:', error);
-      setError(error instanceof Error ? error.message : 'Redemption failed. Please try again.');
+      const msg = error instanceof Error ? error.message : "Redemption failed. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setRedeemingId(null);
       console.log('=== REDEEM END ===');
     }
+  }
+
+  function askRedeemReward(r: any) {
+    setError("");
+    if (student && student.total_points < r.point_cost) {
+      setError(`You need ${r.point_cost - student.total_points} more points to redeem "${r.name}".`);
+      return;
+    }
+    if ((r.stock ?? 0) <= 0) {
+      setError(`"${r.name}" is out of stock right now.`);
+      return;
+    }
+    setConfirm({ kind: "reward", id: r.id, name: r.name, emoji: r.emoji, cost: r.point_cost, stock: r.stock });
+  }
+
+  function askRedeemVendor(p: any) {
+    if (student && student.total_points < p.required_points) {
+      toast.error(`You need ${p.required_points - student.total_points} more points`);
+      return;
+    }
+    if ((p.stock_quantity ?? 0) <= 0) {
+      toast.error("This product is out of stock");
+      return;
+    }
+    setConfirm({ kind: "vendor", id: p.id, name: p.product_name, cost: p.required_points, stock: p.stock_quantity, shop: p.vendors?.shop_name });
+  }
+
+  async function confirmRedeem() {
+    if (!confirm) return;
+    const c = confirm;
+    setConfirm(null);
+    if (c.kind === "reward") await handleRedeem(c.id, c.cost);
+    else await redeemVendor(c.id);
   }
 
   if (!student) return <div className="flex justify-center py-12"><div className="text-2xl animate-bounce">🎁</div></div>;
@@ -238,7 +310,7 @@ function StudentRewards() {
                   size="sm" 
                   className="rounded-xl" 
                   disabled={!canAfford || r.stock <= 0 || isRedeeming} 
-                  onClick={() => handleRedeem(r.id, r.point_cost)}
+                  onClick={() => askRedeemReward(r)}
                 >
                   {isRedeeming ? (
                     <>
@@ -304,7 +376,7 @@ function StudentRewards() {
                 size="sm"
                 className="w-full rounded-xl h-8 text-xs"
                 disabled={!canAfford || busy || p.stock_quantity <= 0}
-                onClick={() => redeemVendor(p.id)}
+                onClick={() => askRedeemVendor(p)}
               >
                 {busy ? "…" : !canAfford ? `Need ${p.required_points - student.total_points} more` : (<><ShoppingCart className="h-3 w-3 mr-1" />Redeem</>)}
               </Button>
@@ -334,6 +406,45 @@ function StudentRewards() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm redemption</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                {confirm && (
+                  <div className="flex items-center gap-3 rounded-xl border p-3">
+                    <div className="text-2xl">{confirm.kind === "reward" ? (confirm.emoji || "🎁") : "🛍️"}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-foreground truncate">{confirm.name}</div>
+                      {confirm.kind === "vendor" && confirm.shop && (
+                        <div className="text-xs text-muted-foreground truncate">{confirm.shop}</div>
+                      )}
+                      <div className="text-xs text-muted-foreground">{confirm.stock} available</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-black text-primary">{confirm.cost} pts</div>
+                    </div>
+                  </div>
+                )}
+                {confirm && student && (
+                  <div className="text-xs text-muted-foreground">
+                    Balance: <span className="font-semibold text-foreground">{student.total_points} pts</span>
+                    {" → "}
+                    <span className="font-semibold text-foreground">{student.total_points - confirm.cost} pts</span> after redemption
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground">This action cannot be undone.</div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRedeem}>Confirm redeem</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

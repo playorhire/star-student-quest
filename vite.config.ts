@@ -11,14 +11,6 @@ export default defineConfig({
       tslib: path.resolve(__dirname, 'node_modules/tslib/tslib.es6.mjs'),
     },
   },
-  ssr: {
-    // Exclude client-only libraries from the server bundle to avoid bundling "use client" directives
-    external: [
-      /@radix-ui\//,
-      /@tanstack\/react-router/,
-      'sonner'
-    ]
-  },
   plugins: [
     tanstackStart(),
     viteReact(),

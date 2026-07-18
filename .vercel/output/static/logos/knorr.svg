@@ -1,0 +1,11 @@
+<svg width="240" height="96" viewBox="0 0 240 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="96" rx="24" fill="#FFF7ED"/>
+  <rect x="16" y="16" width="208" height="64" rx="18" fill="#D1431B"/>
+  <path d="M54 36C54 26.0599 62.0599 18 72 18H92C101.94 18 110 26.0599 110 36V60H54V36Z" fill="#FFF7ED"/>
+  <path d="M64 30H98V44H64V30Z" fill="#D1431B"/>
+  <path d="M64 48H98V60H64V48Z" fill="#F59E0B"/>
+  <path d="M118 26H186" stroke="#FFF7ED" stroke-width="8" stroke-linecap="round"/>
+  <path d="M118 44H174" stroke="#FFF7ED" stroke-width="8" stroke-linecap="round"/>
+  <path d="M118 62H162" stroke="#FFF7ED" stroke-width="8" stroke-linecap="round"/>
+  <text x="120" y="74" fill="#FFF7ED" font-family="Arial, sans-serif" font-size="18" font-weight="700">KNORR</text>
+</svg>

@@ -22,7 +22,8 @@ type UserRoleRow = {
 };
 
 const CREATION_RULES: Record<TenantRole, TenantRole[]> = {
-  super_admin: ["school_admin", "vendor"],
+  // Super admin can create ANY user type - full rights
+  super_admin: ["school_admin", "branch_admin", "teacher", "student", "parent", "vendor", "super_admin"],
   school_admin: ["branch_admin", "teacher"],
   branch_admin: ["teacher", "student", "parent"],
   teacher: [],
@@ -112,20 +113,12 @@ Deno.serve(async (req) => {
 
     const callerScope = roleCheck as UserRoleRow;
 
+    // Super admin can create ANY user type - no restrictions on scope
     if (callerRole === "super_admin") {
-      if (!["school_admin", "vendor"].includes(requestedTenantRole)) {
-        return new Response(JSON.stringify({ error: "Superadmin can only create schooladmin or vendor users" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (requestedTenantRole === "school_admin" && !school_id) {
-        return new Response(JSON.stringify({ error: "school_id is required for schooladmin users" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      // No restrictions - super admin has full rights to create any user
+      // school_id, branch_id are optional but used when provided
     }
+
     if (callerRole === "school_admin") {
       if (!callerScope.school_id || school_id !== callerScope.school_id) {
         return new Response(JSON.stringify({ error: "Schooladmin can only create users inside their assigned school" }), {

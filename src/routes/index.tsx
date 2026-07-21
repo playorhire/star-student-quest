@@ -277,9 +277,6 @@ function Index() {
               { name: "Knorr", src: "/logos/knorr.svg" },
               { name: "EBM", src: "/logos/ebm.svg" },
               { name: "Candyland", src: "/logos/candyland.svg" },
-              { name: "Knorr", src: "/logos/knorr.svg" },
-              { name: "EBM", src: "/logos/ebm.svg" },
-              { name: "Candyland", src: "/logos/candyland.svg" },
             ].map((logo) => (
               <div key={logo.name} className="flex items-center justify-center rounded-2xl border border-primary/10 bg-white/80 p-3 shadow-sm">
                 <img src={logo.src} alt={logo.name} className="h-20 w-full max-w-[180px] object-contain" />

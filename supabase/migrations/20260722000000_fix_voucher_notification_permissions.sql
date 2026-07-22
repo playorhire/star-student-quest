@@ -27,15 +27,23 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(
 -- Enable RLS on notifications table
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
--- RLS policies for notifications
-CREATE POLICY IF NOT EXISTS "users_read_own_notifications" ON public.notifications
-  FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+-- RLS policies for notifications (using DO block for conditional creation)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'users_read_own_notifications') THEN
+    CREATE POLICY "users_read_own_notifications" ON public.notifications
+      FOR SELECT TO authenticated
+      USING (user_id = auth.uid());
+  END IF;
+END $$;
 
-CREATE POLICY IF NOT EXISTS "service_role_all_notifications" ON public.notifications
-  FOR ALL TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'service_role_all_notifications') THEN
+    CREATE POLICY "service_role_all_notifications" ON public.notifications
+      FOR ALL TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 -- Also fix the redeem_vendor_product function to use plain text notification
 -- titles to avoid any encoding issues with emoji characters in SQL literals.

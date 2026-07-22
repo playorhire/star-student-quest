@@ -1,7 +1,41 @@
--- Fix: Re-grant EXECUTE on create_notification so SECURITY DEFINER functions
--- that call it from authenticated context work properly.
--- The function was incorrectly revoked from authenticated in a prior migration.
+-- Create the notifications table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  body TEXT,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Create the create_notification function if it doesn't exist
+CREATE OR REPLACE FUNCTION public.create_notification(_user_id uuid, _title text, _body text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF _user_id IS NULL THEN RETURN; END IF;
+  INSERT INTO public.notifications (user_id, title, body, read)
+  VALUES (_user_id, _title, _body, false);
+END; $$;
+
+-- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.create_notification(uuid, text, text) TO authenticated;
+
+-- Index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+
+-- Enable RLS on notifications table
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for notifications
+CREATE POLICY IF NOT EXISTS "users_read_own_notifications" ON public.notifications
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY IF NOT EXISTS "service_role_all_notifications" ON public.notifications
+  FOR ALL TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- Also fix the redeem_vendor_product function to use plain text notification
 -- titles to avoid any encoding issues with emoji characters in SQL literals.

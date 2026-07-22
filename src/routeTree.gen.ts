@@ -59,6 +59,7 @@ import { Route as AuthenticatedStudentHistoryRouteImport } from './routes/_authe
 import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated.student.notifications'
 import { Route as AuthenticatedStudentQrRouteImport } from './routes/_authenticated.student.qr'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
+import { Route as AuthenticatedStudentVouchersRouteImport } from './routes/_authenticated.student.vouchers'
 import { Route as AuthenticatedSuperAdminAssignSchoolRouteImport } from './routes/_authenticated.super-admin.assign-school'
 import { Route as AuthenticatedSuperAdminCreateUserRouteImport } from './routes/_authenticated.super-admin.create-user'
 import { Route as AuthenticatedSuperAdminDashboardRouteImport } from './routes/_authenticated.super-admin.dashboard'
@@ -367,6 +368,12 @@ const AuthenticatedStudentRewardsRoute =
     path: '/rewards',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedStudentVouchersRoute =
+  AuthenticatedStudentVouchersRouteImport.update({
+    id: '/vouchers',
+    path: '/vouchers',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedSuperAdminAssignSchoolRoute =
   AuthenticatedSuperAdminAssignSchoolRouteImport.update({
     id: '/assign-school',
@@ -550,6 +557,7 @@ export interface FileRoutesByFullPath {
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
+  '/student/vouchers': typeof AuthenticatedStudentVouchersRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -623,6 +631,7 @@ export interface FileRoutesByTo {
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
+  '/student/vouchers': typeof AuthenticatedStudentVouchersRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -698,6 +707,7 @@ export interface FileRoutesById {
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/_authenticated/student/qr': typeof AuthenticatedStudentQrRoute
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
+  '/_authenticated/student/vouchers': typeof AuthenticatedStudentVouchersRoute
   '/_authenticated/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/_authenticated/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/_authenticated/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -773,6 +783,7 @@ export interface FileRouteTypes {
     | '/student/notifications'
     | '/student/qr'
     | '/student/rewards'
+    | '/student/vouchers'
     | '/super-admin/assign-school'
     | '/super-admin/create-user'
     | '/super-admin/dashboard'
@@ -846,6 +857,7 @@ export interface FileRouteTypes {
     | '/student/notifications'
     | '/student/qr'
     | '/student/rewards'
+    | '/student/vouchers'
     | '/super-admin/assign-school'
     | '/super-admin/create-user'
     | '/super-admin/dashboard'
@@ -920,6 +932,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/notifications'
     | '/_authenticated/student/qr'
     | '/_authenticated/student/rewards'
+    | '/_authenticated/student/vouchers'
     | '/_authenticated/super-admin/assign-school'
     | '/_authenticated/super-admin/create-user'
     | '/_authenticated/super-admin/dashboard'
@@ -1305,6 +1318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentRewardsRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/student/vouchers': {
+      id: '/_authenticated/student/vouchers'
+      path: '/vouchers'
+      fullPath: '/student/vouchers'
+      preLoaderRoute: typeof AuthenticatedStudentVouchersRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/super-admin/assign-school': {
       id: '/_authenticated/super-admin/assign-school'
       path: '/assign-school'
@@ -1580,6 +1600,7 @@ interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
   AuthenticatedStudentQrRoute: typeof AuthenticatedStudentQrRoute
   AuthenticatedStudentRewardsRoute: typeof AuthenticatedStudentRewardsRoute
+  AuthenticatedStudentVouchersRoute: typeof AuthenticatedStudentVouchersRoute
 }
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
@@ -1590,6 +1611,7 @@ const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
     AuthenticatedStudentNotificationsRoute,
   AuthenticatedStudentQrRoute: AuthenticatedStudentQrRoute,
   AuthenticatedStudentRewardsRoute: AuthenticatedStudentRewardsRoute,
+  AuthenticatedStudentVouchersRoute: AuthenticatedStudentVouchersRoute,
 }
 
 const AuthenticatedStudentRouteWithChildren =

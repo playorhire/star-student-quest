@@ -24,19 +24,7 @@ function createSupabaseClient() {
 }
 
 function getFunctionErrorMessage(error: unknown, data: unknown): string {
-  if (error && typeof error === 'object') {
-    const maybe = error as { message?: string; details?: string; error?: unknown };
-    if (typeof maybe.message === 'string' && maybe.message && !/httperror/i.test(maybe.message)) {
-      return maybe.message;
-    }
-    if (typeof maybe.details === 'string' && maybe.details) {
-      return maybe.details;
-    }
-    if (typeof maybe.error === 'string' && maybe.error) {
-      return maybe.error;
-    }
-  }
-
+  // If we have a payload from the response body, prefer that over the generic error message
   if (data && typeof data === 'object') {
     const payload = data as { error?: unknown; message?: unknown };
     if (typeof payload.error === 'string' && payload.error) return payload.error;
@@ -45,6 +33,19 @@ function getFunctionErrorMessage(error: unknown, data: unknown): string {
 
   if (typeof data === 'string' && data) {
     return data;
+  }
+
+  if (error && typeof error === 'object') {
+    const maybe = error as { message?: string; details?: string; error?: unknown };
+    if (typeof maybe.message === 'string' && maybe.message && !/httperror/i.test(maybe.message) && !/non-2xx/i.test(maybe.message)) {
+      return maybe.message;
+    }
+    if (typeof maybe.details === 'string' && maybe.details) {
+      return maybe.details;
+    }
+    if (typeof maybe.error === 'string' && maybe.error) {
+      return maybe.error;
+    }
   }
 
   return 'The request could not be completed. Please try again.';
@@ -70,7 +71,7 @@ async function getFunctionErrorPayload(error: unknown): Promise<unknown> {
 async function normalizeFunctionError(error: unknown, data: unknown) {
   if (error instanceof Error) {
     const message = error.message;
-    if (/httperror/i.test(message) || /unexpected end of json input/i.test(message)) {
+    if (/httperror/i.test(message) || /unexpected end of json input/i.test(message) || /non-2xx/i.test(message)) {
       const payload = data ?? await getFunctionErrorPayload(error);
       return new Error(getFunctionErrorMessage(error, payload));
     }

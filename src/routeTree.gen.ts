@@ -15,6 +15,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterSchoolRouteImport } from './routes/register-school'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as StudentSignupRouteImport } from './routes/student-signup'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated.parent'
@@ -110,6 +111,11 @@ const RegisterSchoolRoute = RegisterSchoolRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentSignupRoute = StudentSignupRouteImport.update({
+  id: '/student-signup',
+  path: '/student-signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -513,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/student-signup': typeof StudentSignupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -587,6 +594,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/student-signup': typeof StudentSignupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -663,6 +671,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/student-signup': typeof StudentSignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
@@ -739,6 +748,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register-school'
     | '/reset-password'
+    | '/student-signup'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -813,6 +823,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register-school'
     | '/reset-password'
+    | '/student-signup'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -888,6 +899,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register-school'
     | '/reset-password'
+    | '/student-signup'
     | '/_authenticated/admin'
     | '/_authenticated/branch-admin'
     | '/_authenticated/parent'
@@ -964,6 +976,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterSchoolRoute: typeof RegisterSchoolRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  StudentSignupRoute: typeof StudentSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1008,6 +1021,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student-signup': {
+      id: '/student-signup'
+      path: '/student-signup'
+      fullPath: '/student-signup'
+      preLoaderRoute: typeof StudentSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -1729,6 +1749,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterSchoolRoute: RegisterSchoolRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  StudentSignupRoute: StudentSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -100,6 +100,11 @@ function Index() {
                   Log in
                 </Button>
               </Link>
+              <Link to="/student-signup">
+                <Button size="lg" variant="secondary" className="rounded-full px-7 h-12 text-base font-bold bg-accent/10 text-accent-foreground border-2 border-accent/20">
+                  Student sign up
+                </Button>
+              </Link>
             </div>
             <div className="mt-6 flex items-center justify-center lg:justify-start gap-5 text-xs text-muted-foreground font-semibold">
               <div className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-secondary text-secondary" /> Loved by teachers</div>

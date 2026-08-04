@@ -100,6 +100,9 @@ function LoginPage() {
         </form>
 
         <div className="text-left">
+          <Link to="/student-signup" className="mb-4 inline-flex w-full items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
+            Create student account
+          </Link>
           <p className="text-xs text-muted-foreground mb-3 text-center">Available roles</p>
           <div className="grid grid-cols-2 gap-2">
             {roleInfo.map(({ label, desc, icon: Icon }) => (

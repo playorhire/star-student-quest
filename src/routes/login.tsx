@@ -100,7 +100,7 @@ function LoginPage() {
         </form>
 
         <div className="text-left">
-          <Link to="/student-signup" className="mb-4 inline-flex w-full items-center justify-center rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
+          <Link to="/student-signup" className="mb-4 inline-flex w-full items-center justify-center rounded-xl border border-[#f6b46b] bg-[#f6b46b]/15 px-3 py-2 text-sm font-semibold text-[#9a4f00] transition-colors hover:bg-primary hover:text-white hover:border-primary">
             Create student account
           </Link>
           <p className="text-xs text-muted-foreground mb-3 text-center">Available roles</p>

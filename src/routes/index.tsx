@@ -101,7 +101,7 @@ function Index() {
                 </Button>
               </Link>
               <Link to="/student-signup">
-                <Button size="lg" variant="secondary" className="rounded-full px-7 h-12 text-base font-bold bg-accent/10 text-accent-foreground border-2 border-accent/20">
+                <Button size="lg" className="rounded-full px-7 h-12 text-base font-bold bg-[#f6b46b] text-white border-2 border-[#f6b46b] shadow-md hover:bg-primary hover:border-primary transition-all duration-200">
                   Student sign up
                 </Button>
               </Link>

@@ -89,7 +89,12 @@ function StudentSignup() {
     try {
         const payload = {
           ...form,
+          // include both snake_case and camelCase aliases to match deployed function expectations
           school_name: schools.find((school) => school.id === form.school_id)?.name || "",
+          school: schools.find((school) => school.id === form.school_id)?.name || "",
+          class_name: classes.find((c) => c.id === form.class_id)?.name || "",
+          class: classes.find((c) => c.id === form.class_id)?.name || "",
+          rollNumber: form.roll_number,
         };
 
         // Client-side required field check to provide clearer feedback

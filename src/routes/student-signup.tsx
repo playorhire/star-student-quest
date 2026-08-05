@@ -87,11 +87,14 @@ function StudentSignup() {
 
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        school_name: schools.find((school) => school.id === form.school_id)?.name || "",
+      };
+      console.debug("student-signup payload:", payload);
+
       const { data, error } = await supabase.functions.invoke("student-signup", {
-        body: {
-          ...form,
-          school_name: schools.find((school) => school.id === form.school_id)?.name || "",
-        },
+        body: payload,
       });
 
       const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";

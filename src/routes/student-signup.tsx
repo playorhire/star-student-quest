@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -24,12 +24,28 @@ function StudentSignup() {
     name: "",
     email: "",
     password: "",
-    school_name: "",
+    school_id: "",
     class_name: "",
     roll_number: "",
     section: "A",
   });
   const [loading, setLoading] = useState(false);
+  const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([]);
+  const [schoolLoading, setSchoolLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSchools() {
+      const { data, error } = await supabase.from("schools").select("id, name").order("name");
+      if (error) {
+        toast.error("Unable to load schools. Please refresh the page.");
+      } else {
+        setSchools(data || []);
+      }
+      setSchoolLoading(false);
+    }
+
+    loadSchools();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +57,10 @@ function StudentSignup() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("student-signup", {
-        body: form,
+        body: {
+          ...form,
+          school_name: schools.find((school) => school.id === form.school_id)?.name || "",
+        },
       });
 
       const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";
@@ -102,8 +121,23 @@ function StudentSignup() {
                 <Input id="password" type="password" required minLength={8} value={form.password} onChange={(e) => update("password", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="school_name">School name</Label>
-                <Input id="school_name" required value={form.school_name} onChange={(e) => update("school_name", e.target.value)} />
+                <Label htmlFor="school_id">School</Label>
+                <select
+                  id="school_id"
+                  required
+                  value={form.school_id}
+                  onChange={(e) => update("school_id", e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="" disabled>
+                    {schoolLoading ? "Loading schools..." : "Select a school"}
+                  </option>
+                  {schools.map((school) => (
+                    <option key={school.id} value={school.id}>
+                      {school.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">

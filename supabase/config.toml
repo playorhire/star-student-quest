@@ -2,3 +2,6 @@ project_id = "yhppzdvhemngdtpeegru"
 
 [functions.register-school]
 verify_jwt = false
+
+[functions.student-signup]
+verify_jwt = false

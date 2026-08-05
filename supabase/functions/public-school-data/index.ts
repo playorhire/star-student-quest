@@ -15,7 +15,17 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-    const payload = await req.json();
+    const text = await req.text();
+    let payload: Record<string, unknown> = {};
+
+    try {
+      if (text) {
+        payload = JSON.parse(text);
+      }
+    } catch {
+      payload = {};
+    }
+
     const schoolId = (payload?.school_id || "").toString().trim();
 
     if (schoolId) {

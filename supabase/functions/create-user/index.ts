@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
 
     let school_id = inputSchoolId;
 
-    const requestedTenantRole = (tenant_role || role) as TenantRole | undefined;
+    const requestedTenantRoleRaw = (tenant_role || role) as string | undefined;
+    const requestedTenantRole = requestedTenantRoleRaw?.toString().trim().toLowerCase() as TenantRole | undefined;
 
     if (!email || !password || !requestedTenantRole) {
       return new Response(JSON.stringify({ error: "email, password, and role/tenant_role are required" }), {
@@ -97,6 +98,7 @@ Deno.serve(async (req) => {
       if (roleCheck.role === "school_admin") resolvedTenantRole = "school_admin";
       else if (roleCheck.role === "branch_admin") resolvedTenantRole = "branch_admin";
       else if (roleCheck.role === "admin") resolvedTenantRole = "super_admin";
+      else if (roleCheck.role === "super_admin") resolvedTenantRole = "super_admin";
       else if (roleCheck.role === "teacher") resolvedTenantRole = "teacher";
       else if (roleCheck.role === "parent") resolvedTenantRole = "parent";
       else resolvedTenantRole = "student";

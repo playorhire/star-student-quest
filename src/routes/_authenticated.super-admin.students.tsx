@@ -153,6 +153,7 @@ function SuperAdminStudents() {
                   school_id: schoolId,
                   class_id: classMatch.id,
                   student_id: studentData.id,
+                  skip_domain_insert: true,
                   meta: { name, rollNumber, section, classId: classMatch.id },
                 },
               });

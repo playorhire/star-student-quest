@@ -24,6 +24,7 @@ function SuperAdminLayout() {
 
   const navItems = [
     { to: "/super-admin/dashboard" as any, label: "Dashboard", icon: LayoutDashboard },
+    { to: "/super-admin/students" as any, label: "Students", icon: GraduationCap },
     { to: "/super-admin/schools" as any, label: "Schools", icon: Building2 },
     { to: "/super-admin/school-admins" as any, label: "Admins", icon: UserCog },
     { to: "/super-admin/assign-school" as any, label: "Assign", icon: School },

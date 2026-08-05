@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.student-signup]
 verify_jwt = false
+
+[functions.public-school-data]
+verify_jwt = false

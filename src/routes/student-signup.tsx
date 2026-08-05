@@ -25,27 +25,58 @@ function StudentSignup() {
     email: "",
     password: "",
     school_id: "",
-    class_name: "",
+    class_id: "",
     roll_number: "",
     section: "A",
   });
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([]);
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const [schoolLoading, setSchoolLoading] = useState(true);
+  const [classesLoading, setClassesLoading] = useState(false);
 
   useEffect(() => {
     async function loadSchools() {
-      const { data, error } = await supabase.from("schools").select("id, name").order("name");
-      if (error) {
+      const { data, error } = await supabase.functions.invoke("public-school-data", {
+        body: { action: "schools" },
+      });
+
+      if (error || (data as any)?.error) {
         toast.error("Unable to load schools. Please refresh the page.");
+        setSchools([]);
       } else {
-        setSchools(data || []);
+        setSchools((data as any)?.schools || []);
       }
       setSchoolLoading(false);
     }
 
     loadSchools();
   }, []);
+
+  useEffect(() => {
+    if (!form.school_id) {
+      setClasses([]);
+      setForm((f) => ({ ...f, class_id: "" }));
+      return;
+    }
+
+    async function loadClasses() {
+      setClassesLoading(true);
+      const { data, error } = await supabase.functions.invoke("public-school-data", {
+        body: { school_id: form.school_id },
+      });
+
+      if (error || (data as any)?.error) {
+        toast.error("Unable to load classes for the selected school.");
+        setClasses([]);
+      } else {
+        setClasses((data as any)?.classes || []);
+      }
+      setClassesLoading(false);
+    }
+
+    loadClasses();
+  }, [form.school_id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,15 +170,35 @@ function StudentSignup() {
                   ))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="class_name">Class</Label>
-                  <Input id="class_name" required value={form.class_name} onChange={(e) => update("class_name", e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="roll_number">Roll number</Label>
-                  <Input id="roll_number" required value={form.roll_number} onChange={(e) => update("roll_number", e.target.value)} />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="class_id">Class</Label>
+                <select
+                  id="class_id"
+                  required
+                  value={form.class_id}
+                  onChange={(e) => update("class_id", e.target.value)}
+                  disabled={!form.school_id || classesLoading}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="" disabled>
+                    {!form.school_id
+                      ? "Select a school first"
+                      : classesLoading
+                      ? "Loading classes..."
+                      : classes.length > 0
+                      ? "Select a class"
+                      : "No classes found"}
+                  </option>
+                  {classes.map((clazz) => (
+                    <option key={clazz.id} value={clazz.id}>
+                      {clazz.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roll_number">Roll number</Label>
+                <Input id="roll_number" required value={form.roll_number} onChange={(e) => update("roll_number", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="section">Section</Label>

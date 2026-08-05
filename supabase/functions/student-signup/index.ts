@@ -23,12 +23,13 @@ Deno.serve(async (req) => {
     const name = (payload?.name || "").toString().trim();
     const email = (payload?.email || "").toString().trim().toLowerCase();
     const password = (payload?.password || "").toString();
+    const schoolId = (payload?.school_id || "").toString().trim();
     const schoolName = (payload?.school_name || "").toString().trim();
-    const className = (payload?.class_name || "").toString().trim();
+    const classId = (payload?.class_id || "").toString().trim();
     const rollNumber = (payload?.roll_number || "").toString().trim();
     const section = (payload?.section || "A").toString().trim() || "A";
 
-    if (!name || !email || !password || !schoolName || !className || !rollNumber) {
+    if (!name || !email || !password || !schoolId || !classId || !rollNumber) {
       return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -42,11 +43,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: school, error: schoolError } = await supabase
-      .from("schools")
-      .select("id, name")
-      .ilike("name", schoolName)
-      .maybeSingle();
+    const schoolQuery = supabase.from("schools").select("id, name");
+    const { data: school, error: schoolError } = await (schoolId
+      ? schoolQuery.eq("id", schoolId).maybeSingle()
+      : schoolQuery.ilike("name", schoolName).maybeSingle());
 
     if (schoolError) {
       throw schoolError;
@@ -75,12 +75,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: classRow, error: classError } = await supabase
+    let classQuery = supabase
       .from("classes")
       .select("id, branch_id")
-      .eq("school_id", school.id)
-      .ilike("name", className)
-      .maybeSingle();
+      .eq("school_id", school.id);
+
+    if (classId) {
+      classQuery = classQuery.eq("id", classId);
+    } else {
+      classQuery = classQuery.ilike("name", className);
+    }
+
+    const { data: classRow, error: classError } = await classQuery.maybeSingle();
 
     if (classError) {
       throw classError;

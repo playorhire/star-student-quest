@@ -78,7 +78,7 @@ function StudentSignup() {
     loadClasses();
   }, [form.school_id]);
 
-  async function handleSubmit(e: React.FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (form.password.length < 8) {
       toast.error("Password must be at least 8 characters");
@@ -87,23 +87,39 @@ function StudentSignup() {
 
     setLoading(true);
     try {
-      const payload = {
-        ...form,
-        school_name: schools.find((school) => school.id === form.school_id)?.name || "",
-      };
-      console.debug("student-signup payload:", payload);
+        const payload = {
+          ...form,
+          school_name: schools.find((school) => school.id === form.school_id)?.name || "",
+        };
 
-      const { data, error } = await supabase.functions.invoke("student-signup", {
-        body: payload,
-      });
+        // Client-side required field check to provide clearer feedback
+        const missing: string[] = [];
+        if (!payload.name) missing.push("Full name");
+        if (!payload.email) missing.push("Email");
+        if (!payload.password) missing.push("Password");
+        if (!payload.school_id) missing.push("School");
+        if (!payload.class_id) missing.push("Class");
+        if (!payload.roll_number) missing.push("Roll number");
 
-      console.debug("student-signup result:", { data, error });
+        if (missing.length > 0) {
+          toast.error(`Please fill: ${missing.join(", ")}`);
+          setLoading(false);
+          return;
+        }
 
-      const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";
-      if (error || (data as any)?.error) {
-        console.error("student-signup error payload:", { data, error });
-        throw new Error(message);
-      }
+        console.log("student-signup payload:", payload);
+
+        const { data, error } = await supabase.functions.invoke("student-signup", {
+          body: payload,
+        });
+
+        console.log("student-signup result:", { data, error });
+
+        const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";
+        if (error || (data as any)?.error) {
+          console.error("student-signup error payload:", { data, error });
+          throw new Error(message);
+        }
 
       toast.success("Account created! Signing you in...");
       const { error: signInError } = await supabase.auth.signInWithPassword({

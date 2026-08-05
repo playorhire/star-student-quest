@@ -19,14 +19,24 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const payload = await req.json();
-    const name = (payload?.name || "").toString().trim();
-    const email = (payload?.email || "").toString().trim().toLowerCase();
-    const password = (payload?.password || "").toString();
-    const schoolId = (payload?.school_id || "").toString().trim();
-    const schoolName = (payload?.school_name || "").toString().trim();
-    const classId = (payload?.class_id || "").toString().trim();
-    const rollNumber = (payload?.roll_number || "").toString().trim();
+    const text = await req.text();
+    let payload: Record<string, unknown> = {};
+    try {
+      if (text) {
+        payload = JSON.parse(text);
+      }
+    } catch {
+      payload = {};
+    }
+
+    const name = (payload?.name || payload?.full_name || "").toString().trim();
+    const email = (payload?.email || payload?.email_address || "").toString().trim().toLowerCase();
+    const password = (payload?.password || payload?.pass || "").toString();
+    const schoolId = (payload?.school_id || payload?.schoolId || "").toString().trim();
+    const schoolName = (payload?.school_name || payload?.school || payload?.schoolName || "").toString().trim();
+    const classId = (payload?.class_id || payload?.classId || "").toString().trim();
+    const className = (payload?.class_name || payload?.class || payload?.className || "").toString().trim();
+    const rollNumber = (payload?.roll_number || payload?.rollNumber || "").toString().trim();
     const section = (payload?.section || "A").toString().trim() || "A";
 
     if (!name || !email || !password || !schoolId || !classId || !rollNumber) {

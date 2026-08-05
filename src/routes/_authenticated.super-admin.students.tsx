@@ -23,7 +23,8 @@ function SuperAdminStudents() {
   const [search, setSearch] = useState("");
   const [selectedSchool, setSelectedSchool] = useState("");
   const [csvResult, setCsvResult] = useState<{ count: number; failed: number } | null>(null);
-  const [csvError, setCsvError] = useState<string>("");
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [csvErrorCount, setCsvErrorCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -85,7 +86,8 @@ function SuperAdminStudents() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setCsvError("");
+    setCsvErrors([]);
+    setCsvErrorCount(0);
     setCsvResult(null);
     Papa.parse(file, {
       header: true,
@@ -95,7 +97,9 @@ function SuperAdminStudents() {
         let failed = 0;
         const errors: string[] = [];
 
-        for (const row of results.data as Record<string, string>[]) {
+        for (let rowIndex = 0; rowIndex < (results.data as Record<string, string>[]).length; rowIndex += 1) {
+          const row = (results.data as Record<string, string>[])[rowIndex];
+          const rowNumber = rowIndex + 2; // account for header row
           const name = (row.name || row.Name || "").trim();
           const rollNumber = (row.roll_number || row.roll || row.Roll || "").trim();
           const classValue = (row.class || row.Class || row["class_name"] || row["Class Name"] || "").trim();
@@ -114,13 +118,28 @@ function SuperAdminStudents() {
 
           if (!name || !rollNumber || !classValue || !schoolId) {
             failed += 1;
+            errors.push(`Row ${rowNumber}: missing required fields`);
             continue;
           }
 
           const classMatch = classes.find((cl) => cl.school_id === schoolId && (cl.id === classValue || cl.name === classValue));
           if (!classMatch) {
             failed += 1;
+            errors.push(`Row ${rowNumber}: class not found (${classValue}) for selected school`);
             continue;
+          }
+
+          if (email) {
+            const normalizedEmail = email.toLowerCase();
+            const [{ data: existingUserRole }, { data: existingStudentEmail }] = await Promise.all([
+              (supabase as any).from("user_roles").select("id").eq("email", normalizedEmail).maybeSingle(),
+              (supabase as any).from("students").select("id").eq("email", normalizedEmail).maybeSingle(),
+            ]);
+            if (existingUserRole?.id || existingStudentEmail?.id) {
+              failed += 1;
+              errors.push(`Row ${rowNumber}: email already registered (${email})`);
+              continue;
+            }
           }
 
           try {
@@ -128,6 +147,7 @@ function SuperAdminStudents() {
               .from("students")
               .insert({
                 name,
+                email: email || null,
                 roll_number: rollNumber,
                 class_id: classMatch.id,
                 section,
@@ -139,10 +159,11 @@ function SuperAdminStudents() {
 
             if (studentError) {
               failed += 1;
-              errors.push(studentError.message || "Failed to insert student");
+              errors.push(`Row ${rowNumber}: ${studentError.message || "Failed to insert student"}`);
               continue;
             }
 
+            let authCreated = true;
             if (email && password) {
               const response = await supabase.functions.invoke("create-user", {
                 body: {
@@ -159,7 +180,9 @@ function SuperAdminStudents() {
               });
 
               if (response.error || response.data?.error) {
-                errors.push(response.data?.error || response.error?.message || "Failed to create auth user");
+                failed += 1;
+                errors.push(`Row ${rowNumber}: ${response.data?.error || response.error?.message || "Failed to create auth user"}`);
+                authCreated = false;
               } else if (response.data?.userId) {
                 await (supabase as any)
                   .from("students")
@@ -168,15 +191,20 @@ function SuperAdminStudents() {
               }
             }
 
-            count += 1;
+            if (authCreated) {
+              count += 1;
+            }
           } catch (err: any) {
             failed += 1;
-            errors.push(err.message || "Unknown import error");
+            errors.push(`Row ${rowNumber}: ${err.message || "Unknown import error"}`);
           }
         }
 
         if (errors.length) {
-          setCsvError(errors.slice(0, 3).join("; ") + (errors.length > 3 ? ` (+${errors.length - 3} more errors)` : ""));
+          setCsvErrors(errors.slice(0, 10));
+          setCsvErrorCount(errors.length);
+        } else {
+          setCsvErrorCount(0);
         }
 
         setCsvResult({ count, failed });
@@ -267,11 +295,22 @@ function SuperAdminStudents() {
               <Upload className="h-4 w-4 mr-1" /> Upload CSV
             </Button>
           </div>
-          {(csvResult || csvError) && (
+          {(csvResult || csvErrors.length > 0) && (
             <div className="col-span-full rounded-2xl border border-input bg-background p-3 text-sm text-muted-foreground">
               {csvResult && <span className="mr-3 text-foreground">Imported {csvResult.count} students.</span>}
               {csvResult?.failed ? <span className="text-destructive">Failed: {csvResult.failed}</span> : null}
-              {csvError ? <div className="text-destructive mt-2">{csvError}</div> : null}
+              {csvErrors.length > 0 ? (
+                <div className="text-destructive mt-2 space-y-1">
+                  <div className="font-semibold">
+                    Import errors{csvErrorCount > 10 ? ` (showing first 10 of ${csvErrorCount})` : ""}:
+                  </div>
+                  <ul className="list-disc list-inside text-destructive">
+                    {csvErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           )}
         </CardContent>

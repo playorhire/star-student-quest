@@ -231,9 +231,11 @@ Deno.serve(async (req) => {
     } else if (skip_domain_insert && normalizedRole === "student" && student_id) {
       // Update existing student record with auth user_id (form already created the record)
       console.log(`Updating student ${student_id} with user_id ${userId}`);
-      const { data: studentUpdateData, error: studentUpdateError } = await supabase.from("students").update({
-        user_id: userId,
-      }).eq("id", student_id).select();
+      const updatePayload: Record<string, any> = { user_id: userId };
+      if (email) {
+        updatePayload.email = email;
+      }
+      const { data: studentUpdateData, error: studentUpdateError } = await supabase.from("students").update(updatePayload).eq("id", student_id).select();
       console.log("Student update result:", { data: studentUpdateData, error: studentUpdateError });
       if (studentUpdateError) {
         console.error("Student update error:", studentUpdateError);

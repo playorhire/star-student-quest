@@ -7,7 +7,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner";
-import { GraduationCap, Search, RefreshCw, Upload, Download, CheckCircle } from "lucide-react";
+import { GraduationCap, Search, RefreshCw, Upload, Download, CheckCircle, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import Papa from "papaparse";
 
 export const Route = createFileRoute("/_authenticated/super-admin/students")({
@@ -26,6 +27,15 @@ function SuperAdminStudents() {
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const [csvErrorCount, setCsvErrorCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Edit student state
+  const [editStudent, setEditStudent] = useState<any | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRoll, setEditRoll] = useState("");
+  const [editClassId, setEditClassId] = useState("");
+  const [editSection, setEditSection] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   useEffect(() => {
     if (user?.role === "super_admin") {
@@ -62,6 +72,54 @@ function SuperAdminStudents() {
       toast.error(err.message || "Failed to load students");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function openEdit(s: any) {
+    setEditStudent(s);
+    setEditName(s.name || "");
+    setEditRoll(s.roll_number || "");
+    setEditClassId(s.class_id || "");
+    setEditSection(s.section || "A");
+    setEditEmail(s.email || "");
+    setEditError("");
+  }
+
+  async function handleSaveEdit() {
+    if (!editStudent) return;
+    if (!editName.trim() || !editRoll.trim() || !editClassId) {
+      setEditError("Name, roll number and class are required");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      const payload: any = {
+        name: editName.trim(),
+        roll_number: editRoll.trim(),
+        class_id: editClassId,
+        section: editSection || "A",
+        email: editEmail.trim() || null,
+      };
+
+      const { error: updateErr } = await (supabase as any).from("students").update(payload).eq("id", editStudent.id);
+      if (updateErr) throw updateErr;
+
+      // If student has linked auth user and email changed, update auth user
+      if (editStudent.user_id && editEmail.trim() && editEmail.trim() !== (editStudent.email || "")) {
+        const res = await supabase.functions.invoke("admin-update-user", { body: { targetUserId: editStudent.user_id, email: editEmail.trim() } });
+        if (res.error || res.data?.error) {
+          const msg = res.data?.error || res.error?.message || "Failed to update auth user";
+          throw new Error(msg);
+        }
+      }
+
+      setEditStudent(null);
+      loadData();
+    } catch (err: any) {
+      setEditError(err?.message || "Failed to save");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -357,6 +415,11 @@ function SuperAdminStudents() {
                   <div className="font-semibold">{student.total_points ?? 0}</div>
                 </div>
               </div>
+              <div className="flex items-center gap-2 mt-2 md:mt-0">
+                <Button variant="ghost" size="icon" onClick={() => openEdit(student)} className="h-8 w-8">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -366,6 +429,46 @@ function SuperAdminStudents() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!editStudent} onOpenChange={(open) => !open && setEditStudent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Name</Label>
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="rounded-xl" />
+              </div>
+              <div>
+                <Label className="text-xs">Roll Number</Label>
+                <Input value={editRoll} onChange={(e) => setEditRoll(e.target.value)} className="rounded-xl" />
+              </div>
+              <div>
+                <Label className="text-xs">Class</Label>
+                <select value={editClassId} onChange={(e) => setEditClassId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
+                  <option value="">Select</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Section</Label>
+                <Input value={editSection} onChange={(e) => setEditSection(e.target.value)} className="rounded-xl" />
+              </div>
+              <div>
+                <Label className="text-xs">Email</Label>
+                <Input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="rounded-xl" />
+              </div>
+            </div>
+            {editError && <div className="text-destructive">{editError}</div>}
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={() => setEditStudent(null)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? "Saving..." : "Save"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

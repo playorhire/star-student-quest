@@ -36,6 +36,21 @@ function SuperAdminStudents() {
   const [editEmail, setEditEmail] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  
+  async function handleDelete(studentId: string, userId?: string) {
+    if (!confirm("Delete this student? This will remove the student record and linked account if present.")) return;
+    try {
+      // If there's a linked auth user, ask edge function to delete auth user (service role)
+      if (userId) {
+        await supabase.functions.invoke("admin-update-user", { body: { targetUserId: userId, deleteUser: true } });
+      }
+      const { error } = await (supabase as any).from("students").delete().eq("id", studentId);
+      if (error) throw error;
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete student");
+    }
+  }
 
   useEffect(() => {
     if (user?.role === "super_admin") {
@@ -418,6 +433,9 @@ function SuperAdminStudents() {
               <div className="flex items-center gap-2 mt-2 md:mt-0">
                 <Button variant="ghost" size="icon" onClick={() => openEdit(student)} className="h-8 w-8">
                   <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(student.id, student.user_id)} className="h-8 w-8 text-destructive">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" /></svg>
                 </Button>
               </div>
             </CardContent>

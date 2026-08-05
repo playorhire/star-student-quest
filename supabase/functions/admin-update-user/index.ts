@@ -21,7 +21,8 @@ type RoleRow = {
 };
 
 const MANAGEMENT_RULES: Record<TenantRole, TenantRole[]> = {
-  super_admin: ["school_admin"],
+  // super_admin can manage any tenant role
+  super_admin: ["school_admin", "branch_admin", "teacher", "student", "parent", "vendor", "super_admin"],
   school_admin: ["branch_admin", "teacher"],
   branch_admin: ["teacher", "student", "parent"],
   teacher: [],

@@ -97,8 +97,13 @@ function StudentSignup() {
         body: payload,
       });
 
+      console.debug("student-signup result:", { data, error });
+
       const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";
-      if (error || (data as any)?.error) throw new Error(message);
+      if (error || (data as any)?.error) {
+        console.error("student-signup error payload:", { data, error });
+        throw new Error(message);
+      }
 
       toast.success("Account created! Signing you in...");
       const { error: signInError } = await supabase.auth.signInWithPassword({

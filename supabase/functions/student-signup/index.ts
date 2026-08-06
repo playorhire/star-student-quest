@@ -34,13 +34,23 @@ Deno.serve(async (req) => {
     const password = (payload?.password || payload?.pass || "").toString();
     const schoolId = (payload?.school_id || payload?.schoolId || "").toString().trim();
     const schoolName = (payload?.school_name || payload?.school || payload?.schoolName || "").toString().trim();
+    const schoolAddress = (payload?.school_address || payload?.address || "").toString().trim();
     const branchId = (payload?.branch_id || payload?.branchId || "").toString().trim();
+    const branchName = (payload?.branch_name || payload?.branch || payload?.branchName || "").toString().trim();
     const classId = (payload?.class_id || payload?.classId || "").toString().trim();
     const className = (payload?.class_name || payload?.class || payload?.className || "").toString().trim();
+    const customSchoolRequested = (payload?.create_custom_school || payload?.createCustomSchool || "false").toString().toLowerCase() === "true";
     const rollNumber = (payload?.roll_number || payload?.rollNumber || "").toString().trim();
     const section = (payload?.section || "A").toString().trim() || "A";
 
-    if (!name || !email || !password || !schoolId || !branchId || !classId || !rollNumber) {
+    if (!name || !email || !password || !rollNumber) {
+      return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!customSchoolRequested && (!schoolId || !branchId || !classId)) {
       return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -54,33 +64,198 @@ Deno.serve(async (req) => {
       });
     }
 
-    const schoolQuery = supabase.from("schools").select("id, name");
-    const { data: school, error: schoolError } = await (schoolId
-      ? schoolQuery.eq("id", schoolId).maybeSingle()
-      : schoolQuery.ilike("name", schoolName).maybeSingle());
+    let school: { id: string; name: string } | null = null;
+    let branchRow: { id: string; school_id: string } | null = null;
+    let classRow: { id: string; branch_id: string | null } | null = null;
 
-    if (schoolError) {
-      throw schoolError;
-    }
-    if (!school) {
-      return new Response(JSON.stringify({ error: "We couldn't find that school. Please ask your school admin to confirm the school name." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (customSchoolRequested) {
+      if (!schoolName || !branchName || !className) {
+        return new Response(JSON.stringify({ error: "Please provide a school name, branch name, and class name." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingSchool, error: schoolLookupError } = await supabase
+        .from("schools")
+        .select("id, name")
+        .ilike("name", schoolName)
+        .maybeSingle();
+
+      if (schoolLookupError) {
+        throw schoolLookupError;
+      }
+
+      if (existingSchool) {
+        school = existingSchool;
+      } else {
+        const { data: createdSchool, error: schoolInsertError } = await supabase
+          .from("schools")
+          .insert({ name: schoolName, address: schoolAddress || null })
+          .select("id, name")
+          .single();
+
+        if (schoolInsertError) {
+          throw schoolInsertError;
+        }
+        school = createdSchool;
+      }
+
+      if (!school) {
+        return new Response(JSON.stringify({ error: "We couldn't create the school record for your signup." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingBranch, error: branchLookupError } = await supabase
+        .from("branches")
+        .select("id, school_id")
+        .eq("school_id", school.id)
+        .ilike("name", branchName)
+        .maybeSingle();
+
+      if (branchLookupError) {
+        throw branchLookupError;
+      }
+
+      if (existingBranch) {
+        branchRow = existingBranch;
+      } else {
+        const { data: createdBranch, error: branchInsertError } = await supabase
+          .from("branches")
+          .insert({ name: branchName, school_id: school.id })
+          .select("id, school_id")
+          .single();
+
+        if (branchInsertError) {
+          throw branchInsertError;
+        }
+        branchRow = createdBranch;
+      }
+
+      if (!branchRow) {
+        return new Response(JSON.stringify({ error: "We couldn't create the branch record for your signup." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingClass, error: classLookupError } = await supabase
+        .from("classes")
+        .select("id, branch_id")
+        .eq("school_id", school.id)
+        .eq("branch_id", branchRow.id)
+        .ilike("name", className)
+        .maybeSingle();
+
+      if (classLookupError) {
+        throw classLookupError;
+      }
+
+      if (existingClass) {
+        classRow = existingClass;
+      } else {
+        const { data: createdClass, error: classInsertError } = await supabase
+          .from("classes")
+          .insert({ name: className, school_id: school.id, branch_id: branchRow.id })
+          .select("id, branch_id")
+          .single();
+
+        if (classInsertError) {
+          throw classInsertError;
+        }
+        classRow = createdClass;
+      }
+    } else {
+      const schoolQuery = supabase.from("schools").select("id, name");
+      const { data: schoolData, error: schoolError } = await (schoolId
+        ? schoolQuery.eq("id", schoolId).maybeSingle()
+        : schoolQuery.ilike("name", schoolName).maybeSingle());
+
+      if (schoolError) {
+        throw schoolError;
+      }
+      if (!schoolData) {
+        return new Response(JSON.stringify({ error: "We couldn't find that school. Please ask your school admin to confirm the school name." }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      school = schoolData;
+
+      const { data: branchLookupData, error: branchLookupError } = await supabase
+        .from("branches")
+        .select("id, school_id")
+        .eq("id", branchId)
+        .maybeSingle();
+
+      if (branchLookupError) {
+        throw branchLookupError;
+      }
+      if (!school) {
+        return new Response(JSON.stringify({ error: "We couldn't resolve the selected school." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!branchLookupData || branchLookupData.school_id !== school.id) {
+        return new Response(JSON.stringify({ error: "We couldn't find that branch for your school. Please ask your school admin to confirm the branch name." }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      branchRow = branchLookupData;
+
+      if (!school) {
+        return new Response(JSON.stringify({ error: "We couldn't resolve the selected school." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let classQuery = supabase
+        .from("classes")
+        .select("id, branch_id")
+        .eq("school_id", school.id);
+
+      if (classId) {
+        classQuery = classQuery.eq("id", classId);
+      } else {
+        classQuery = classQuery.ilike("name", className);
+      }
+
+      const { data: classLookupData, error: classError } = await classQuery.maybeSingle();
+
+      if (classError) {
+        throw classError;
+      }
+      if (!classLookupData) {
+        return new Response(JSON.stringify({ error: "We couldn't find that class for your school. Please ask your school admin to confirm the class name." }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!branchRow) {
+        return new Response(JSON.stringify({ error: "We couldn't resolve the selected branch." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (classLookupData.branch_id && classLookupData.branch_id !== branchRow.id) {
+        return new Response(JSON.stringify({ error: "The selected class does not belong to the selected branch." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      classRow = classLookupData;
     }
 
-    const { data: branchRow, error: branchLookupError } = await supabase
-      .from("branches")
-      .select("id, school_id")
-      .eq("id", branchId)
-      .maybeSingle();
-
-    if (branchLookupError) {
-      throw branchLookupError;
-    }
-    if (!branchRow || branchRow.school_id !== school.id) {
-      return new Response(JSON.stringify({ error: "We couldn't find that branch for your school. Please ask your school admin to confirm the branch name." }), {
-        status: 404,
+    if (!school || !branchRow || !classRow) {
+      return new Response(JSON.stringify({ error: "We couldn't complete the school setup for your signup." }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -102,38 +277,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    let classQuery = supabase
-      .from("classes")
-      .select("id, branch_id")
-      .eq("school_id", school.id);
-
-    if (classId) {
-      classQuery = classQuery.eq("id", classId);
-    } else {
-      classQuery = classQuery.ilike("name", className);
-    }
-
-    const { data: classRow, error: classError } = await classQuery.maybeSingle();
-
-    if (classError) {
-      throw classError;
-    }
-    if (!classRow) {
-      return new Response(JSON.stringify({ error: "We couldn't find that class for your school. Please ask your school admin to confirm the class name." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (classRow.branch_id && classRow.branch_id !== branchRow.id) {
-      return new Response(JSON.stringify({ error: "The selected class does not belong to the selected branch." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const resolvedBranchId = branchRow.id;
-
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -149,7 +292,7 @@ Deno.serve(async (req) => {
       role: "student",
       tenant_role: "student",
       school_id: school.id,
-      branch_id: resolvedBranchId,
+      branch_id: branchRow.id,
       email,
       name,
       is_primary: true,
@@ -164,7 +307,7 @@ Deno.serve(async (req) => {
       email,
       user_id: newUser.user.id,
       school_id: school.id,
-      branch_id: resolvedBranchId,
+      branch_id: branchRow.id,
       class_id: classRow.id,
       roll_number: rollNumber,
       section,

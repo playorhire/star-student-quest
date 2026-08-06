@@ -27,8 +27,26 @@ Deno.serve(async (req) => {
     }
 
     const schoolId = (payload?.school_id || "").toString().trim();
+    const action = (payload?.action || "classes").toString().trim().toLowerCase();
 
     if (schoolId) {
+      if (action === "branches") {
+        const { data: branches, error } = await supabase
+          .from("branches")
+          .select("id, name")
+          .eq("school_id", schoolId)
+          .order("name");
+
+        if (error) {
+          throw error;
+        }
+
+        return new Response(JSON.stringify({ branches }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const { data: classes, error } = await supabase
         .from("classes")
         .select("id, name")

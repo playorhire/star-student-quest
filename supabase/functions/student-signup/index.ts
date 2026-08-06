@@ -34,12 +34,13 @@ Deno.serve(async (req) => {
     const password = (payload?.password || payload?.pass || "").toString();
     const schoolId = (payload?.school_id || payload?.schoolId || "").toString().trim();
     const schoolName = (payload?.school_name || payload?.school || payload?.schoolName || "").toString().trim();
+    const branchId = (payload?.branch_id || payload?.branchId || "").toString().trim();
     const classId = (payload?.class_id || payload?.classId || "").toString().trim();
     const className = (payload?.class_name || payload?.class || payload?.className || "").toString().trim();
     const rollNumber = (payload?.roll_number || payload?.rollNumber || "").toString().trim();
     const section = (payload?.section || "A").toString().trim() || "A";
 
-    if (!name || !email || !password || !schoolId || !classId || !rollNumber) {
+    if (!name || !email || !password || !schoolId || !branchId || !classId || !rollNumber) {
       return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -63,6 +64,22 @@ Deno.serve(async (req) => {
     }
     if (!school) {
       return new Response(JSON.stringify({ error: "We couldn't find that school. Please ask your school admin to confirm the school name." }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: branchRow, error: branchLookupError } = await supabase
+      .from("branches")
+      .select("id, school_id")
+      .eq("id", branchId)
+      .maybeSingle();
+
+    if (branchLookupError) {
+      throw branchLookupError;
+    }
+    if (!branchRow || branchRow.school_id !== school.id) {
+      return new Response(JSON.stringify({ error: "We couldn't find that branch for your school. Please ask your school admin to confirm the branch name." }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -108,6 +125,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (classRow.branch_id && classRow.branch_id !== branchRow.id) {
+      return new Response(JSON.stringify({ error: "The selected class does not belong to the selected branch." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const resolvedBranchId = branchRow.id;
+
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -123,7 +149,7 @@ Deno.serve(async (req) => {
       role: "student",
       tenant_role: "student",
       school_id: school.id,
-      branch_id: classRow.branch_id || null,
+      branch_id: resolvedBranchId,
       email,
       name,
       is_primary: true,
@@ -138,7 +164,7 @@ Deno.serve(async (req) => {
       email,
       user_id: newUser.user.id,
       school_id: school.id,
-      branch_id: classRow.branch_id || null,
+      branch_id: resolvedBranchId,
       class_id: classRow.id,
       roll_number: rollNumber,
       section,

@@ -25,14 +25,17 @@ function StudentSignup() {
     email: "",
     password: "",
     school_id: "",
+    branch_id: "",
     class_id: "",
     roll_number: "",
     section: "A",
   });
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const [schoolLoading, setSchoolLoading] = useState(true);
+  const [branchesLoading, setBranchesLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
 
   useEffect(() => {
@@ -54,28 +57,49 @@ function StudentSignup() {
   }, []);
 
   useEffect(() => {
+    setBranches([]);
+    setClasses([]);
+    setForm((f) => ({ ...f, branch_id: "", class_id: "" }));
+
     if (!form.school_id) {
-      setClasses([]);
-      setForm((f) => ({ ...f, class_id: "" }));
       return;
     }
 
-    async function loadClasses() {
+    async function loadSchoolData() {
+      setBranchesLoading(true);
       setClassesLoading(true);
-      const { data, error } = await supabase.functions.invoke("public-school-data", {
-        body: { school_id: form.school_id },
-      });
 
-      if (error || (data as any)?.error) {
+      const [branchesResponse, classesResponse] = await Promise.all([
+        supabase.functions.invoke("public-school-data", {
+          body: { action: "branches", school_id: form.school_id },
+        }),
+        supabase.functions.invoke("public-school-data", {
+          body: { action: "classes", school_id: form.school_id },
+        }),
+      ]);
+
+      const branchesData = branchesResponse.data as any;
+      const classesData = classesResponse.data as any;
+
+      if (branchesResponse.error || branchesData?.error) {
+        toast.error("Unable to load branches for the selected school.");
+        setBranches([]);
+      } else {
+        setBranches(branchesData?.branches || []);
+      }
+
+      if (classesResponse.error || classesData?.error) {
         toast.error("Unable to load classes for the selected school.");
         setClasses([]);
       } else {
-        setClasses((data as any)?.classes || []);
+        setClasses(classesData?.classes || []);
       }
+
+      setBranchesLoading(false);
       setClassesLoading(false);
     }
 
-    loadClasses();
+    loadSchoolData();
   }, [form.school_id]);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -92,6 +116,8 @@ function StudentSignup() {
           // include both snake_case and camelCase aliases to match deployed function expectations
           school_name: schools.find((school) => school.id === form.school_id)?.name || "",
           school: schools.find((school) => school.id === form.school_id)?.name || "",
+          branch_name: branches.find((branch) => branch.id === form.branch_id)?.name || "",
+          branch: branches.find((branch) => branch.id === form.branch_id)?.name || "",
           class_name: classes.find((c) => c.id === form.class_id)?.name || "",
           class: classes.find((c) => c.id === form.class_id)?.name || "",
           rollNumber: form.roll_number,
@@ -103,6 +129,7 @@ function StudentSignup() {
         if (!payload.email) missing.push("Email");
         if (!payload.password) missing.push("Password");
         if (!payload.school_id) missing.push("School");
+        if (!payload.branch_id) missing.push("Branch");
         if (!payload.class_id) missing.push("Class");
         if (!payload.roll_number) missing.push("Roll number");
 
@@ -195,6 +222,32 @@ function StudentSignup() {
                   {schools.map((school) => (
                     <option key={school.id} value={school.id}>
                       {school.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="branch_id">Branch</Label>
+                <select
+                  id="branch_id"
+                  required
+                  value={form.branch_id}
+                  onChange={(e) => update("branch_id", e.target.value)}
+                  disabled={!form.school_id || branchesLoading}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="" disabled>
+                    {!form.school_id
+                      ? "Select a school first"
+                      : branchesLoading
+                      ? "Loading branches..."
+                      : branches.length > 0
+                      ? "Select a branch"
+                      : "No branches found"}
+                  </option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
                     </option>
                   ))}
                 </select>

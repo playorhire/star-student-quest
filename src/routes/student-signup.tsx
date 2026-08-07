@@ -63,28 +63,20 @@ function StudentSignup() {
 
   useEffect(() => {
     setBranches([]);
-    setClasses([]);
     setForm((f) => ({ ...f, branch_id: "", class_id: "" }));
 
     if (!form.school_id) {
       return;
     }
 
-    async function loadSchoolData() {
+    async function loadBranches() {
       setBranchesLoading(true);
-      setClassesLoading(true);
 
-      const [branchesResponse, classesResponse] = await Promise.all([
-        supabase.functions.invoke("public-school-data", {
-          body: { action: "branches", school_id: form.school_id },
-        }),
-        supabase.functions.invoke("public-school-data", {
-          body: { action: "classes", school_id: form.school_id },
-        }),
-      ]);
+      const branchesResponse = await supabase.functions.invoke("public-school-data", {
+        body: { action: "branches", school_id: form.school_id },
+      });
 
       const branchesData = branchesResponse.data as any;
-      const classesData = classesResponse.data as any;
 
       if (branchesResponse.error || branchesData?.error) {
         toast.error("Unable to load branches for the selected school.");
@@ -93,21 +85,43 @@ function StudentSignup() {
         setBranches(branchesData?.branches || []);
       }
 
+      setBranchesLoading(false);
+    }
+
+    loadBranches();
+  }, [form.school_id]);
+
+  useEffect(() => {
+    setClasses([]);
+    setForm((f) => ({ ...f, class_id: "" }));
+
+    if (!form.school_id || !form.branch_id) {
+      return;
+    }
+
+    async function loadClasses() {
+      setClassesLoading(true);
+
+      const classesResponse = await supabase.functions.invoke("public-school-data", {
+        body: { action: "classes", school_id: form.school_id, branch_id: form.branch_id },
+      });
+
+      const classesData = classesResponse.data as any;
+
       if (classesResponse.error || classesData?.error) {
-        toast.error("Unable to load classes for the selected school.");
+        toast.error("Unable to load classes for the selected branch.");
         setClasses([]);
       } else {
         setClasses(classesData?.classes || []);
       }
 
-      setBranchesLoading(false);
       setClassesLoading(false);
     }
 
-    loadSchoolData();
-  }, [form.school_id]);
+    loadClasses();
+  }, [form.school_id, form.branch_id]);
 
-    async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (form.password.length < 8) {
       toast.error("Password must be at least 8 characters");

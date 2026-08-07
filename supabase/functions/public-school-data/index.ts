@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const schoolId = (payload?.school_id || "").toString().trim();
+    const branchId = (payload?.branch_id || "").toString().trim();
     const action = (payload?.action || "classes").toString().trim().toLowerCase();
 
     if (schoolId) {
@@ -47,11 +48,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: classes, error } = await supabase
+      let classesQuery = supabase
         .from("classes")
         .select("id, name")
-        .eq("school_id", schoolId)
-        .order("name");
+        .eq("school_id", schoolId);
+
+      if (branchId) {
+        classesQuery = classesQuery.eq("branch_id", branchId);
+      }
+
+      const { data: classes, error } = await classesQuery.order("name");
 
       if (error) {
         throw error;

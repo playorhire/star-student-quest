@@ -293,16 +293,19 @@ function Index() {
 
       <footer className="relative z-10 border-t border-white/40 bg-white/30 backdrop-blur py-6 text-center text-xs text-muted-foreground">
         Question ! 0331-897-2780 <br />
-        <span className="inline-flex flex-wrap items-center justify-center gap-2 mt-2">
-          <a href="https://www.youtube.com/@starpointsdotapp" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-            YouTube
-          </a>
-          <span>•</span>
-          <a href="https://www.linkedin.com/company/starpointsapp/" target="_blank" rel="noreferrer" className="underline hover:text-foreground">
-            LinkedIn
-          </a>
-        </span>
-        <div className="mt-2">Made with 💜 for curious kids • © {new Date().getFullYear()} StarPoints</div>
+        <div className="inline-flex flex-wrap items-center justify-center gap-3 mt-4">
+          <Button asChild size="lg" variant="outline">
+            <a href="https://www.youtube.com/@starpointsdotapp" target="_blank" rel="noreferrer">
+              YouTube
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="https://www.linkedin.com/company/starpointsapp/" target="_blank" rel="noreferrer">
+              LinkedIn
+            </a>
+          </Button>
+        </div>
+        <div className="mt-3">Made with 💜 for curious kids • © {new Date().getFullYear()} StarPoints</div>
       </footer>
     </div>
   );

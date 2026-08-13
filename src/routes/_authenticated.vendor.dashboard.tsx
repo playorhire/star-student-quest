@@ -105,7 +105,7 @@ function VendorDashboard() {
         // Fallback: draw text if logo fails
         ctx.fillStyle = "#f59e0b";
         ctx.font = `bold ${12 * scale}px sans-serif`;
-        ctx.fillText("StarPoints", cardW - 16 * scale - logoSize / 2, logoY + logoSize / 2);
+        ctx.fillText("StarPoints", cardW - 16 * scale + logoSize / 2, logoY + logoSize / 2);
       }
 
       ctx.fillStyle = "#111827";

@@ -79,7 +79,7 @@ function VendorProfile() {
       ctx.fill();
 
       // Draw StarPoints logo on top-left
-      const logoSize = 100; // 1/4 of card width
+      const logoSize = 100 * scale; // 1/4 of card width
       const logoY = 16 * scale;
       const starLogoPadding = 8 * scale;
       try {
@@ -90,16 +90,7 @@ function VendorProfile() {
         ctx.fillRect(starLogoPadding, logoY, logoSize, logoSize);
       }
 
-      // Draw Sindh Bank logo on top-right
-      const sindhLogoPadding = cardW - logoSize - 16 * scale;
-      try {
-        ctx.drawImage(sindhBankLogo, sindhLogoPadding, logoY, logoSize, logoSize);
-      } catch (e) {
-        // Fallback
-        ctx.fillStyle = "#1e3a8a";
-        ctx.fillRect(sindhLogoPadding, logoY, logoSize, logoSize);
-      }
-
+   
       // Vendor shop name - centered below header
       ctx.fillStyle = "#111827";
       ctx.font = `bold ${24 * scale}px sans-serif`;
@@ -152,7 +143,7 @@ function VendorProfile() {
 
     qrImg.src = url;
     sindhBankLogo.src = "/logos/sindh-bank.svg";
-    starPointsLogo.src = "/logos/starpoints.svg";
+    starPointsLogo.src = "/logos/starpoints.png";
   }
 
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

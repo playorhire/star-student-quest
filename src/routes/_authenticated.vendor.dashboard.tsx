@@ -55,11 +55,23 @@ function VendorDashboard() {
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
 
+    // Load all images
     const qrImg = new Image();
-    qrImg.onload = () => {
+    const sindhBankLogo = new Image();
+    const starPointsLogo = new Image();
+    let imagesLoaded = 0;
+
+    const onImageLoad = () => {
+      imagesLoaded++;
+      if (imagesLoaded === 3) {
+        renderCard();
+      }
+    };
+
+    const renderCard = () => {
       const scale = 2;
       const cardW = 340 * scale;
-      const cardH = 420 * scale;
+      const cardH = 480 * scale;
       const canvas = document.createElement("canvas");
       canvas.width = cardW;
       canvas.height = cardH;
@@ -69,25 +81,48 @@ function VendorDashboard() {
       roundRect(ctx, 0, 0, cardW, cardH, 28 * scale);
       ctx.fill();
 
-      ctx.fillStyle = "#111827";
-      ctx.font = `bold ${18 * scale}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("StarPoints✨", cardW / 2, 32 * scale);
+      // Header background
+      ctx.fillStyle = "#f3f4f6";
+      roundRect(ctx, 0, 0, cardW, 110 * scale, 28 * scale);
+      ctx.fill();
+
+      // Draw Sindh Bank logo on left
+      const logoSize = 50 * scale;
+      const logoY = 20 * scale;
+      try {
+        ctx.drawImage(sindhBankLogo, 16 * scale, logoY, logoSize, logoSize);
+      } catch (e) {
+        // Fallback: draw text if logo fails
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = `bold ${12 * scale}px sans-serif`;
+        ctx.fillText("Sindh Bank", 16 * scale + logoSize / 2, logoY + logoSize / 2);
+      }
+
+      // Draw StarPoints logo on right
+      try {
+        ctx.drawImage(starPointsLogo, cardW - 16 * scale - logoSize, logoY, logoSize, logoSize);
+      } catch (e) {
+        // Fallback: draw text if logo fails
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = `bold ${12 * scale}px sans-serif`;
+        ctx.fillText("StarPoints", cardW - 16 * scale - logoSize / 2, logoY + logoSize / 2);
+      }
 
       ctx.fillStyle = "#111827";
       ctx.font = `bold ${20 * scale}px sans-serif`;
-      ctx.fillText(vendor.shop_name || "Vendor Shop", cardW / 2, 88 * scale);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(vendor.shop_name || "Vendor Shop", cardW / 2, 95 * scale);
 
       const qrBoxSize = 180 * scale;
       const qrBoxX = (cardW - qrBoxSize) / 2;
-      const qrBoxY = 118 * scale;
+      const qrBoxY = 140 * scale;
       ctx.fillStyle = "#ffffff";
       roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 18 * scale);
       ctx.fill();
       ctx.drawImage(qrImg, qrBoxX + 10 * scale, qrBoxY + 10 * scale, qrBoxSize - 20 * scale, qrBoxSize - 20 * scale);
 
-      const codeBoxY = 325 * scale;
+      const codeBoxY = 350 * scale;
       const codeBoxH = 52 * scale;
       ctx.fillStyle = "#f3f4f6";
       roundRect(ctx, 24 * scale, codeBoxY, cardW - 48 * scale, codeBoxH, 16 * scale);
@@ -107,7 +142,14 @@ function VendorDashboard() {
       a.href = canvas.toDataURL("image/png");
       a.click();
     };
+
+    qrImg.onload = onImageLoad;
+    sindhBankLogo.onload = onImageLoad;
+    starPointsLogo.onload = onImageLoad;
+
     qrImg.src = url;
+    sindhBankLogo.src = "/logos/sindh-bank.svg";
+    starPointsLogo.src = "/logos/starpoints.svg";
   }
 
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

@@ -62,87 +62,82 @@ function VendorProfile() {
     const renderCard = () => {
       const scale = 2;
       const cardW = 360 * scale;
-      const cardH = 520 * scale;
+      const cardH = 540 * scale;
       const canvas = document.createElement("canvas");
       canvas.width = cardW;
       canvas.height = cardH;
       const ctx = canvas.getContext("2d")!;
 
+      // White background with rounded corners
       ctx.fillStyle = "#ffffff";
       roundRect(ctx, 0, 0, cardW, cardH, 28 * scale);
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(15, 23, 42, 0.08)";
-      ctx.lineWidth = 2 * scale;
-      roundRect(ctx, 0, 0, cardW, cardH, 28 * scale);
-      ctx.stroke();
+      // Header section background
+      ctx.fillStyle = "#f5f5f5";
+      roundRect(ctx, 0, 0, cardW, 100 * scale, 28 * scale);
+      ctx.fill();
 
-      // Draw Sindh Bank logo at 20% corner (top-left)
-      const logoSize = 60 * scale;
-      const cornerOffset = cardW * 0.2;
-      const sindhX = cornerOffset - logoSize / 2;
-      const logoY = cornerOffset - logoSize / 2;
+      // Draw StarPoints logo on top-left
+      const logoSize = 50 * scale;
+      const logoY = 16 * scale;
+      const starLogoPadding = 16 * scale;
       try {
-        ctx.drawImage(sindhBankLogo, sindhX, logoY, logoSize, logoSize);
+        ctx.drawImage(starPointsLogo, starLogoPadding, logoY, logoSize, logoSize);
+      } catch (e) {
+        // Fallback
+        ctx.fillStyle = "#7c3aed";
+        ctx.fillRect(starLogoPadding, logoY, logoSize, logoSize);
+      }
+
+      // Draw Sindh Bank logo on top-right
+      const sindhLogoPadding = cardW - logoSize - 16 * scale;
+      try {
+        ctx.drawImage(sindhBankLogo, sindhLogoPadding, logoY, logoSize, logoSize);
       } catch (e) {
         // Fallback
         ctx.fillStyle = "#1e3a8a";
-        ctx.font = `bold ${10 * scale}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.fillText("Sindh", sindhX + logoSize / 2, logoY + logoSize / 2 - 8);
-        ctx.fillText("Bank", sindhX + logoSize / 2, logoY + logoSize / 2 + 8);
+        ctx.fillRect(sindhLogoPadding, logoY, logoSize, logoSize);
       }
 
-      // Draw StarPoints logo at 20% corner (top-right)
-      const starpointsX = cardW - cornerOffset - logoSize / 2;
-      try {
-        ctx.drawImage(starPointsLogo, starpointsX, logoY, logoSize, logoSize);
-      } catch (e) {
-        // Fallback
-        ctx.fillStyle = "#f59e0b";
-        ctx.font = `bold ${10 * scale}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.fillText("Star", starpointsX + logoSize / 2, logoY + logoSize / 2 - 8);
-        ctx.fillText("Points", starpointsX + logoSize / 2, logoY + logoSize / 2 + 8);
-      }
-
-      ctx.fillStyle = "#0f172a";
-      ctx.font = `bold ${18 * scale}px sans-serif`;
+      // Vendor shop name - centered below header
+      ctx.fillStyle = "#111827";
+      ctx.font = `bold ${24 * scale}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("StarPoints✨", cardW / 2, 140 * scale);
+      ctx.fillText((v.shop_name || "Vendor Shop").toUpperCase(), cardW / 2, 145 * scale);
 
-      ctx.fillStyle = "#111827";
-      ctx.font = `bold ${22 * scale}px sans-serif`;
-      ctx.fillText(v.shop_name || "Vendor Shop", cardW / 2, 190 * scale);
+      // QR code box
+      const qrBoxSize = 200 * scale;
+      const qrBoxX = (cardW - qrBoxSize) / 2;
+      const qrBoxY = 185 * scale;
+      ctx.fillStyle = "#ffffff";
+      roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 12 * scale);
+      ctx.fill();
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 1 * scale;
+      roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 12 * scale);
+      ctx.stroke();
+      
+      // Draw QR code image inside box
+      ctx.drawImage(qrImg, qrBoxX + 5 * scale, qrBoxY + 5 * scale, qrBoxSize - 10 * scale, qrBoxSize - 10 * scale);
+
+      // Vendor ID section at bottom
+      const idBoxY = 420 * scale;
+      const idBoxH = 80 * scale;
+      ctx.fillStyle = "#f9fafb";
+      roundRect(ctx, 20 * scale, idBoxY, cardW - 40 * scale, idBoxH, 12 * scale);
+      ctx.fill();
 
       ctx.fillStyle = "#6b7280";
-      ctx.font = `${13 * scale}px sans-serif`;
-      ctx.fillText("Vendor QR Code", cardW / 2, 230 * scale);
-
-      const qrBoxSize = 210 * scale;
-      const qrBoxX = (cardW - qrBoxSize) / 2;
-      const qrBoxY = 260 * scale;
-      ctx.fillStyle = "#ffffff";
-      roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 18 * scale);
-      ctx.fill();
-      ctx.drawImage(qrImg, qrBoxX + 10 * scale, qrBoxY + 10 * scale, qrBoxSize - 20 * scale, qrBoxSize - 20 * scale);
-
-      const codeBoxY = 500 * scale;
-      const codeBoxH = 48 * scale;
-      ctx.fillStyle = "#f3f4f6";
-      roundRect(ctx, 24 * scale, codeBoxY, cardW - 48 * scale, codeBoxH, 16 * scale);
-      ctx.fill();
-
-      ctx.fillStyle = "#374151";
-      ctx.font = `${11 * scale}px sans-serif`;
+      ctx.font = `${12 * scale}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText("Vendor code", cardW / 2, codeBoxY + 16 * scale);
+      ctx.fillText("Vendor ID", cardW / 2, idBoxY + 25 * scale);
 
       ctx.fillStyle = "#111827";
-      ctx.font = `bold ${16 * scale}px sans-serif`;
+      ctx.font = `bold ${18 * scale}px sans-serif`;
       const codeText = String(v.id).slice(0, 8).toUpperCase();
-      ctx.fillText(codeText, cardW / 2, codeBoxY + 32 * scale);
+      ctx.fillText(codeText, cardW / 2, idBoxY + 55 * scale);
 
       URL.revokeObjectURL(url);
       const a = document.createElement("a");

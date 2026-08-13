@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QRCodeSVG } from "qrcode.react";
-import { Download } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { toast } from "sonner";
 import React from "react";
 
@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/vendor/profile")({
 function VendorProfile() {
   const [v, setV] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [showPNGModal, setShowPNGModal] = useState(false);
+  const [pngDataUrl, setPngDataUrl] = useState<string | null>(null);
   const qrWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { load(); }, []);
@@ -78,9 +80,9 @@ function VendorProfile() {
       ctx.fill();
 
       // Draw StarPoints logo centered in header
-      const logoSize = cardW /2;
-      const logoY = 16 * scale;
-      const starLogoX = (cardW - logoSize); // Center horizontally
+      const logoSize = cardW * 0.75; // 75% of card width
+      const logoY = 8 * scale;
+      const starLogoX = (cardW - logoSize) / 2; // Center horizontally
       try {
         ctx.drawImage(starPointsLogo, starLogoX, logoY, logoSize, logoSize);
       } catch (e) {
@@ -130,10 +132,11 @@ function VendorProfile() {
       ctx.fillText(codeText, cardW / 2, idBoxY + 55 * scale);
 
       URL.revokeObjectURL(url);
-      const a = document.createElement("a");
-      a.download = `${(v.shop_name || "vendor").replace(/\s+/g, "_")}_QR.png`;
-      a.href = canvas.toDataURL("image/png");
-      a.click();
+      
+      // Store the PNG data URL and show modal
+      const pngDataUrl = canvas.toDataURL("image/png");
+      setPngDataUrl(pngDataUrl);
+      setShowPNGModal(true);
     };
 
     qrImg.onload = onImageLoad;
@@ -141,6 +144,15 @@ function VendorProfile() {
 
     qrImg.src = url;
     starPointsLogo.src = "/logos/starpoints.png";
+  }
+
+  function handleDownloadPNG() {
+    if (!pngDataUrl || !v?.id) return;
+    
+    const a = document.createElement("a");
+    a.download = `${(v.shop_name || "vendor").replace(/\s+/g, "_")}_QR.png`;
+    a.href = pngDataUrl;
+    a.click();
   }
 
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -174,7 +186,7 @@ function VendorProfile() {
             </div>
             <p className="text-xs text-muted-foreground">Scan this QR code to identify your vendor account</p>
             <Button onClick={downloadPNG} className="w-full rounded-xl gap-2">
-              <Download className="h-4 w-4" /> Download PNG
+              <Download className="h-4 w-4" /> Preview PNG
             </Button>
           </div>
 
@@ -189,6 +201,49 @@ function VendorProfile() {
           </div>
         </CardContent>
       </Card>
+
+      {/* PNG Preview Modal */}
+      {showPNGModal && pngDataUrl && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md border-0 shadow-lg">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold">Vendor QR Card Preview</h2>
+                <button
+                  onClick={() => setShowPNGModal(false)}
+                  className="p-1 hover:bg-muted rounded-lg transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="flex justify-center">
+                <img 
+                  src={pngDataUrl} 
+                  alt="Vendor QR Card Preview" 
+                  className="max-h-96 rounded-lg border shadow-sm"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleDownloadPNG} 
+                  className="flex-1 rounded-xl gap-2"
+                >
+                  <Download className="h-4 w-4" /> Download PNG
+                </Button>
+                <Button 
+                  onClick={() => setShowPNGModal(false)} 
+                  variant="outline" 
+                  className="flex-1 rounded-xl"
+                >
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

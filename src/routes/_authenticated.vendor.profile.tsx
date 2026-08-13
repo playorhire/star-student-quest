@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { QRCodeSVG } from "qrcode.react";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
+import React from "react";
 
 export const Route = createFileRoute("/_authenticated/vendor/profile")({
   component: VendorProfile,
@@ -45,11 +46,23 @@ function VendorProfile() {
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
 
+    // Load all images
     const qrImg = new Image();
-    qrImg.onload = () => {
+    const sindhBankLogo = new Image();
+    const starPointsLogo = new Image();
+    let imagesLoaded = 0;
+
+    const onImageLoad = () => {
+      imagesLoaded++;
+      if (imagesLoaded === 3) {
+        renderCard();
+      }
+    };
+
+    const renderCard = () => {
       const scale = 2;
       const cardW = 360 * scale;
-      const cardH = 470 * scale;
+      const cardH = 520 * scale;
       const canvas = document.createElement("canvas");
       canvas.width = cardW;
       canvas.height = cardH;
@@ -64,29 +77,58 @@ function VendorProfile() {
       roundRect(ctx, 0, 0, cardW, cardH, 28 * scale);
       ctx.stroke();
 
+      // Draw Sindh Bank logo at 20% corner (top-left)
+      const logoSize = 60 * scale;
+      const cornerOffset = cardW * 0.2;
+      const sindhX = cornerOffset - logoSize / 2;
+      const logoY = cornerOffset - logoSize / 2;
+      try {
+        ctx.drawImage(sindhBankLogo, sindhX, logoY, logoSize, logoSize);
+      } catch (e) {
+        // Fallback
+        ctx.fillStyle = "#1e3a8a";
+        ctx.font = `bold ${10 * scale}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("Sindh", sindhX + logoSize / 2, logoY + logoSize / 2 - 8);
+        ctx.fillText("Bank", sindhX + logoSize / 2, logoY + logoSize / 2 + 8);
+      }
+
+      // Draw StarPoints logo at 20% corner (top-right)
+      const starpointsX = cardW - cornerOffset - logoSize / 2;
+      try {
+        ctx.drawImage(starPointsLogo, starpointsX, logoY, logoSize, logoSize);
+      } catch (e) {
+        // Fallback
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = `bold ${10 * scale}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("Star", starpointsX + logoSize / 2, logoY + logoSize / 2 - 8);
+        ctx.fillText("Points", starpointsX + logoSize / 2, logoY + logoSize / 2 + 8);
+      }
+
       ctx.fillStyle = "#0f172a";
       ctx.font = `bold ${18 * scale}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("StarPoints✨", cardW / 2, 34 * scale);
+      ctx.fillText("StarPoints✨", cardW / 2, 140 * scale);
 
       ctx.fillStyle = "#111827";
       ctx.font = `bold ${22 * scale}px sans-serif`;
-      ctx.fillText(v.shop_name || "Vendor Shop", cardW / 2, 96 * scale);
+      ctx.fillText(v.shop_name || "Vendor Shop", cardW / 2, 190 * scale);
 
       ctx.fillStyle = "#6b7280";
       ctx.font = `${13 * scale}px sans-serif`;
-      ctx.fillText("Vendor QR Code", cardW / 2, 130 * scale);
+      ctx.fillText("Vendor QR Code", cardW / 2, 230 * scale);
 
       const qrBoxSize = 210 * scale;
       const qrBoxX = (cardW - qrBoxSize) / 2;
-      const qrBoxY = 158 * scale;
+      const qrBoxY = 260 * scale;
       ctx.fillStyle = "#ffffff";
       roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 18 * scale);
       ctx.fill();
       ctx.drawImage(qrImg, qrBoxX + 10 * scale, qrBoxY + 10 * scale, qrBoxSize - 20 * scale, qrBoxSize - 20 * scale);
 
-      const codeBoxY = 390 * scale;
+      const codeBoxY = 500 * scale;
       const codeBoxH = 48 * scale;
       ctx.fillStyle = "#f3f4f6";
       roundRect(ctx, 24 * scale, codeBoxY, cardW - 48 * scale, codeBoxH, 16 * scale);
@@ -94,6 +136,7 @@ function VendorProfile() {
 
       ctx.fillStyle = "#374151";
       ctx.font = `${11 * scale}px sans-serif`;
+      ctx.textAlign = "center";
       ctx.fillText("Vendor code", cardW / 2, codeBoxY + 16 * scale);
 
       ctx.fillStyle = "#111827";
@@ -107,7 +150,14 @@ function VendorProfile() {
       a.href = canvas.toDataURL("image/png");
       a.click();
     };
+
+    qrImg.onload = onImageLoad;
+    sindhBankLogo.onload = onImageLoad;
+    starPointsLogo.onload = onImageLoad;
+
     qrImg.src = url;
+    sindhBankLogo.src = "/logos/sindh-bank.svg";
+    starPointsLogo.src = "/logos/starpoints.svg";
   }
 
   function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

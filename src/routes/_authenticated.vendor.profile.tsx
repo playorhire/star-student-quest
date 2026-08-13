@@ -78,7 +78,7 @@ function VendorProfile() {
       ctx.fill();
 
       // Draw StarPoints logo centered in header
-      const logoSize = 100 * scale; // 1/4 of card width
+      const logoSize = cardW /1; // 1/4 of card width
       const logoY = 16 * scale;
       const starLogoX = (cardW - logoSize) / 2; // Center horizontally
       try {

@@ -48,13 +48,12 @@ function VendorProfile() {
 
     // Load all images
     const qrImg = new Image();
-    const sindhBankLogo = new Image();
     const starPointsLogo = new Image();
     let imagesLoaded = 0;
 
     const onImageLoad = () => {
       imagesLoaded++;
-      if (imagesLoaded === 3) {
+      if (imagesLoaded === 2) {
         renderCard();
       }
     };
@@ -78,16 +77,16 @@ function VendorProfile() {
       roundRect(ctx, 0, 0, cardW, 100 * scale, 28 * scale);
       ctx.fill();
 
-      // Draw StarPoints logo on top-left
+      // Draw StarPoints logo centered in header
       const logoSize = 100 * scale; // 1/4 of card width
       const logoY = 16 * scale;
-      const starLogoPadding = 8 * scale;
+      const starLogoX = (cardW - logoSize) / 2; // Center horizontally
       try {
-        ctx.drawImage(starPointsLogo, starLogoPadding, logoY, logoSize, logoSize);
+        ctx.drawImage(starPointsLogo, starLogoX, logoY, logoSize, logoSize);
       } catch (e) {
         // Fallback
         ctx.fillStyle = "#7c3aed";
-        ctx.fillRect(starLogoPadding, logoY, logoSize, logoSize);
+        ctx.fillRect(starLogoX, logoY, logoSize, logoSize);
       }
 
    
@@ -138,11 +137,9 @@ function VendorProfile() {
     };
 
     qrImg.onload = onImageLoad;
-    sindhBankLogo.onload = onImageLoad;
     starPointsLogo.onload = onImageLoad;
 
     qrImg.src = url;
-    sindhBankLogo.src = "/logos/sindh-bank.svg";
     starPointsLogo.src = "/logos/starpoints.png";
   }
 

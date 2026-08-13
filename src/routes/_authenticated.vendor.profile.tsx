@@ -79,9 +79,9 @@ function VendorProfile() {
       ctx.fill();
 
       // Draw StarPoints logo on top-left
-      const logoSize = 200 * scale / 2; // 1/4 of card width
+      const logoSize = 100; // 1/4 of card width
       const logoY = 16 * scale;
-      const starLogoPadding = 16 * scale;
+      const starLogoPadding = 8 * scale;
       try {
         ctx.drawImage(starPointsLogo, starLogoPadding, logoY, logoSize, logoSize);
       } catch (e) {

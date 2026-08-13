@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, ShoppingBag, CheckCircle2, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { QRCodeSVG } from "qrcode.react";
+import { Package, ShoppingBag, CheckCircle2, Clock, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/vendor/dashboard")({
   component: VendorDashboard,
@@ -11,18 +13,23 @@ export const Route = createFileRoute("/_authenticated/vendor/dashboard")({
 function VendorDashboard() {
   const [stats, setStats] = useState({ products: 0, pending: 0, approved: 0, collected: 0 });
   const [monthly, setMonthly] = useState<{ month: string; count: number }[]>([]);
+  const [vendor, setVendor] = useState<{ id?: string; shop_name?: string } | null>(null);
+  const qrWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
-    const { data: vendor } = await (supabase as any).rpc("get_my_vendor_id");
-    const vendorId = vendor as string | null;
+    const { data: vendorIdRow } = await (supabase as any).rpc("get_my_vendor_id");
+    const vendorId = vendorIdRow as string | null;
     if (!vendorId) return;
 
-    const [products, redemptions] = await Promise.all([
+    const [vendorData, products, redemptions] = await Promise.all([
+      (supabase as any).from("vendors").select("id, shop_name").eq("id", vendorId).single(),
       (supabase as any).from("vendor_products").select("id, admin_status").eq("vendor_id", vendorId),
       (supabase as any).from("reward_redemptions").select("id, status, redeemed_at").eq("vendor_id", vendorId),
     ]);
+    setVendor(vendorData.data || null);
+
     const p = products.data || [];
     const r = redemptions.data || [];
     setStats({
@@ -38,6 +45,83 @@ function VendorDashboard() {
       byMonth[m] = (byMonth[m] || 0) + 1;
     });
     setMonthly(Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b)).map(([month, count]) => ({ month, count })));
+  }
+
+  function downloadPNG() {
+    const svg = qrWrapperRef.current?.querySelector("svg");
+    if (!svg || !vendor?.id) return;
+
+    const svgString = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const qrImg = new Image();
+    qrImg.onload = () => {
+      const scale = 2;
+      const cardW = 340 * scale;
+      const cardH = 420 * scale;
+      const canvas = document.createElement("canvas");
+      canvas.width = cardW;
+      canvas.height = cardH;
+      const ctx = canvas.getContext("2d")!;
+
+      ctx.fillStyle = "#ffffff";
+      roundRect(ctx, 0, 0, cardW, cardH, 28 * scale);
+      ctx.fill();
+
+      ctx.fillStyle = "#111827";
+      ctx.font = `bold ${18 * scale}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("StarPoints✨", cardW / 2, 32 * scale);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = `bold ${20 * scale}px sans-serif`;
+      ctx.fillText(vendor.shop_name || "Vendor Shop", cardW / 2, 88 * scale);
+
+      const qrBoxSize = 180 * scale;
+      const qrBoxX = (cardW - qrBoxSize) / 2;
+      const qrBoxY = 118 * scale;
+      ctx.fillStyle = "#ffffff";
+      roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 18 * scale);
+      ctx.fill();
+      ctx.drawImage(qrImg, qrBoxX + 10 * scale, qrBoxY + 10 * scale, qrBoxSize - 20 * scale, qrBoxSize - 20 * scale);
+
+      const codeBoxY = 325 * scale;
+      const codeBoxH = 52 * scale;
+      ctx.fillStyle = "#f3f4f6";
+      roundRect(ctx, 24 * scale, codeBoxY, cardW - 48 * scale, codeBoxH, 16 * scale);
+      ctx.fill();
+
+      ctx.fillStyle = "#374151";
+      ctx.font = `${11 * scale}px sans-serif`;
+      ctx.fillText("Vendor ID", cardW / 2, codeBoxY + 17 * scale);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = `bold ${14 * scale}px sans-serif`;
+      ctx.fillText(String(vendor.id).slice(0, 8).toUpperCase(), cardW / 2, codeBoxY + 34 * scale);
+
+      URL.revokeObjectURL(url);
+      const a = document.createElement("a");
+      a.download = `${(vendor.shop_name || "vendor").replace(/\s+/g, "_")}_QR.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    };
+    qrImg.src = url;
+  }
+
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   const cards = [
@@ -68,6 +152,23 @@ function VendorDashboard() {
           </Card>
         ))}
       </div>
+
+      {vendor && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <div className="text-sm font-bold text-foreground">Vendor QR</div>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed bg-muted/30 p-4 text-center">
+              <div ref={qrWrapperRef} className="bg-white p-3 rounded-2xl border">
+                <QRCodeSVG value={`vendor:${vendor.id}`} size={160} level="H" />
+              </div>
+              <p className="text-xs text-muted-foreground">{vendor.shop_name || "Vendor"} QR code</p>
+              <Button onClick={downloadPNG} className="w-full gap-2 rounded-xl">
+                <Download className="h-4 w-4" /> Download PNG
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">

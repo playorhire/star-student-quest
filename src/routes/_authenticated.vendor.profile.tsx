@@ -80,15 +80,17 @@ function VendorProfile() {
       ctx.fill();
 
       // Draw StarPoints logo centered in header
-      const logoSize = cardW * 0.75; // 75% of card width
-      const logoY = 2;
-      const starLogoX = (cardW - logoSize) / 2; // Center horizontally
+      // Logo aspect ratio: 433x91 = 4.76:1
+      const logoHeight = 45 * scale; // 45px tall when unscaled
+      const logoWidth = (logoHeight * 433) / 91; // Maintain aspect ratio
+      const starLogoX = (cardW - logoWidth) / 2; // Center horizontally
+      const logoY = (100 * scale - logoHeight) / 2; // Center vertically in header
       try {
-        ctx.drawImage(starPointsLogo);
+        ctx.drawImage(starPointsLogo, starLogoX, logoY, logoWidth, logoHeight);
       } catch (e) {
         // Fallback
         ctx.fillStyle = "#7c3aed";
-        ctx.fillRect(logoSize);
+        ctx.fillRect(starLogoX, logoY, logoWidth, logoHeight);
       }
 
    

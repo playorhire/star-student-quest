@@ -31,25 +31,23 @@ function SchoolsManagement() {
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
 
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredSchools = normalizedSearchQuery
-    ? schools.filter((school) =>
-        [school.name, school.address, ...(school.branches || []).map((branch: any) => branch.name)]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(normalizedSearchQuery)),
-      )
-    : schools;
-
   useEffect(() => {
-    loadSchools();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      loadSchools(searchQuery);
+    }, 250);
 
-  async function loadSchools() {
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  async function loadSchools(searchTerm = searchQuery) {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    const query = (supabase as any)
       .from("schools")
       .select("*, branches(id, name)")
       .order("created_at", { ascending: false });
+    const { data, error } = searchTerm.trim()
+      ? await query.ilike("name", `%${searchTerm.trim()}%`)
+      : await query;
     if (error) toast.error(error.message);
     else setSchools(data || []);
     setLoading(false);
@@ -294,38 +292,38 @@ function SchoolsManagement() {
         </CardContent>
       </Card>
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label="Search schools"
+          className="pl-9 pr-9"
+          placeholder="Search by school name"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+        {searchQuery && (
+          <Button
+            aria-label="Clear school search"
+            className="absolute right-1 top-1/2 -translate-y-1/2"
+            onClick={() => setSearchQuery("")}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading...</div>
       ) : schools.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">No schools yet</div>
+        <div className="text-center py-12 text-muted-foreground">
+          {searchQuery.trim() ? "No schools match your search" : "No schools yet"}
+        </div>
       ) : (
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="Search schools"
-              className="pl-9 pr-9"
-              placeholder="Search by school, address, or branch"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-            {searchQuery && (
-              <Button
-                aria-label="Clear school search"
-                className="absolute right-1 top-1/2 -translate-y-1/2"
-                onClick={() => setSearchQuery("")}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
-          {filteredSchools.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No schools match your search</div>
-          ) : filteredSchools.map(school => (
+          {schools.map(school => (
             <Card key={school.id}>
               <CardContent className="p-4">
                 {isEditing === school.id ? (

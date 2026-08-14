@@ -5,7 +5,7 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Building2, Plus, Trash2, Pencil, Upload, Loader2 } from "lucide-react";
+import { Building2, Plus, Trash2, Pencil, Upload, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 
@@ -27,8 +27,18 @@ function SchoolsManagement() {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
+
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredSchools = normalizedSearchQuery
+    ? schools.filter((school) =>
+        [school.name, school.address, ...(school.branches || []).map((branch: { name?: string | null }) => branch.name)]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedSearchQuery)),
+      )
+    : schools;
 
   useEffect(() => {
     loadSchools();
@@ -290,7 +300,32 @@ function SchoolsManagement() {
         <div className="text-center py-12 text-muted-foreground">No schools yet</div>
       ) : (
         <div className="space-y-3">
-          {schools.map(school => (
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search schools"
+              className="pl-9 pr-9"
+              placeholder="Search by school, address, or branch"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            {searchQuery && (
+              <Button
+                aria-label="Clear school search"
+                className="absolute right-1 top-1/2 -translate-y-1/2"
+                onClick={() => setSearchQuery("")}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {filteredSchools.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">No schools match your search</div>
+          ) : filteredSchools.map(school => (
             <Card key={school.id}>
               <CardContent className="p-4">
                 {isEditing === school.id ? (

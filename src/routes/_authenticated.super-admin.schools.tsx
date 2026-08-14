@@ -34,7 +34,7 @@ function SchoolsManagement() {
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredSchools = normalizedSearchQuery
     ? schools.filter((school) =>
-        [school.name, school.address, ...(school.branches || []).map((branch: { name?: string | null }) => branch.name)]
+        [school.name, school.address, ...(school.branches || []).map((branch: any) => branch.name)]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedSearchQuery)),
       )

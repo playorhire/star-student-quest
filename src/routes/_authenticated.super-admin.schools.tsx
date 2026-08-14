@@ -13,6 +13,13 @@ export const Route = createFileRoute("/_authenticated/super-admin/schools")({
   component: SchoolsManagement,
 });
 
+function splitCommaSeparatedNames(rawValue: string) {
+  return rawValue
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 function SchoolsManagement() {
   const { user } = useAuth();
   const [schools, setSchools] = useState<any[]>([]);
@@ -99,7 +106,7 @@ function SchoolsManagement() {
         const schoolName = (row.school_name || row.school || "").trim();
         const schoolAddress = (row.school_address || row.address || "").trim();
         const branchName = (row.branch_name || row.branch || "").trim();
-        const className = (row.class_name || row.class || "").trim();
+        const classNames = splitCommaSeparatedNames(row.class_name || row.class || "");
 
         if (!schoolName) {
           skipped.push("Missing school name");
@@ -156,7 +163,7 @@ function SchoolsManagement() {
             createdBranches += 1;
           }
 
-          if (className) {
+          for (const className of classNames) {
             const { data: existingClass, error: classLookupError } = await (supabase as any)
               .from("classes")
               .select("id")
@@ -178,26 +185,28 @@ function SchoolsManagement() {
               createdClasses += 1;
             }
           }
-        } else if (className) {
-          const { data: existingClass, error: classLookupError } = await (supabase as any)
-            .from("classes")
-            .select("id")
-            .eq("school_id", schoolId)
-            .is("branch_id", null)
-            .ilike("name", className)
-            .maybeSingle();
-
-          if (classLookupError) throw classLookupError;
-
-          if (existingClass) {
-            duplicates += 1;
-          } else {
-            const { error: classInsertError } = await (supabase as any)
+        } else {
+          for (const className of classNames) {
+            const { data: existingClass, error: classLookupError } = await (supabase as any)
               .from("classes")
-              .insert({ name: className, school_id: schoolId, branch_id: null });
+              .select("id")
+              .eq("school_id", schoolId)
+              .is("branch_id", null)
+              .ilike("name", className)
+              .maybeSingle();
 
-            if (classInsertError) throw classInsertError;
-            createdClasses += 1;
+            if (classLookupError) throw classLookupError;
+
+            if (existingClass) {
+              duplicates += 1;
+            } else {
+              const { error: classInsertError } = await (supabase as any)
+                .from("classes")
+                .insert({ name: className, school_id: schoolId, branch_id: null });
+
+              if (classInsertError) throw classInsertError;
+              createdClasses += 1;
+            }
           }
         }
       }
@@ -253,7 +262,7 @@ function SchoolsManagement() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-semibold">Bulk import schools, branches, and classes</h2>
-              <p className="text-sm text-muted-foreground">Upload a CSV with columns: school_name, school_address, branch_name, class_name</p>
+              <p className="text-sm text-muted-foreground">Upload a CSV with columns: school_name, school_address, branch_name, class_name. You can enter multiple classes in one row separated by commas, like “Grade 1, Grade 2, Grade 3”.</p>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
               <Upload className="h-4 w-4" />

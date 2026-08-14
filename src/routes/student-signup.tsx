@@ -95,7 +95,12 @@ function StudentSignup() {
     setClasses([]);
     setForm((f) => ({ ...f, class_id: "" }));
 
-    if (!form.school_id || !form.branch_id) {
+    if (!form.school_id) {
+      return;
+    }
+
+    const isMainBranchSchool = branches.length === 0;
+    if (!isMainBranchSchool && !form.branch_id) {
       return;
     }
 
@@ -103,13 +108,17 @@ function StudentSignup() {
       setClassesLoading(true);
 
       const classesResponse = await supabase.functions.invoke("public-school-data", {
-        body: { action: "classes", school_id: form.school_id, branch_id: form.branch_id },
+        body: {
+          action: "classes",
+          school_id: form.school_id,
+          branch_id: isMainBranchSchool ? "" : form.branch_id,
+        },
       });
 
       const classesData = classesResponse.data as any;
 
       if (classesResponse.error || classesData?.error) {
-        toast.error("Unable to load classes for the selected branch.");
+        toast.error(isMainBranchSchool ? "Unable to load classes for this school." : "Unable to load classes for the selected branch.");
         setClasses([]);
       } else {
         setClasses(classesData?.classes || []);
@@ -119,7 +128,7 @@ function StudentSignup() {
     }
 
     loadClasses();
-  }, [form.school_id, form.branch_id]);
+  }, [form.school_id, form.branch_id, branches.length]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -131,17 +140,18 @@ function StudentSignup() {
     setLoading(true);
     try {
         const isCustomSchool = form.use_custom_school;
+        const isMainBranchSchool = !isCustomSchool && branches.length === 0;
         const payload = {
           ...form,
           // include both snake_case and camelCase aliases to match deployed function expectations
           school_id: isCustomSchool ? "" : form.school_id,
-          branch_id: isCustomSchool ? "" : form.branch_id,
+          branch_id: isCustomSchool ? "" : isMainBranchSchool ? "" : form.branch_id,
           class_id: isCustomSchool ? "" : form.class_id,
           school_name: isCustomSchool ? form.custom_school_name.trim() : schools.find((school) => school.id === form.school_id)?.name || "",
           school: isCustomSchool ? form.custom_school_name.trim() : schools.find((school) => school.id === form.school_id)?.name || "",
           school_address: form.custom_school_address.trim(),
-          branch_name: isCustomSchool ? form.custom_branch_name.trim() : branches.find((branch) => branch.id === form.branch_id)?.name || "",
-          branch: isCustomSchool ? form.custom_branch_name.trim() : branches.find((branch) => branch.id === form.branch_id)?.name || "",
+          branch_name: isCustomSchool ? form.custom_branch_name.trim() : isMainBranchSchool ? "Main Branch" : branches.find((branch) => branch.id === form.branch_id)?.name || "",
+          branch: isCustomSchool ? form.custom_branch_name.trim() : isMainBranchSchool ? "Main Branch" : branches.find((branch) => branch.id === form.branch_id)?.name || "",
           class_name: isCustomSchool ? form.custom_class_name.trim() : classes.find((c) => c.id === form.class_id)?.name || "",
           class: isCustomSchool ? form.custom_class_name.trim() : classes.find((c) => c.id === form.class_id)?.name || "",
           create_custom_school: isCustomSchool ? "true" : "false",
@@ -159,7 +169,7 @@ function StudentSignup() {
           if (!payload.class_name) missing.push("Class name");
         } else {
           if (!payload.school_id) missing.push("School");
-          if (!payload.branch_id) missing.push("Branch");
+          if (!isMainBranchSchool && !payload.branch_id) missing.push("Branch");
           if (!payload.class_id) missing.push("Class");
         }
         if (!payload.roll_number) missing.push("Roll number");
@@ -288,29 +298,33 @@ function StudentSignup() {
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="branch_id">Branch</Label>
-                    <select
-                      id="branch_id"
-                      required
-                      value={form.branch_id}
-                      onChange={(e) => update("branch_id", e.target.value)}
-                      disabled={!form.school_id || branchesLoading}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="" disabled>
-                        {!form.school_id
-                          ? "Select a school first"
-                          : branchesLoading
-                          ? "Loading branches..."
-                          : branches.length > 0
-                          ? "Select a branch"
-                          : "No branches found"}
-                      </option>
-                      {branches.map((branch) => (
-                        <option key={branch.id} value={branch.id}>
-                          {branch.name}
+                    {branches.length === 0 ? (
+                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                        Main Branch
+                      </div>
+                    ) : (
+                      <select
+                        id="branch_id"
+                        required
+                        value={form.branch_id}
+                        onChange={(e) => update("branch_id", e.target.value)}
+                        disabled={!form.school_id || branchesLoading}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="" disabled>
+                          {!form.school_id
+                            ? "Select a school first"
+                            : branchesLoading
+                            ? "Loading branches..."
+                            : "Select a branch"}
                         </option>
-                      ))}
-                    </select>
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="class_id">Class</Label>
@@ -319,7 +333,7 @@ function StudentSignup() {
                       required
                       value={form.class_id}
                       onChange={(e) => update("class_id", e.target.value)}
-                      disabled={!form.school_id || classesLoading}
+                      disabled={!form.school_id || classesLoading || (branches.length === 0 && classes.length === 0)}
                       className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="" disabled>

@@ -55,6 +55,8 @@ Deno.serve(async (req) => {
 
       if (branchId) {
         classesQuery = classesQuery.eq("branch_id", branchId);
+      } else {
+        classesQuery = classesQuery.is("branch_id", null);
       }
 
       const { data: classes, error } = await classesQuery.order("name");

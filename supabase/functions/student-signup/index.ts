@@ -31,6 +31,8 @@ Deno.serve(async (req) => {
 
     const name = (payload?.name || payload?.full_name || "").toString().trim();
     const email = (payload?.email || payload?.email_address || "").toString().trim().toLowerCase();
+    const phone = (payload?.phone || payload?.mobile || payload?.mobile_number || "").toString().trim();
+    const registrationMethod = (payload?.registration_method || payload?.registrationMethod || (phone ? "phone" : "email")).toString().toLowerCase();
     const password = (payload?.password || payload?.pass || "").toString();
     const schoolId = (payload?.school_id || payload?.schoolId || "").toString().trim();
     const schoolName = (payload?.school_name || payload?.school || payload?.schoolName || "").toString().trim();
@@ -43,7 +45,7 @@ Deno.serve(async (req) => {
     const rollNumber = (payload?.roll_number || payload?.rollNumber || "").toString().trim();
     const section = (payload?.section || "A").toString().trim() || "A";
 
-    if (!name || !email || !password || !rollNumber) {
+    if (!name || !password || !rollNumber || (registrationMethod !== "email" && registrationMethod !== "phone") || (registrationMethod === "email" ? !email : !phone)) {
       return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -61,6 +63,18 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Password must be at least 8 characters." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (registrationMethod === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return new Response(JSON.stringify({ error: "Please enter a valid email address." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (registrationMethod === "phone" && !/^\+[1-9]\d{7,14}$/.test(phone)) {
+      return new Response(JSON.stringify({ error: "Enter a mobile number with country code, for example +923001234567." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -277,11 +291,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
+    const authUser = registrationMethod === "phone"
+      ? { phone, password, phone_confirm: true }
+      : { email, password, email_confirm: true };
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser(authUser);
 
     if (createError) {
       throw createError;
@@ -293,7 +306,7 @@ Deno.serve(async (req) => {
       tenant_role: "student",
       school_id: school.id,
       branch_id: branchRow.id,
-      email,
+      email: email || null,
       name,
       is_primary: true,
     });
@@ -304,7 +317,7 @@ Deno.serve(async (req) => {
 
     const { data: student, error: studentInsertError } = await supabase.from("students").insert({
       name,
-      email,
+      email: email || null,
       user_id: newUser.user.id,
       school_id: school.id,
       branch_id: branchRow.id,

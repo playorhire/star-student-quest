@@ -17,7 +17,7 @@ interface AuthState {
   user: AuthUser | null;
   session: Session | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string, method?: "email" | "phone") => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -109,8 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const login = useCallback(async (identifier: string, password: string, method: "email" | "phone" = "email") => {
+    const credentials = method === "phone"
+      ? { phone: identifier, password }
+      : { email: identifier, password };
+    const { error } = await supabase.auth.signInWithPassword(credentials);
     if (error) throw error;
   }, []);
 

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
 import { useState } from "react";
-import { GraduationCap, ScanLine, Shield, Users } from "lucide-react";
+import { GraduationCap, Mail, Phone, ScanLine, Shield, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -17,7 +17,8 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { login, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [method, setMethod] = useState<"email" | "phone">("email");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,18 +26,20 @@ function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email.trim()) { setError("Please enter your email."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("That doesn't look like a valid email address."); return; }
+    const value = identifier.trim();
+    if (!value) { setError(`Please enter your ${method === "email" ? "email" : "mobile number"}.`); return; }
+    if (method === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setError("That doesn't look like a valid email address."); return; }
+    if (method === "phone" && !/^\+[1-9]\d{7,14}$/.test(value)) { setError("Enter your mobile number with country code, for example +923001234567."); return; }
     if (!password) { setError("Please enter your password."); return; }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(value, password, method);
       // Auth state change listener will handle role detection and redirect happens in _authenticated or index
       navigate({ to: "/" });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Login failed";
       const friendly = /invalid login/i.test(raw)
-        ? "Incorrect email or password."
+        ? `Incorrect ${method === "email" ? "email" : "mobile number"} or password.`
         : /email not confirmed/i.test(raw)
         ? "Please confirm your email before signing in."
         : raw;
@@ -62,15 +65,23 @@ function LoginPage() {
         <p className="text-muted-foreground mb-8">Sign in to get started</p>
 
         <form onSubmit={handleLogin} className="space-y-4 text-left mb-8">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1" role="group" aria-label="Sign-in method">
+            <button type="button" onClick={() => { setMethod("email"); setIdentifier(""); setError(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "email" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              <Mail className="h-4 w-4" /> Email
+            </button>
+            <button type="button" onClick={() => { setMethod("phone"); setIdentifier(""); setError(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "phone" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+              <Phone className="h-4 w-4" /> Mobile
+            </button>
+          </div>
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">Email</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">{method === "email" ? "Email" : "Mobile number"}</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type={method === "email" ? "email" : "tel"}
+              value={identifier}
+              onChange={e => setIdentifier(e.target.value)}
               required
               className="w-full rounded-xl border border-border bg-card px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="you@school.edu"
+              placeholder={method === "email" ? "you@school.edu" : "+923001234567"}
             />
           </div>
           <div>
@@ -86,9 +97,9 @@ function LoginPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="text-right">
-            <Link to="/forgot-password" className="text-xs font-bold text-primary hover:underline">
+            {method === "email" && <Link to="/forgot-password" className="text-xs font-bold text-primary hover:underline">
               Forgot password?
-            </Link>
+            </Link>}
           </div>
           <button
             type="submit"

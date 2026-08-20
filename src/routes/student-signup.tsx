@@ -23,6 +23,8 @@ function StudentSignup() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
+    registration_method: "email" as "email" | "phone",
     password: "",
     school_id: "",
     branch_id: "",
@@ -161,7 +163,8 @@ function StudentSignup() {
         // Client-side required field check to provide clearer feedback
         const missing: string[] = [];
         if (!payload.name) missing.push("Full name");
-        if (!payload.email) missing.push("Email");
+        if (form.registration_method === "email" && !payload.email) missing.push("Email");
+        if (form.registration_method === "phone" && !payload.phone) missing.push("Mobile number");
         if (!payload.password) missing.push("Password");
         if (isCustomSchool) {
           if (!payload.school_name) missing.push("School name");
@@ -195,10 +198,10 @@ function StudentSignup() {
         }
 
       toast.success("Account created! Signing you in...");
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
+      const credentials = form.registration_method === "phone"
+        ? { phone: form.phone.trim(), password: form.password }
+        : { email: form.email.trim(), password: form.password };
+      const { error: signInError } = await supabase.auth.signInWithPassword(credentials);
 
       if (signInError) {
         toast.error("Account created. Please sign in manually.");
@@ -241,9 +244,24 @@ function StudentSignup() {
                 <Input id="name" required value={form.name} onChange={(e) => update("name", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" required value={form.email} onChange={(e) => update("email", e.target.value)} />
+                <Label>Register with</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant={form.registration_method === "email" ? "default" : "outline"} onClick={() => setForm((f) => ({ ...f, registration_method: "email" }))}>Email</Button>
+                  <Button type="button" variant={form.registration_method === "phone" ? "default" : "outline"} onClick={() => setForm((f) => ({ ...f, registration_method: "phone" }))}>Mobile</Button>
+                </div>
               </div>
+              {form.registration_method === "email" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" required value={form.email} onChange={(e) => update("email", e.target.value)} />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Mobile number</Label>
+                  <Input id="phone" type="tel" required value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+923001234567" />
+                  <p className="text-xs text-muted-foreground">Include your country code.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" required minLength={8} value={form.password} onChange={(e) => update("password", e.target.value)} />

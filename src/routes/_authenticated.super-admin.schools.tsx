@@ -5,9 +5,10 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Building2, Plus, Trash2, Pencil, Upload, Loader2, Search, X } from "lucide-react";
+import { Building2, CalendarDays, Eye, Plus, Trash2, Pencil, Upload, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/super-admin/schools")({
   component: SchoolsManagement,
@@ -20,6 +21,16 @@ function splitCommaSeparatedNames(rawValue: string) {
     .filter(Boolean);
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "Not available";
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function SchoolsManagement() {
   const { user } = useAuth();
   const [schools, setSchools] = useState<any[]>([]);
@@ -27,6 +38,9 @@ function SchoolsManagement() {
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
+  const [formCity, setFormCity] = useState("");
+  const [formCountry, setFormCountry] = useState("");
+  const [viewingSchool, setViewingSchool] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
@@ -55,7 +69,12 @@ function SchoolsManagement() {
 
   async function handleSave() {
     if (!formName.trim()) { toast.error("Name is required"); return; }
-    const payload = { name: formName.trim(), address: formAddress.trim() || null };
+    const payload = {
+      name: formName.trim(),
+      address: formAddress.trim() || null,
+      city: formCity.trim() || null,
+      country: formCountry.trim() || null,
+    };
 
     if (isEditing && isEditing !== "new") {
       const { error } = await (supabase as any).from("schools").update(payload).eq("id", isEditing);
@@ -70,7 +89,26 @@ function SchoolsManagement() {
     setIsEditing(null);
     setFormName("");
     setFormAddress("");
+    setFormCity("");
+    setFormCountry("");
     loadSchools();
+  }
+
+  function beginEditing(school: any) {
+    setViewingSchool(null);
+    setIsEditing(school.id);
+    setFormName(school.name);
+    setFormAddress(school.address || "");
+    setFormCity(school.city || "");
+    setFormCountry(school.country || "");
+  }
+
+  function cancelEditing() {
+    setIsEditing(null);
+    setFormName("");
+    setFormAddress("");
+    setFormCity("");
+    setFormCountry("");
   }
 
   async function handleDelete(id: string) {
@@ -247,7 +285,7 @@ function SchoolsManagement() {
           <h1 className="text-2xl font-black">Schools</h1>
           <p className="text-sm text-muted-foreground">Manage all schools in the system</p>
         </div>
-        <Button onClick={() => { setIsEditing("new"); setFormName(""); setFormAddress(""); }}>
+        <Button onClick={() => { setIsEditing("new"); setFormName(""); setFormAddress(""); setFormCity(""); setFormCountry(""); }}>
           <Plus className="h-4 w-4 mr-1" /> Add School
         </Button>
       </div>
@@ -257,9 +295,13 @@ function SchoolsManagement() {
           <CardContent className="p-4 space-y-3">
             <Input placeholder="School Name" value={formName} onChange={e => setFormName(e.target.value)} />
             <Input placeholder="Address (optional)" value={formAddress} onChange={e => setFormAddress(e.target.value)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input placeholder="City (optional)" value={formCity} onChange={e => setFormCity(e.target.value)} />
+              <Input placeholder="Country (optional)" value={formCountry} onChange={e => setFormCountry(e.target.value)} />
+            </div>
             <div className="flex gap-2">
               <Button onClick={handleSave}>Save</Button>
-              <Button variant="outline" onClick={() => setIsEditing(null)}>Cancel</Button>
+              <Button variant="outline" onClick={cancelEditing}>Cancel</Button>
             </div>
           </CardContent>
         </Card>
@@ -330,9 +372,13 @@ function SchoolsManagement() {
                   <div className="space-y-3">
                     <Input value={formName} onChange={e => setFormName(e.target.value)} />
                     <Input value={formAddress} onChange={e => setFormAddress(e.target.value)} />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input placeholder="City (optional)" value={formCity} onChange={e => setFormCity(e.target.value)} />
+                      <Input placeholder="Country (optional)" value={formCountry} onChange={e => setFormCountry(e.target.value)} />
+                    </div>
                     <div className="flex gap-2">
                       <Button onClick={handleSave}>Save</Button>
-                      <Button variant="outline" onClick={() => setIsEditing(null)}>Cancel</Button>
+                      <Button variant="outline" onClick={cancelEditing}>Cancel</Button>
                     </div>
                   </div>
                 ) : (
@@ -344,17 +390,30 @@ function SchoolsManagement() {
                       <div>
                         <div className="font-bold">{school.name}</div>
                         {school.address && <div className="text-sm text-muted-foreground">{school.address}</div>}
+                        {(school.city || school.country) && (
+                          <div className="text-sm text-muted-foreground">{[school.city, school.country].filter(Boolean).join(", ")}</div>
+                        )}
                         <div className="text-xs text-muted-foreground mt-1">
                           {school.branches?.length || 0} branches
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          Created {formatDate(school.created_at)}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" title="View school details" onClick={() => setViewingSchool(school)}>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View {school.name}</span>
+                      </Button>
                       <Button
                         variant="ghost" size="sm"
-                        onClick={() => { setIsEditing(school.id); setFormName(school.name); setFormAddress(school.address || ""); }}
+                        title="Edit school"
+                        onClick={() => beginEditing(school)}
                       >
                         <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit {school.name}</span>
                       </Button>
                       <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(school.id)}>
                         <Trash2 className="h-4 w-4" />
@@ -367,6 +426,37 @@ function SchoolsManagement() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!viewingSchool} onOpenChange={(open) => !open && setViewingSchool(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{viewingSchool?.name}</DialogTitle>
+          </DialogHeader>
+          {viewingSchool && (
+            <div className="space-y-4 text-sm">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                <dt className="font-medium text-muted-foreground">Address</dt>
+                <dd>{viewingSchool.address || "Not provided"}</dd>
+                <dt className="font-medium text-muted-foreground">City</dt>
+                <dd>{viewingSchool.city || "Not provided"}</dd>
+                <dt className="font-medium text-muted-foreground">Country</dt>
+                <dd>{viewingSchool.country || "Not provided"}</dd>
+                <dt className="font-medium text-muted-foreground">Created</dt>
+                <dd>{formatDate(viewingSchool.created_at)}</dd>
+                <dt className="font-medium text-muted-foreground">Last updated</dt>
+                <dd>{formatDate(viewingSchool.updated_at)}</dd>
+                <dt className="font-medium text-muted-foreground">Branches</dt>
+                <dd>{viewingSchool.branches?.length || 0}</dd>
+              </dl>
+              <div className="flex justify-end">
+                <Button onClick={() => beginEditing(viewingSchool)}>
+                  <Pencil className="mr-1 h-4 w-4" /> Edit school
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

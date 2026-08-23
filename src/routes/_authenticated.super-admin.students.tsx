@@ -64,7 +64,7 @@ function SuperAdminStudents() {
       const [studentsRes, schoolsRes, classesRes] = await Promise.all([
         (supabase as any)
           .from("students")
-          .select("id, name, email, roll_number, section, total_points, avatar_emoji, class_id, school_id, schools(name), classes(name)")
+          .select("id, user_id, name, email, roll_number, section, total_points, avatar_emoji, class_id, school_id, schools:schools!students_school_id_fkey(name), classes:classes!students_class_id_fkey(name, school_id)")
           .order("name"),
         (supabase as any).from("schools").select("id, name").order("name"),
         (supabase as any).from("classes").select("id, name, school_id").order("name"),
@@ -80,7 +80,20 @@ function SuperAdminStudents() {
         throw classesRes.error;
       }
 
-      setStudents(studentsRes.data || []);
+      const schoolsById = new Map((schoolsRes.data || []).map((school: any) => [school.id, school]));
+      const studentsWithSchools = (studentsRes.data || []).map((student: any) => {
+        // Some older student records only have their class linked. Use the class's
+        // school in that case so every student still shows under the right school.
+        const schoolId = student.school_id || student.classes?.school_id || null;
+
+        return {
+          ...student,
+          school_id: schoolId,
+          schools: student.schools || (schoolId ? schoolsById.get(schoolId) : null),
+        };
+      });
+
+      setStudents(studentsWithSchools);
       setSchools(schoolsRes.data || []);
       setClasses(classesRes.data || []);
     } catch (err: any) {
@@ -109,10 +122,12 @@ function SuperAdminStudents() {
     setSavingEdit(true);
     setEditError("");
     try {
+      const selectedClass = classes.find((schoolClass) => schoolClass.id === editClassId);
       const payload: any = {
         name: editName.trim(),
         roll_number: editRoll.trim(),
         class_id: editClassId,
+        school_id: selectedClass?.school_id || editStudent.school_id,
         section: editSection || "A",
         email: editEmail.trim() || null,
       };
@@ -303,7 +318,7 @@ function SuperAdminStudents() {
   const studentCountsBySchool = schools.map((school) => ({
     ...school,
     count: students.filter((student) => student.school_id === school.id).length,
-  }));
+  })).filter((school) => school.count > 0);
 
   if (!user || user.role !== "super_admin") {
     return (
@@ -344,7 +359,7 @@ function SuperAdminStudents() {
               className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="">All schools</option>
-              {schools.map((school) => (
+              {studentCountsBySchool.map((school) => (
                 <option key={school.id} value={school.id}>{school.name}</option>
               ))}
             </select>
@@ -389,17 +404,19 @@ function SuperAdminStudents() {
         </CardContent>
       </Card>
 
-      <Card className="border border-border bg-card">
-        <CardContent className="grid gap-3 md:grid-cols-3">
-          {studentCountsBySchool.map((school) => (
-            <div key={school.id} className="rounded-2xl border border-input bg-background p-4">
-              <div className="text-sm text-muted-foreground">{school.name}</div>
-              <div className="mt-2 text-2xl font-bold">{school.count}</div>
-              <div className="text-xs text-muted-foreground">students</div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {studentCountsBySchool.length > 0 && (
+        <Card className="border border-border bg-card">
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            {studentCountsBySchool.map((school) => (
+              <div key={school.id} className="rounded-2xl border border-input bg-background p-4">
+                <div className="text-sm text-muted-foreground">{school.name}</div>
+                <div className="mt-2 text-2xl font-bold">{school.count}</div>
+                <div className="text-xs text-muted-foreground">students</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-3">
         {filtered.map((student) => (

@@ -77,6 +77,7 @@ import { Route as AuthenticatedTeacherMessagesRouteImport } from './routes/_auth
 import { Route as AuthenticatedTeacherNotificationsRouteImport } from './routes/_authenticated.teacher.notifications'
 import { Route as AuthenticatedTeacherProfileRouteImport } from './routes/_authenticated.teacher.profile'
 import { Route as AuthenticatedTeacherRewardsRouteImport } from './routes/_authenticated.teacher.rewards'
+import { Route as AuthenticatedTeacherRulesRouteImport } from './routes/_authenticated.teacher.rules'
 import { Route as AuthenticatedTeacherScanRouteImport } from './routes/_authenticated.teacher.scan'
 import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_authenticated.teacher.students'
 import { Route as AuthenticatedVendorDashboardRouteImport } from './routes/_authenticated.vendor.dashboard'
@@ -477,6 +478,12 @@ const AuthenticatedTeacherRewardsRoute =
     path: '/rewards',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedTeacherRulesRoute =
+  AuthenticatedTeacherRulesRouteImport.update({
+    id: '/rules',
+    path: '/rules',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedTeacherScanRoute =
   AuthenticatedTeacherScanRouteImport.update({
     id: '/scan',
@@ -588,6 +595,7 @@ export interface FileRoutesByFullPath {
   '/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
+  '/teacher/rules': typeof AuthenticatedTeacherRulesRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
@@ -664,6 +672,7 @@ export interface FileRoutesByTo {
   '/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
+  '/teacher/rules': typeof AuthenticatedTeacherRulesRoute
   '/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
@@ -742,6 +751,7 @@ export interface FileRoutesById {
   '/_authenticated/teacher/notifications': typeof AuthenticatedTeacherNotificationsRoute
   '/_authenticated/teacher/profile': typeof AuthenticatedTeacherProfileRoute
   '/_authenticated/teacher/rewards': typeof AuthenticatedTeacherRewardsRoute
+  '/_authenticated/teacher/rules': typeof AuthenticatedTeacherRulesRoute
   '/_authenticated/teacher/scan': typeof AuthenticatedTeacherScanRoute
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRoute
   '/_authenticated/vendor/dashboard': typeof AuthenticatedVendorDashboardRoute
@@ -820,6 +830,7 @@ export interface FileRouteTypes {
     | '/teacher/notifications'
     | '/teacher/profile'
     | '/teacher/rewards'
+    | '/teacher/rules'
     | '/teacher/scan'
     | '/teacher/students'
     | '/vendor/dashboard'
@@ -896,6 +907,7 @@ export interface FileRouteTypes {
     | '/teacher/notifications'
     | '/teacher/profile'
     | '/teacher/rewards'
+    | '/teacher/rules'
     | '/teacher/scan'
     | '/teacher/students'
     | '/vendor/dashboard'
@@ -973,6 +985,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/notifications'
     | '/_authenticated/teacher/profile'
     | '/_authenticated/teacher/rewards'
+    | '/_authenticated/teacher/rules'
     | '/_authenticated/teacher/scan'
     | '/_authenticated/teacher/students'
     | '/_authenticated/vendor/dashboard'
@@ -1470,6 +1483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherRewardsRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/teacher/rules': {
+      id: '/_authenticated/teacher/rules'
+      path: '/rules'
+      fullPath: '/teacher/rules'
+      preLoaderRoute: typeof AuthenticatedTeacherRulesRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/teacher/scan': {
       id: '/_authenticated/teacher/scan'
       path: '/scan'
@@ -1699,6 +1719,7 @@ interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherNotificationsRoute: typeof AuthenticatedTeacherNotificationsRoute
   AuthenticatedTeacherProfileRoute: typeof AuthenticatedTeacherProfileRoute
   AuthenticatedTeacherRewardsRoute: typeof AuthenticatedTeacherRewardsRoute
+  AuthenticatedTeacherRulesRoute: typeof AuthenticatedTeacherRulesRoute
   AuthenticatedTeacherScanRoute: typeof AuthenticatedTeacherScanRoute
   AuthenticatedTeacherStudentsRoute: typeof AuthenticatedTeacherStudentsRoute
 }
@@ -1712,6 +1733,7 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
     AuthenticatedTeacherNotificationsRoute,
   AuthenticatedTeacherProfileRoute: AuthenticatedTeacherProfileRoute,
   AuthenticatedTeacherRewardsRoute: AuthenticatedTeacherRewardsRoute,
+  AuthenticatedTeacherRulesRoute: AuthenticatedTeacherRulesRoute,
   AuthenticatedTeacherScanRoute: AuthenticatedTeacherScanRoute,
   AuthenticatedTeacherStudentsRoute: AuthenticatedTeacherStudentsRoute,
 }

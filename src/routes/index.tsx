@@ -1,312 +1,38 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useAuth } from "../lib/auth-context";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { ArrowRight, Gift, GraduationCap, Handshake, School, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { QrCode, Trophy, Gift, Sparkles, Zap, ArrowRight, Star } from "lucide-react";
+import { useAuth } from "../lib/auth-context";
 
-export const Route = createFileRoute("/")({
-  component: Index,
-  head: () => ({
-    meta: [
-      { title: "StarPoints — Learn, Earn, Shine ✨" },
-      { name: "description", content: "A playful school rewards app where students earn points, climb the leaderboard, and redeem fun rewards with a tap of their QR card." },
-      { property: "og:title", content: "StarPoints — Learn, Earn, Shine ✨" },
-      { property: "og:description", content: "Gamified learning for classrooms. Points, badges, leaderboards, and a rewards shop kids actually love." },
-    ],
-  }),
-});
+export const Route = createFileRoute("/")({ component: Index, head: () => ({ meta: [{ title: "StarPoints — Achieve. Earn. Shine." }, { name: "description", content: "A smarter way to recognise student achievement." }] }) });
+
+const features = [
+  [Trophy, "Recognize Achievement", "Celebrate the good work, kindness and progress that happens every day.", "bg-[#fff5ce] text-[#edab00]"],
+  [Sparkles, "Reward Positive Performance", "Turn the effort students put in into moments they can be proud of.", "bg-[#eff1ff] text-[#305ee7]"],
+  [Zap, "Track Student Progress", "Give every learner a clear view of their achievements and goals.", "bg-[#e9fbf5] text-[#06a87c]"],
+  [Gift, "Unlock Real Rewards", "Create rewards students are genuinely excited to work towards.", "bg-[#f5ecff] text-[#8c49d9]"],
+  [Handshake, "Connect Schools & Brands", "Build positive partnerships that bring more opportunities to students.", "bg-[#edf7ff] text-[#0874db]"],
+  [Users, "Bring Everyone Together", "Keep teachers, families, schools and reward partners in one place.", "bg-[#fff1ed] text-[#ed744f]"],
+] as const;
+
+function ProductCard() {
+  return <div className="mx-auto w-full max-w-md rounded-[28px] border-4 border-slate-900 bg-white p-3 shadow-2xl shadow-blue-900/20"><div className="rounded-[19px] bg-[#f6fbff] p-4"><div className="flex items-center justify-between"><span className="text-xs font-extrabold text-[#0874db]">★ StarPoints</span><span className="h-2 w-12 rounded bg-slate-200" /></div><p className="mt-6 text-xs font-bold text-slate-500">My Points</p><div className="mt-1 flex items-center gap-2 text-2xl font-black text-[#053b85]"><Star className="h-6 w-6 fill-[#ffca12] text-[#ffca12]" /> 1,250</div><div className="mt-3 h-2 rounded-full bg-blue-100"><div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#0974e7] to-[#06b58a]" /></div><p className="mt-6 text-xs font-bold text-slate-500">Recent Achievements</p>{[["Mathematics", "+85"], ["English", "+72"], ["Science", "+90"]].map(([x, p], i) => <div className="mt-3 flex items-center justify-between text-xs" key={x}><span className="flex items-center gap-2 font-bold text-slate-700"><span className={`grid h-5 w-5 place-items-center rounded-full ${i === 0 ? "bg-yellow-100" : i === 1 ? "bg-green-100" : "bg-violet-100"}`}>✦</span>{x}</span><b className="text-[#06a87c]">{p}</b></div>)}<div className="mt-7 flex justify-around border-t pt-3 text-[10px] font-bold text-[#0874db]"><span>⌂<br />Home</span><span>♧<br />Rewards</span><span>♙<br />Profile</span></div></div></div>;
+}
 
 function Index() {
-  const { isAuthenticated, user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (loading) return;
-    if (isAuthenticated && user) {
-      if (user.role === "super_admin") navigate({ to: "/super-admin/dashboard" as any });
-      else if (user.role === "school_admin" || user.role === "admin") navigate({ to: "/school-admin/dashboard" as any });
-      else if (user.role === "branch_admin") navigate({ to: "/branch-admin/dashboard" as any });
-      else if (user.role === "teacher") navigate({ to: "/teacher/dashboard" });
-      else if (user.role === "parent") navigate({ to: "/parent/dashboard" });
-      else if (user.role === "vendor") navigate({ to: "/vendor/dashboard" as any });
-      else navigate({ to: "/student/dashboard" });
-    }
-  }, [isAuthenticated, user, loading, navigate]);
-
-  if (loading || isAuthenticated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-4xl animate-bounce">🎓</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-primary/5 to-accent/10">
-      {/* Decorative pastel blobs */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl animate-pulse" />
-        <div className="absolute top-40 -right-20 h-80 w-80 rounded-full bg-accent/20 blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-secondary/30 blur-3xl animate-pulse" style={{ animationDelay: "2s" }} />
-      </div>
-
-      {/* Nav */}
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-lg shadow-lg shadow-primary/30">
-            ✨
-          </div>
-          <span className="text-lg font-black tracking-tight text-foreground">StarPoints</span>
-        </Link>
-        <nav className="flex items-center gap-2">
-          <Link to="/login" className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-sm font-bold text-foreground/80 hover:text-foreground transition-colors">
-            Log in
-          </Link>
-          <Link to={"/register-school" as any}>
-            <Button className="rounded-full px-5 font-bold shadow-md shadow-primary/30">
-              Register School <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </Link>
-        </nav>
-      </header>
-
-      {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 pt-8 pb-16 sm:pt-16">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
-          <div className="text-center lg:text-left animate-fade-in">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/60 backdrop-blur px-4 py-1.5 text-xs font-bold text-primary shadow-sm">
-              <Sparkles className="h-3.5 w-3.5" /> Made for classrooms kids love
-            </div>
-            <h1 className="mt-5 text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight text-foreground">
-              Learn, Earn,{" "}
-              <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-                Shine
-              </span>{" "}
-              ✨
-            </h1>
-            <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
-              Turn every quiz, project, and gold-star moment into points. Scan, earn,
-              climb the leaderboard, and redeem rewards — all in one playful app for
-              students, teachers, and parents. 🎉
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center lg:justify-start gap-3">
-              <Link to={"/register-school" as any}>
-                <Button size="lg" className="rounded-full px-7 h-12 text-base font-bold shadow-xl shadow-primary/30 hover:scale-105 transition-transform">
-                  Register your School <Zap className="ml-1 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="rounded-full px-7 h-12 text-base font-bold bg-white/60 backdrop-blur border-2">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/student-signup">
-                <Button size="lg" className="rounded-full px-7 h-12 text-base font-bold bg-[#f6b46b] text-white border-2 border-[#f6b46b] shadow-md hover:bg-primary hover:border-primary transition-all duration-200">
-                  Student sign up
-                </Button>
-              </Link>
-            </div>
-            <div className="mt-6 flex items-center justify-center lg:justify-start gap-5 text-xs text-muted-foreground font-semibold">
-              <div className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-secondary text-secondary" /> Loved by teachers</div>
-              <div>🧒 Kid-friendly</div>
-              <div>📱 Mobile-first</div>
-            </div>
-          </div>
-
-          {/* Animated illustration */}
-          <div className="relative mx-auto w-full max-w-md animate-fade-in">
-            <div className="relative aspect-square">
-              {/* Glass card phone */}
-              <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-white/70 to-white/30 backdrop-blur-xl border border-white/60 shadow-2xl shadow-primary/20" />
-
-              {/* Student avatar */}
-              <div className="absolute top-8 left-8 flex items-center gap-3 rounded-2xl bg-white/80 backdrop-blur px-3 py-2 shadow-lg animate-fade-in">
-                <div className="text-3xl">🧑‍🎓</div>
-                <div>
-                  <div className="text-xs font-black text-foreground">Maaz</div>
-                  <div className="text-[10px] text-muted-foreground">Class 7A</div>
-                </div>
-              </div>
-
-              {/* Points popup */}
-              <div className="absolute top-6 right-6 rounded-2xl bg-gradient-to-br from-primary to-accent px-4 py-3 text-center shadow-xl shadow-primary/40 animate-bounce" style={{ animationDuration: "2.5s" }}>
-                <div className="text-[10px] font-bold text-white/80">+ Points</div>
-                <div className="text-2xl font-black text-white">+50 ⚡</div>
-              </div>
-
-              {/* QR code */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-2xl">
-                <div className="grid grid-cols-6 gap-1">
-                  {Array.from({ length: 36 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-3 w-3 rounded-sm ${
-                        [0, 1, 2, 5, 6, 10, 12, 13, 17, 20, 22, 25, 27, 28, 31, 33, 35].includes(i)
-                          ? "bg-foreground"
-                          : "bg-transparent"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <div className="mt-2 text-center text-[10px] font-black tracking-widest text-foreground">SCAN ME</div>
-              </div>
-
-              {/* Floating emojis */}
-              <div className="absolute bottom-10 left-6 text-4xl animate-bounce" style={{ animationDuration: "3s" }}>🏆</div>
-              <div className="absolute bottom-16 right-10 text-3xl animate-bounce" style={{ animationDuration: "2s", animationDelay: "0.5s" }}>🎁</div>
-              <div className="absolute top-1/3 right-4 text-2xl animate-pulse">⭐</div>
-              <div className="absolute bottom-4 right-1/3 text-2xl animate-pulse" style={{ animationDelay: "1s" }}>💜</div>
-
-              {/* Teacher card */}
-              <div className="absolute bottom-6 left-6 flex items-center gap-2 rounded-2xl bg-white/80 backdrop-blur px-3 py-2 shadow-lg">
-                <div className="text-2xl">👩‍🏫</div>
-                <div className="text-[10px] font-bold text-foreground">Ms. Qurat ul Ain scanned!</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-     
-
-      {/* Features */}
-      <section id="features" className="relative z-10 mx-auto max-w-6xl px-5 pb-20">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-4 py-1.5 text-xs font-bold text-accent">
-            🎯 Everything you need
-          </div>
-          <h2 className="mt-4 text-3xl sm:text-4xl font-black text-foreground">
-            Built for joyful learning
-          </h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            Four playful tools that turn classrooms into adventures.
-          </p>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          {[
-            {
-              icon: Zap,
-              emoji: "⚡",
-              title: "Points System",
-              desc: "Teachers award points instantly for great work, kindness, and effort. Auto-calculated by activity/quiz rules.",
-              tint: "from-primary/20 to-primary/5",
-              iconColor: "text-primary",
-            },
-            {
-              icon: Trophy,
-              emoji: "🏆",
-              title: "Badges",
-              desc: "Earn badges as you climb — Bronze, Silver, Gold and beyond.",
-              tint: "from-secondary/30 to-secondary/5",
-              iconColor: "text-secondary-foreground",
-            },
-            {
-              icon: Gift,
-              emoji: "🎁",
-              title: "Rewards Shop",
-              desc: "Spend points on real treats — homework passes, stickers, extra recess. Admins set the catalog.",
-              tint: "from-accent/20 to-accent/5",
-              iconColor: "text-accent",
-            },
-            {
-              icon: QrCode,
-              emoji: "📱",
-              title: "QR Card",
-              desc: "Every student has a unique QR. Teachers scan, points fly, parents get notified. Magic.",
-              tint: "from-primary/20 to-accent/10",
-              iconColor: "text-primary",
-            },
-          ].map((f) => (
-            <div
-              key={f.title}
-              className={`group relative overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br ${f.tint} backdrop-blur-xl p-6 shadow-lg shadow-primary/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/80 backdrop-blur text-3xl shadow-md">
-                  {f.emoji}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    {f.title}
-                    <f.icon className={`h-4 w-4 ${f.iconColor}`} />
-                  </h3>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Roles strip */}
-        <div className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[
-            { emoji: "🧑‍🎓", title: "Students", desc: "Earn, collect badges, redeem rewards" },
-            { emoji: "👩‍🏫", title: "Teachers", desc: "Scan QR, award points in seconds" },
-            { emoji: "👨‍👩‍👧", title: "Parents", desc: "Get notified when kids shine" },
-          ].map((r) => (
-            <div key={r.title} className="rounded-3xl border border-white/60 bg-white/50 backdrop-blur-xl p-5 text-center shadow-md">
-              <div className="text-4xl">{r.emoji}</div>
-              <div className="mt-2 font-black text-foreground">{r.title}</div>
-              <div className="text-xs text-muted-foreground mt-1">{r.desc}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="relative mt-16 overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary via-accent to-secondary p-10 text-center shadow-2xl shadow-primary/30">
-          <div className="absolute -top-10 -right-10 text-9xl opacity-20">✨</div>
-          <div className="absolute -bottom-8 -left-8 text-9xl opacity-20">🎉</div>
-          <h3 className="relative text-3xl sm:text-4xl font-black text-white">
-            Ready to make learning sparkle?
-          </h3>
-          <p className="relative mt-3 text-white/90 max-w-md mx-auto">
-            Join classrooms turning every gold-star moment into a celebration.
-          </p>
-          <Link to={"/register-school" as any} className="relative inline-block mt-6">
-            <Button size="lg" className="rounded-full px-8 h-12 bg-white text-primary hover:bg-white/90 font-black text-base shadow-xl hover:scale-105 transition-transform">
-              Register your School <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </section>
-
- {/* Supporting Organizations */}
-      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-8">
-        <div className="rounded-[2rem] border border-white/60 bg-white/60 p-6 shadow-lg shadow-primary/10 backdrop-blur-xl sm:p-8">
-          <p className="text-center text-sm font-bold uppercase tracking-[0.25em] text-muted-foreground">
-            Proudly supporting organizations
-          </p>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {[
-              { name: "Knorr", src: "/logos/knorr.svg" },
-              { name: "EBM", src: "/logos/ebm.svg" },
-              { name: "Candyland", src: "/logos/candyland.svg" },
-            ].map((logo) => (
-              <div key={logo.name} className="flex items-center justify-center rounded-2xl border border-primary/10 bg-white/80 p-3 shadow-sm">
-                <img src={logo.src} alt={logo.name} className="h-20 w-full max-w-[180px] object-contain" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <footer className="relative z-10 border-t border-white/40 bg-white/30 backdrop-blur py-6 text-center text-xs text-muted-foreground">
-        Question ! 0331-897-2780 <br />
-        <div className="inline-flex flex-wrap items-center justify-center gap-3 mt-4">
-          <Button asChild size="lg" variant="outline">
-            <a href="https://www.youtube.com/@starpointsdotapp" target="_blank" rel="noreferrer">
-              YouTube
-            </a>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <a href="https://www.linkedin.com/company/starpointsapp/" target="_blank" rel="noreferrer">
-              LinkedIn
-            </a>
-          </Button>
-        </div>
-        <div className="mt-3">Made with 💜 for curious kids • © {new Date().getFullYear()} StarPoints</div>
-      </footer>
-    </div>
-  );
+  const { isAuthenticated, user, loading } = useAuth(); const navigate = useNavigate();
+  useEffect(() => { if (!loading && isAuthenticated && user) { const paths: Record<string, string> = { super_admin: "/super-admin/dashboard", school_admin: "/school-admin/dashboard", admin: "/school-admin/dashboard", branch_admin: "/branch-admin/dashboard", teacher: "/teacher/dashboard", parent: "/parent/dashboard", vendor: "/vendor/dashboard", student: "/student/dashboard" }; navigate({ to: (paths[user.role] || "/student/dashboard") as never }); } }, [loading, isAuthenticated, user, navigate]);
+  if (loading || isAuthenticated) return <div className="grid min-h-screen place-items-center"><Sparkles className="animate-pulse text-blue-600" /></div>;
+  return <main className="overflow-hidden bg-white text-[#073d7a]">
+    <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8"><Link to="/" className="flex items-center gap-2"><img src="/logos/starpoints.png" className="h-11 w-11 object-contain" alt="StarPoints" /><span className="hidden text-xl font-black tracking-tight sm:block">StarPoints<small className="block text-[9px] font-bold">Achieve. Earn. Shine.</small></span></Link><nav className="hidden gap-6 text-xs font-bold lg:flex"><a href="#home" className="text-blue-600">Home</a><a href="#why">About</a><a href="#students">For Students</a><a href="#teachers">For Teachers</a><a href="#schools">For Schools</a><a href="#partners">Reward Partners</a></nav><div className="flex gap-2"><Link to="/login"><Button variant="outline" className="rounded-full border-blue-500 bg-white text-xs font-bold text-blue-700 hover:bg-blue-50">Login</Button></Link><Link to={"/register-school" as any}><Button className="rounded-full bg-[#0874db] text-xs font-bold shadow-md shadow-blue-200 hover:bg-[#065fc0]">Get Started</Button></Link></div></header>
+    <section id="home" className="relative isolate bg-gradient-to-r from-[#f8fcff] via-[#e8f7ff] to-[#dbf2ff] px-5 py-14 sm:px-8 lg:py-20"><div className="absolute inset-y-0 right-0 -z-10 hidden w-[44%] bg-gradient-to-br from-blue-200 via-sky-100 to-yellow-100 lg:block" /><div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[.95fr_1.05fr]"><div><h1 className="text-4xl font-black tracking-tight sm:text-6xl">Achieve. <span className="text-[#0874db]">Earn.</span> <span className="text-[#f5b900]">Shine.</span><Sparkles className="ml-1 inline h-8 w-8 text-[#f5b900]" /></h1><p className="mt-5 max-w-lg text-lg leading-7 text-[#164b82]">A smarter way to recognize student achievement and turn it into meaningful rewards.</p><div className="mt-8 flex flex-wrap gap-3"><Link to="/student-signup"><Button className="h-11 rounded-xl bg-[#0874db] px-5 font-bold hover:bg-[#065fc0]"><GraduationCap /> I’m a Student</Button></Link><Link to={"/register-school" as any}><Button variant="outline" className="h-11 rounded-xl border-blue-500 bg-white px-5 font-bold text-blue-700 hover:bg-blue-50"><School /> For Schools</Button></Link><a href="#partners"><Button className="h-11 rounded-xl bg-[#06a87c] px-5 font-bold hover:bg-[#058964]"><Handshake /> Become a Reward Partner</Button></a></div></div><div className="relative mx-auto flex w-full max-w-xl justify-center py-4"><div className="absolute h-80 w-80 rounded-full bg-yellow-200/70 blur-2xl" /><div className="relative w-64 rotate-3 sm:w-72"><ProductCard /></div><div className="absolute bottom-2 left-4 rounded-2xl bg-white px-4 py-3 shadow-lg"><p className="text-xs font-bold">Small steps.</p><p className="text-lg font-black text-[#06a87c]">Big dreams.</p></div></div></div></section>
+    <section className="bg-[#f7fcff] px-5 py-14 sm:px-8"><div className="mx-auto max-w-6xl text-center"><h2 className="text-2xl font-black sm:text-3xl">How StarPoints Works</h2><p className="mt-2 text-sm">It’s simple. Achievements turn into points, and points turn into rewards.</p><div className="mt-10 grid gap-7 sm:grid-cols-2 lg:grid-cols-4">{[[GraduationCap,"1. Achieve","Students earn StarPoints for academic achievements and positive performance.","bg-[#0874db]"],[Users,"2. Earn Points","Teachers recognize achievements and award points through StarPoints.","bg-[#06a87c]"],[Trophy,"3. Track Progress","Students view their points, achievements and progress in the app or portal.","bg-[#f5b900]"],[Gift,"4. Redeem Rewards","Students use their points to unlock exciting rewards from partners.","bg-[#8c49d9]"]].map(([Icon,title,text,color]) => <div key={title as string}><div className={`mx-auto grid h-16 w-16 place-items-center rounded-full text-white shadow-lg ${color as string}`}><Icon className="h-7 w-7" /></div><h3 className="mt-5 font-black">{title as string}</h3><p className="mx-auto mt-2 max-w-[200px] text-sm leading-5">{text as string}</p></div>)}</div></div></section>
+    <section id="why" className="mx-auto grid max-w-7xl gap-10 px-5 py-16 sm:px-8 lg:grid-cols-2 lg:py-24"><div><h2 className="text-3xl font-black">Why StarPoints?</h2><p className="mt-3 text-lg leading-7">We believe every student has a unique ability.<br />Let’s recognize it.</p><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{features.map(([Icon,title,text,tone]) => <div key={title} className="rounded-2xl bg-[#f6faff] p-4 text-center"><div className={`mx-auto grid h-10 w-10 place-items-center rounded-xl ${tone}`}><Icon className="h-5 w-5" /></div><h3 className="mt-3 text-xs font-black leading-4">{title}</h3><p className="sr-only">{text}</p></div>)}</div></div><div className="relative flex items-center justify-center rounded-[32px] bg-gradient-to-br from-[#effaff] to-[#f9f5ff] p-8"><div className="w-72"><ProductCard /></div><div className="absolute -right-1 top-8 rounded-3xl bg-[#fff4c1] px-4 py-3 text-center text-sm font-black text-[#b57d00] -rotate-6">Your<br />Progress<br />Matters!</div></div></section>
+    <section id="students" className="mx-auto grid max-w-7xl gap-5 px-5 pb-20 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">{[["For Students","Your Effort. Your Points. Your Rewards.","Study hard. Participate. Improve. Get recognized. Earn StarPoints. Redeem rewards.","bg-[#fff8dc]","Create Student Account","/student-signup"],["For Teachers","Make Every Achievement Count.","Recognize achievements, award points, track performance and encourage positive behavior.","bg-[#eafbf5]","Teacher Login","/login"],["For Schools","Build a Culture of Achievement.","Digital reward management, student engagement, tracking and reporting — all in one place.","bg-[#eaf5ff]","Register Your School","/register-school"],["Reward Partners","Turn Your Brand Into a Student Reward.","Reach students through meaningful rewards — not just advertising.","bg-[#f7efff]","Become a Reward Partner","#partners"]].map(([eyebrow,title,text,bg,cta,path], i) => <article id={i === 1 ? "teachers" : i === 2 ? "schools" : i === 3 ? "partners" : undefined} key={eyebrow} className={`rounded-2xl border border-slate-100 p-5 ${bg}`}><div className="mb-6 h-20 rounded-xl bg-white/70" /><p className="text-sm font-black">{eyebrow}</p><h3 className="mt-3 min-h-14 text-lg font-black leading-5">{title}</h3><p className="mt-3 min-h-20 text-sm leading-5">{text}</p>{path.startsWith("/") ? <Link to={path as any}><Button className="mt-5 rounded-lg bg-[#0874db] text-xs font-bold hover:bg-[#065fc0]">{cta} <ArrowRight /></Button></Link> : <a href={path}><Button className="mt-5 rounded-lg bg-[#8c49d9] text-xs font-bold hover:bg-[#7032bc]">{cta} <ArrowRight /></Button></a>}</article>)}</section>
+    <section className="border-t border-blue-50 bg-white px-5 py-16 sm:px-8"><div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[.8fr_1.2fr]"><div><h2 className="text-3xl font-black">The StarPoints Ecosystem</h2><p className="mt-4 max-w-sm leading-6">Bringing together schools, teachers, students and partners—for a brighter future for every child.</p></div><div className="relative mx-auto grid w-full max-w-xl grid-cols-3 items-center gap-4 text-center"><div className="rounded-full border border-blue-100 bg-[#eef7ff] p-5"><School className="mx-auto h-7 w-7 text-[#0874db]" /><p className="mt-2 text-xs font-black">Schools</p></div><div className="row-span-2 grid aspect-square place-items-center rounded-full border-4 border-[#0874db] bg-white p-5 shadow-xl shadow-blue-100"><div><Star className="mx-auto h-10 w-10 fill-[#ffcb1c] text-[#ffcb1c]" /><p className="mt-2 text-lg font-black">StarPoints</p></div></div><div className="rounded-full border border-emerald-100 bg-[#e8fbf5] p-5"><Users className="mx-auto h-7 w-7 text-[#06a87c]" /><p className="mt-2 text-xs font-black">Teachers</p></div><div className="rounded-full border border-violet-100 bg-[#f5edff] p-5"><Handshake className="mx-auto h-7 w-7 text-[#8c49d9]" /><p className="mt-2 text-xs font-black">Partners</p></div><div className="rounded-full border border-yellow-100 bg-[#fff9df] p-5"><GraduationCap className="mx-auto h-7 w-7 text-[#e0a400]" /><p className="mt-2 text-xs font-black">Students</p></div></div></div></section>
+    <section className="border-y border-blue-50 bg-white px-5 py-7 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row"><div><p className="font-black">Our Reward Partners</p><p className="text-sm">Trusted brands. Real rewards.</p></div><div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-lg font-black text-slate-400"><span>nestlé</span><span className="text-red-500">EBM</span><span className="text-amber-600">Books & Beyond</span><span className="text-emerald-500">careem</span><span className="text-red-500">TCS</span></div></div></section>
+    <section className="bg-gradient-to-r from-[#f6fffd] to-[#f2faff] px-5 py-11 sm:px-8"><div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center lg:flex-row lg:text-left"><div><h2 className="text-2xl font-black">Our Impact</h2><p>Real change. Brighter futures.</p></div><div className="grid grid-cols-2 gap-6 text-center sm:grid-cols-4">{[["500+","Schools"],["25,000+","Students"],["100,000+","Achievements"],["50+","Reward Partners"]].map(([number,label]) => <div key={label}><p className="text-2xl font-black text-[#0874db]">{number}</p><p className="text-xs font-bold">{label}</p></div>)}</div></div></section>
+    <section className="bg-[#0874db] px-5 py-14 text-center text-white sm:px-8"><h2 className="text-3xl font-black">Every Child Has the Ability to Shine.</h2><p className="mx-auto mt-3 max-w-lg">Let’s recognize their effort, celebrate their achievements, and give them something to look forward to.</p><Link to={"/register-school" as any}><Button className="mt-7 h-11 rounded-full bg-[#ffcb1c] px-7 font-bold text-[#073d7a] hover:bg-[#ffd84f]">Join StarPoints Today <ArrowRight /></Button></Link></section>
+    <footer className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-8 text-xs sm:flex-row sm:px-8"><Link to="/" className="flex items-center gap-2 font-black"><img src="/logos/starpoints.png" className="h-8 w-8" alt="" />StarPoints</Link><div className="flex gap-4 font-bold"><a href="#home">Home</a><a href="#why">About</a><a href="#students">For Students</a><a href="#schools">For Schools</a></div><span>© {new Date().getFullYear()} StarPoints</span></footer>
+  </main>;
 }

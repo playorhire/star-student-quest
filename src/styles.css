@@ -140,3 +140,29 @@
   }
 }
 #lovable-badge { display: none !important; }
+
+/* Homepage reference imagery: kept as responsive background regions while copy and
+   controls remain real, accessible HTML. */
+#home > * { position: relative; z-index: 1; }
+#home::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 0 auto;
+  width: 58%;
+  background: url("/home/hero-students.png") center right / cover no-repeat;
+  mask-image: linear-gradient(to right, transparent 0%, black 22%);
+}
+#students article > div:first-child {
+  height: 122px;
+  background-position: center;
+  background-size: cover;
+}
+#students article:nth-child(1) > div:first-child { background-image: url("/home/student-card.png"); }
+#students article:nth-child(2) > div:first-child { background-image: url("/home/teacher-card.png"); }
+#students article:nth-child(3) > div:first-child { background-image: url("/home/school-card.png"); }
+#students article:nth-child(4) > div:first-child { background-image: url("/home/partner-card.png"); }
+
+@media (max-width: 1023px) {
+  #home::after { opacity: .18; width: 100%; mask-image: none; }
+}

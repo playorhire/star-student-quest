@@ -17,7 +17,7 @@ function StudentLayout() {
     { to: "/student/history" as const, label: "History", icon: History },
     { to: "/student/rewards" as const, label: "Rewards", icon: Gift },
     { to: "/student/vouchers" as const, label: "Vouchers", icon: Ticket },
-    { to: "/student/documents" as any, label: "Documents", icon: FileText },
+    { to: "/student/documents" as any, label: "Achievements", icon: FileText },
     { to: "/student/help" as any, label: "Help", icon: HelpCircle },
   ];
 

@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "../lib/auth-context";
-import { Building2, LayoutDashboard, Settings, Shield, LogOut, UserCog, School, KeyRound, Store, UserPlus, GraduationCap, Trophy } from "lucide-react";
+import { Building2, LayoutDashboard, Settings, Shield, LogOut, UserCog, School, KeyRound, Store, UserPlus, GraduationCap, Trophy, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
   component: SuperAdminLayout,
@@ -26,6 +26,7 @@ function SuperAdminLayout() {
     { to: "/super-admin/dashboard" as any, label: "Dashboard", icon: LayoutDashboard },
     { to: "/super-admin/students" as any, label: "Students", icon: GraduationCap },
     { to: "/super-admin/achievements" as any, label: "Achievements", icon: Trophy },
+    { to: "/super-admin/documents" as any, label: "Documents", icon: FileText },
     { to: "/super-admin/schools" as any, label: "Schools", icon: Building2 },
     { to: "/super-admin/school-admins" as any, label: "Admins", icon: UserCog },
     { to: "/super-admin/assign-school" as any, label: "Assign", icon: School },

@@ -62,6 +62,7 @@ import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/
 import { Route as AuthenticatedStudentQrRouteImport } from './routes/_authenticated.student.qr'
 import { Route as AuthenticatedStudentRewardsRouteImport } from './routes/_authenticated.student.rewards'
 import { Route as AuthenticatedStudentVouchersRouteImport } from './routes/_authenticated.student.vouchers'
+import { Route as AuthenticatedSuperAdminAchievementsRouteImport } from './routes/_authenticated.super-admin.achievements'
 import { Route as AuthenticatedSuperAdminAssignSchoolRouteImport } from './routes/_authenticated.super-admin.assign-school'
 import { Route as AuthenticatedSuperAdminCreateUserRouteImport } from './routes/_authenticated.super-admin.create-user'
 import { Route as AuthenticatedSuperAdminDashboardRouteImport } from './routes/_authenticated.super-admin.dashboard'
@@ -348,9 +349,12 @@ const AuthenticatedStudentDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
-const AuthenticatedStudentDocumentsRoute = AuthenticatedStudentDocumentsRouteImport.update({
-  id: '/documents', path: '/documents', getParentRoute: () => AuthenticatedStudentRoute,
-} as any)
+const AuthenticatedStudentDocumentsRoute =
+  AuthenticatedStudentDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedStudentHelpRoute =
   AuthenticatedStudentHelpRouteImport.update({
     id: '/help',
@@ -385,6 +389,12 @@ const AuthenticatedStudentVouchersRoute =
     id: '/vouchers',
     path: '/vouchers',
     getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
+const AuthenticatedSuperAdminAchievementsRoute =
+  AuthenticatedSuperAdminAchievementsRouteImport.update({
+    id: '/achievements',
+    path: '/achievements',
+    getParentRoute: () => AuthenticatedSuperAdminRoute,
   } as any)
 const AuthenticatedSuperAdminAssignSchoolRoute =
   AuthenticatedSuperAdminAssignSchoolRouteImport.update({
@@ -578,13 +588,13 @@ export interface FileRoutesByFullPath {
   '/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/student/documents': typeof AuthenticatedStudentDocumentsRoute
-  '/student/documents': typeof AuthenticatedStudentDocumentsRoute
   '/student/help': typeof AuthenticatedStudentHelpRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/student/vouchers': typeof AuthenticatedStudentVouchersRoute
+  '/super-admin/achievements': typeof AuthenticatedSuperAdminAchievementsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -663,6 +673,7 @@ export interface FileRoutesByTo {
   '/student/qr': typeof AuthenticatedStudentQrRoute
   '/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/student/vouchers': typeof AuthenticatedStudentVouchersRoute
+  '/super-admin/achievements': typeof AuthenticatedSuperAdminAchievementsRoute
   '/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -737,13 +748,13 @@ export interface FileRoutesById {
   '/_authenticated/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/_authenticated/student/dashboard': typeof AuthenticatedStudentDashboardRoute
   '/_authenticated/student/documents': typeof AuthenticatedStudentDocumentsRoute
-  '/_authenticated/student/documents': typeof AuthenticatedStudentDocumentsRoute
   '/_authenticated/student/help': typeof AuthenticatedStudentHelpRoute
   '/_authenticated/student/history': typeof AuthenticatedStudentHistoryRoute
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
   '/_authenticated/student/qr': typeof AuthenticatedStudentQrRoute
   '/_authenticated/student/rewards': typeof AuthenticatedStudentRewardsRoute
   '/_authenticated/student/vouchers': typeof AuthenticatedStudentVouchersRoute
+  '/_authenticated/super-admin/achievements': typeof AuthenticatedSuperAdminAchievementsRoute
   '/_authenticated/super-admin/assign-school': typeof AuthenticatedSuperAdminAssignSchoolRoute
   '/_authenticated/super-admin/create-user': typeof AuthenticatedSuperAdminCreateUserRoute
   '/_authenticated/super-admin/dashboard': typeof AuthenticatedSuperAdminDashboardRoute
@@ -824,6 +835,7 @@ export interface FileRouteTypes {
     | '/student/qr'
     | '/student/rewards'
     | '/student/vouchers'
+    | '/super-admin/achievements'
     | '/super-admin/assign-school'
     | '/super-admin/create-user'
     | '/super-admin/dashboard'
@@ -902,6 +914,7 @@ export interface FileRouteTypes {
     | '/student/qr'
     | '/student/rewards'
     | '/student/vouchers'
+    | '/super-admin/achievements'
     | '/super-admin/assign-school'
     | '/super-admin/create-user'
     | '/super-admin/dashboard'
@@ -981,6 +994,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/qr'
     | '/_authenticated/student/rewards'
     | '/_authenticated/student/vouchers'
+    | '/_authenticated/super-admin/achievements'
     | '/_authenticated/super-admin/assign-school'
     | '/_authenticated/super-admin/create-user'
     | '/_authenticated/super-admin/dashboard'
@@ -1390,6 +1404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentVouchersRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/super-admin/achievements': {
+      id: '/_authenticated/super-admin/achievements'
+      path: '/achievements'
+      fullPath: '/super-admin/achievements'
+      preLoaderRoute: typeof AuthenticatedSuperAdminAchievementsRouteImport
+      parentRoute: typeof AuthenticatedSuperAdminRoute
+    }
     '/_authenticated/super-admin/assign-school': {
       id: '/_authenticated/super-admin/assign-school'
       path: '/assign-school'
@@ -1699,6 +1720,7 @@ const AuthenticatedStudentRouteWithChildren =
   AuthenticatedStudentRoute._addFileChildren(AuthenticatedStudentRouteChildren)
 
 interface AuthenticatedSuperAdminRouteChildren {
+  AuthenticatedSuperAdminAchievementsRoute: typeof AuthenticatedSuperAdminAchievementsRoute
   AuthenticatedSuperAdminAssignSchoolRoute: typeof AuthenticatedSuperAdminAssignSchoolRoute
   AuthenticatedSuperAdminCreateUserRoute: typeof AuthenticatedSuperAdminCreateUserRoute
   AuthenticatedSuperAdminDashboardRoute: typeof AuthenticatedSuperAdminDashboardRoute
@@ -1712,6 +1734,8 @@ interface AuthenticatedSuperAdminRouteChildren {
 
 const AuthenticatedSuperAdminRouteChildren: AuthenticatedSuperAdminRouteChildren =
   {
+    AuthenticatedSuperAdminAchievementsRoute:
+      AuthenticatedSuperAdminAchievementsRoute,
     AuthenticatedSuperAdminAssignSchoolRoute:
       AuthenticatedSuperAdminAssignSchoolRoute,
     AuthenticatedSuperAdminCreateUserRoute:
@@ -1819,12 +1843,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

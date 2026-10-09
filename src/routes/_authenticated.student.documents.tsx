@@ -80,8 +80,8 @@ function StudentDocuments() {
 
   return <div className="space-y-5">
     <div>
-      <h1 className="text-xl font-black text-foreground">My Documents</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Keep your certificates, test results, and mark sheets together.</p>
+      <h1 className="text-xl font-black text-foreground">My Achievements</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Share your certificates, test results, and mark sheets.</p>
     </div>
     <Card><CardContent className="space-y-4 p-4">
       <label className="text-sm font-semibold">Document type</label>

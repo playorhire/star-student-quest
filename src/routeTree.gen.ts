@@ -55,6 +55,7 @@ import { Route as AuthenticatedSchoolAdminRewardsRouteImport } from './routes/_a
 import { Route as AuthenticatedSchoolAdminStudentsRouteImport } from './routes/_authenticated.school-admin.students'
 import { Route as AuthenticatedSchoolAdminTeachersRouteImport } from './routes/_authenticated.school-admin.teachers'
 import { Route as AuthenticatedStudentDashboardRouteImport } from './routes/_authenticated.student.dashboard'
+import { Route as AuthenticatedStudentDocumentsRouteImport } from './routes/_authenticated.student.documents'
 import { Route as AuthenticatedStudentHelpRouteImport } from './routes/_authenticated.student.help'
 import { Route as AuthenticatedStudentHistoryRouteImport } from './routes/_authenticated.student.history'
 import { Route as AuthenticatedStudentNotificationsRouteImport } from './routes/_authenticated.student.notifications'
@@ -347,6 +348,9 @@ const AuthenticatedStudentDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedStudentDocumentsRoute = AuthenticatedStudentDocumentsRouteImport.update({
+  id: '/documents', path: '/documents', getParentRoute: () => AuthenticatedStudentRoute,
+} as any)
 const AuthenticatedStudentHelpRoute =
   AuthenticatedStudentHelpRouteImport.update({
     id: '/help',
@@ -573,6 +577,8 @@ export interface FileRoutesByFullPath {
   '/school-admin/students': typeof AuthenticatedSchoolAdminStudentsRoute
   '/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
+  '/student/documents': typeof AuthenticatedStudentDocumentsRoute
+  '/student/documents': typeof AuthenticatedStudentDocumentsRoute
   '/student/help': typeof AuthenticatedStudentHelpRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -650,6 +656,7 @@ export interface FileRoutesByTo {
   '/school-admin/students': typeof AuthenticatedSchoolAdminStudentsRoute
   '/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/student/dashboard': typeof AuthenticatedStudentDashboardRoute
+  '/student/documents': typeof AuthenticatedStudentDocumentsRoute
   '/student/help': typeof AuthenticatedStudentHelpRoute
   '/student/history': typeof AuthenticatedStudentHistoryRoute
   '/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -729,6 +736,8 @@ export interface FileRoutesById {
   '/_authenticated/school-admin/students': typeof AuthenticatedSchoolAdminStudentsRoute
   '/_authenticated/school-admin/teachers': typeof AuthenticatedSchoolAdminTeachersRoute
   '/_authenticated/student/dashboard': typeof AuthenticatedStudentDashboardRoute
+  '/_authenticated/student/documents': typeof AuthenticatedStudentDocumentsRoute
+  '/_authenticated/student/documents': typeof AuthenticatedStudentDocumentsRoute
   '/_authenticated/student/help': typeof AuthenticatedStudentHelpRoute
   '/_authenticated/student/history': typeof AuthenticatedStudentHistoryRoute
   '/_authenticated/student/notifications': typeof AuthenticatedStudentNotificationsRoute
@@ -808,6 +817,7 @@ export interface FileRouteTypes {
     | '/school-admin/students'
     | '/school-admin/teachers'
     | '/student/dashboard'
+    | '/student/documents'
     | '/student/help'
     | '/student/history'
     | '/student/notifications'
@@ -885,6 +895,7 @@ export interface FileRouteTypes {
     | '/school-admin/students'
     | '/school-admin/teachers'
     | '/student/dashboard'
+    | '/student/documents'
     | '/student/help'
     | '/student/history'
     | '/student/notifications'
@@ -963,6 +974,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school-admin/students'
     | '/_authenticated/school-admin/teachers'
     | '/_authenticated/student/dashboard'
+    | '/_authenticated/student/documents'
     | '/_authenticated/student/help'
     | '/_authenticated/student/history'
     | '/_authenticated/student/notifications'
@@ -1329,6 +1341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentDashboardRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/student/documents': {
+      id: '/_authenticated/student/documents'
+      path: '/documents'
+      fullPath: '/student/documents'
+      preLoaderRoute: typeof AuthenticatedStudentDocumentsRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
+    }
     '/_authenticated/student/help': {
       id: '/_authenticated/student/help'
       path: '/help'
@@ -1655,6 +1674,7 @@ const AuthenticatedSchoolAdminRouteWithChildren =
 
 interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentDashboardRoute: typeof AuthenticatedStudentDashboardRoute
+  AuthenticatedStudentDocumentsRoute: typeof AuthenticatedStudentDocumentsRoute
   AuthenticatedStudentHelpRoute: typeof AuthenticatedStudentHelpRoute
   AuthenticatedStudentHistoryRoute: typeof AuthenticatedStudentHistoryRoute
   AuthenticatedStudentNotificationsRoute: typeof AuthenticatedStudentNotificationsRoute
@@ -1665,6 +1685,7 @@ interface AuthenticatedStudentRouteChildren {
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentDashboardRoute: AuthenticatedStudentDashboardRoute,
+  AuthenticatedStudentDocumentsRoute: AuthenticatedStudentDocumentsRoute,
   AuthenticatedStudentHelpRoute: AuthenticatedStudentHelpRoute,
   AuthenticatedStudentHistoryRoute: AuthenticatedStudentHistoryRoute,
   AuthenticatedStudentNotificationsRoute:

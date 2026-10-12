@@ -12,7 +12,7 @@ const BUCKET = "student-documents";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const TYPES = ["Quiz", "Test", "Certificate", "Mark sheet"] as const;
 type DocumentType = (typeof TYPES)[number];
-type Subject = { id: string; name: string };
+type Subject = { id: string; name: string; document_type: string };
 type StoredDocument = { name: string; id: string; created_at: string | null; metadata: { size?: number; mimetype?: string } | null };
 
 export const Route = createFileRoute("/_authenticated/student/documents")({ component: StudentDocuments });
@@ -41,8 +41,8 @@ function StudentDocuments() {
       if (error || !data) { toast.error("Couldn't find your student profile"); setLoading(false); return; }
       if (!active) return;
       setStudentId(data.id);
-      const { data: classSubjects } = await supabase.from("subjects").select("id, name").eq("class_id", data.class_id).order("name");
-      if (active) { setSubjects(classSubjects ?? []); setSubjectId(classSubjects?.[0]?.id ?? ""); }
+      const { data: classSubjects } = await supabase.from("subjects").select("id, name, document_type").eq("class_id", data.class_id).order("name");
+      if (active) { setSubjects(classSubjects ?? []); setSubjectId(""); }
       await loadDocuments(data.id);
       if (active) setLoading(false);
     })();
@@ -97,6 +97,7 @@ function StudentDocuments() {
   }
 
   const typeFor = (name: string) => TYPES.find((item) => name.startsWith(`${item.toLowerCase().replaceAll(" ", "-")}-`)) ?? "Document";
+  const availableSubjects = subjects.filter((subject) => subject.document_type === type);
   const displayName = (name: string) => (name.includes("--") ? name.split("--").slice(2).join("--") : name.replace(/^[a-z-]+-[0-9a-f-]+-/i, "")).replaceAll("_", " ");
   const remaining = () => {
     const now = new Date();
@@ -116,7 +117,7 @@ function StudentDocuments() {
     </div>
     <Card><CardContent className="space-y-4 p-4">
       <label className="text-sm font-semibold">Document type</label>
-      <Select value={type} onValueChange={(value) => setType(value as DocumentType)}>
+      <Select value={type} onValueChange={(value) => { setType(value as DocumentType); setSubjectId(""); }}>
         <SelectTrigger><SelectValue /></SelectTrigger>
         <SelectContent>{TYPES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
       </Select>
@@ -124,13 +125,14 @@ function StudentDocuments() {
         <label className="text-sm font-semibold">Subject</label>
         <Select value={subjectId} onValueChange={setSubjectId}>
           <SelectTrigger><SelectValue placeholder="Choose a subject" /></SelectTrigger>
-          <SelectContent>{subjects.map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}</SelectContent>
+          <SelectContent>{availableSubjects.map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}</SelectContent>
         </Select>
+        {availableSubjects.length === 0 && <p className="text-xs text-muted-foreground">No subjects are configured for {type}.</p>}
       </>}
       <p className="text-xs text-muted-foreground">Uploads remaining in this period: {remaining()}</p>
       <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm font-semibold text-primary hover:bg-primary/10">
         <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Choose a file"}
-        <input className="sr-only" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={uploading || !studentId || ((type === "Quiz" || type === "Test") && (!subjectId || subjects.length === 0)) || remaining() === 0} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ""; }} />
+        <input className="sr-only" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={uploading || !studentId || ((type === "Quiz" || type === "Test") && (!subjectId || availableSubjects.length === 0)) || remaining() === 0} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ""; }} />
       </label>
       <p className="text-xs text-muted-foreground">PDF, JPG, PNG, or WEBP · up to 10 MB</p>
     </CardContent></Card>

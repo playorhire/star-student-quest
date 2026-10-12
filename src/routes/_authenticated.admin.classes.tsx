@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin/classes")({
 });
 
 interface ClassRow { id: string; name: string; }
-interface SubjectRow { id: string; name: string; class_id: string; }
+interface SubjectRow { id: string; name: string; class_id: string; document_type: string; }
 
 function AdminClasses() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -21,13 +21,14 @@ function AdminClasses() {
   const [newClassName, setNewClassName] = useState("");
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectClassId, setNewSubjectClassId] = useState("");
+  const [newSubjectType, setNewSubjectType] = useState<"Quiz" | "Test">("Quiz");
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     const [c, s] = await Promise.all([
       supabase.from("classes").select("id, name").order("name"),
-      supabase.from("subjects").select("id, name, class_id").order("name"),
+      supabase.from("subjects").select("id, name, class_id, document_type").order("name"),
     ]);
     setClasses(c.data || []);
     setSubjects(s.data || []);
@@ -47,7 +48,7 @@ function AdminClasses() {
 
   async function handleAddSubject() {
     if (!newSubjectName.trim() || !newSubjectClassId) return;
-    const { data } = await supabase.from("subjects").insert({ name: newSubjectName.trim(), class_id: newSubjectClassId }).select().single();
+    const { data } = await supabase.from("subjects").insert({ name: newSubjectName.trim(), class_id: newSubjectClassId, document_type: newSubjectType }).select().single();
     if (data) {
       // Also create a default point rule
       await supabase.from("point_rules").insert({
@@ -60,6 +61,7 @@ function AdminClasses() {
     }
     setNewSubjectName("");
     setNewSubjectClassId("");
+    setNewSubjectType("Quiz");
     load();
   }
 
@@ -107,7 +109,7 @@ function AdminClasses() {
                   <div className="flex flex-wrap gap-1 mt-2">
                     {classSubjects.map(sub => (
                       <Badge key={sub.id} variant="outline" className="text-[10px] gap-1">
-                        <BookOpen className="h-3 w-3" /> {sub.name}
+                        <BookOpen className="h-3 w-3" /> {sub.name} · {sub.document_type}
                         <button onClick={() => handleRemoveSubject(sub.id)} className="ml-1 text-destructive hover:text-destructive">×</button>
                       </Badge>
                     ))}
@@ -132,6 +134,13 @@ function AdminClasses() {
               <select value={newSubjectClassId} onChange={e => setNewSubjectClassId(e.target.value)} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
                 <option value="">Select class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">Document Type</Label>
+              <select value={newSubjectType} onChange={e => setNewSubjectType(e.target.value as "Quiz" | "Test")} className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm">
+                <option value="Quiz">Quiz</option>
+                <option value="Test">Test</option>
               </select>
             </div>
           </div>

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/branch-admin/classes")({
 });
 
 interface ClassRow { id: string; name: string; }
-interface SubjectRow { id: string; name: string; class_id: string; }
+interface SubjectRow { id: string; name: string; class_id: string; document_type: string; }
 
 function BranchAdminClasses() {
   const { user } = useAuth();
@@ -34,6 +34,7 @@ function BranchAdminClasses() {
   const [editingSubject, setEditingSubject] = useState<SubjectRow | null>(null);
   const [subjectName, setSubjectName] = useState("");
   const [subjectClassId, setSubjectClassId] = useState("");
+  const [subjectDocumentType, setSubjectDocumentType] = useState<"Quiz" | "Test">("Quiz");
   const [subjectSubmitting, setSubjectSubmitting] = useState(false);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ function BranchAdminClasses() {
     setLoading(true);
     const [c, s] = await Promise.all([
       (supabase as any).from("classes").select("id, name").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
-      (supabase as any).from("subjects").select("id, name, class_id").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
+      (supabase as any).from("subjects").select("id, name, class_id, document_type").eq("school_id", user!.schoolId).eq("branch_id", user!.branchId).order("name"),
     ]);
     setClasses(c.data || []);
     setSubjects(s.data || []);
@@ -99,6 +100,7 @@ function BranchAdminClasses() {
     setEditingSubject(null);
     setSubjectName("");
     setSubjectClassId("");
+    setSubjectDocumentType("Quiz");
     setShowSubjectForm(true);
   }
 
@@ -106,6 +108,7 @@ function BranchAdminClasses() {
     setEditingSubject(sub);
     setSubjectName(sub.name);
     setSubjectClassId(sub.class_id);
+    setSubjectDocumentType(sub.document_type === "Test" ? "Test" : "Quiz");
     setShowSubjectForm(true);
   }
 
@@ -115,11 +118,11 @@ function BranchAdminClasses() {
     setSubjectSubmitting(true);
 
     if (editingSubject) {
-      const { error } = await (supabase as any).from("subjects").update({ name: subjectName.trim(), class_id: subjectClassId }).eq("id", editingSubject.id);
+      const { error } = await (supabase as any).from("subjects").update({ name: subjectName.trim(), class_id: subjectClassId, document_type: subjectDocumentType }).eq("id", editingSubject.id);
       if (error) toast.error(error.message);
       else toast.success("Subject updated");
     } else {
-      const { data, error } = await (supabase as any).from("subjects").insert({ name: subjectName.trim(), class_id: subjectClassId, school_id: user!.schoolId, branch_id: user!.branchId }).select().single();
+      const { data, error } = await (supabase as any).from("subjects").insert({ name: subjectName.trim(), class_id: subjectClassId, document_type: subjectDocumentType, school_id: user!.schoolId, branch_id: user!.branchId }).select().single();
       if (error) {
         toast.error(error.message);
       } else if (data) {
@@ -141,6 +144,7 @@ function BranchAdminClasses() {
     setEditingSubject(null);
     setSubjectName("");
     setSubjectClassId("");
+    setSubjectDocumentType("Quiz");
     load();
   }
 
@@ -207,6 +211,10 @@ function BranchAdminClasses() {
                 <option value="">Select class</option>
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+              <select aria-label="Document type" value={subjectDocumentType} onChange={e => setSubjectDocumentType(e.target.value as "Quiz" | "Test")} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="Quiz">Quiz</option>
+                <option value="Test">Test</option>
+              </select>
               <Button type="submit" disabled={subjectSubmitting}>
                 {subjectSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 {editingSubject ? "Update" : "Create"}
@@ -243,7 +251,7 @@ function BranchAdminClasses() {
                     <div className="flex flex-wrap gap-1 mt-2">
                       {classSubjects.map(sub => (
                         <Badge key={sub.id} variant="outline" className="text-[10px] gap-1">
-                          <BookOpen className="h-3 w-3" /> {sub.name}
+                          <BookOpen className="h-3 w-3" /> {sub.name} · {sub.document_type}
                           <button onClick={() => openEditSubject(sub)} className="ml-1 text-muted-foreground hover:text-foreground"><Pencil className="h-3 w-3" /></button>
                           <button onClick={() => handleDeleteSubject(sub.id)} className="ml-1 text-destructive hover:text-destructive"><X className="h-3 w-3" /></button>
                         </Badge>

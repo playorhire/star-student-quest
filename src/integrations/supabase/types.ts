@@ -853,6 +853,7 @@ export type Database = {
           branch_id: string | null
           class_id: string
           created_at: string
+          document_type: string
           id: string
           name: string
           school_id: string | null
@@ -861,6 +862,7 @@ export type Database = {
           branch_id?: string | null
           class_id: string
           created_at?: string
+          document_type?: string
           id?: string
           name: string
           school_id?: string | null
@@ -869,6 +871,7 @@ export type Database = {
           branch_id?: string | null
           class_id?: string
           created_at?: string
+          document_type?: string
           id?: string
           name?: string
           school_id?: string | null

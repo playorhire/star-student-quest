@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { FileText, ExternalLink, Upload, Trash2 } from "lucide-react";
+import { FileText, ExternalLink, Upload, Trash2, Camera, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 const BUCKET = "student-documents";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -26,6 +27,13 @@ function StudentDocuments() {
   const [type, setType] = useState<DocumentType>(TYPES[0]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [resultType, setResultType] = useState<"Quiz" | "Test" | "Mark sheet">("Quiz");
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [detectedText, setDetectedText] = useState("");
+  const [score, setScore] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [submittingMark, setSubmittingMark] = useState(false);
 
   const loadDocuments = useCallback(async (id: string) => {
     const { data, error } = await supabase.storage.from(BUCKET).list(id, { limit: 100, sortBy: { column: "created_at", order: "desc" } });
@@ -96,6 +104,47 @@ function StudentDocuments() {
     await loadDocuments(studentId);
   }
 
+  async function scanMark(file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("OCR needs an image. Choose or take a photo of the result."); return; }
+    if (file.size > MAX_FILE_SIZE) { toast.error("Choose an image smaller than 10 MB"); return; }
+    setSubmissionFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setDetectedText("");
+    setScore("");
+    setScanning(true);
+    try {
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng");
+      let data;
+      try { ({ data } = await worker.recognize(file)); }
+      finally { await worker.terminate(); }
+      setDetectedText(data.text);
+      const scoreMatch = data.text.match(/(?:marks?|score|obtained)\s*[:=\-]?\s*(\d{1,3})/i) || data.text.match(/(\d{1,3})\s*\/\s*\d{1,3}/);
+      if (scoreMatch) setScore(scoreMatch[1]);
+      toast.success(scoreMatch ? "Score detected. Please verify it." : "Scan complete. Enter your score below.");
+    } catch (error) {
+      console.error("OCR scan failed", error);
+      toast.error("Could not read this image. You can still enter the score manually.");
+    } finally { setScanning(false); }
+  }
+
+  async function submitMark() {
+    if (!studentId || !submissionFile || !subjectId || !score) { toast.error("Choose a subject, photo, and score"); return; }
+    const marks = Number(score);
+    if (!Number.isInteger(marks) || marks < 0) { toast.error("Enter a whole-number score"); return; }
+    setSubmittingMark(true);
+    const ext = submissionFile.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "jpg";
+    const path = `${studentId}/mark-submissions/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, submissionFile, { contentType: submissionFile.type, upsert: false });
+    if (uploadError) { toast.error("Photo upload failed", { description: uploadError.message }); setSubmittingMark(false); return; }
+    const { error } = await (supabase as any).rpc("submit_student_mark", { p_subject_id: subjectId, p_result_type: resultType, p_marks_entered: marks, p_evidence_path: path, p_ocr_text: detectedText || null });
+    setSubmittingMark(false);
+    if (error) { toast.error("Submission failed", { description: error.message }); await supabase.storage.from(BUCKET).remove([path]); return; }
+    toast.success("Score sent for teacher and superadmin approval");
+    setSubmissionFile(null); setPreviewUrl(null); setDetectedText(""); setScore("");
+  }
+
   const typeFor = (name: string) => TYPES.find((item) => name.startsWith(`${item.toLowerCase().replaceAll(" ", "-")}-`)) ?? "Document";
   const availableSubjects = subjects.filter((subject) => subject.document_type === type);
   const displayName = (name: string) => (name.includes("--") ? name.split("--").slice(2).join("--") : name.replace(/^[a-z-]+-[0-9a-f-]+-/i, "")).replaceAll("_", " ");
@@ -115,6 +164,18 @@ function StudentDocuments() {
       <h1 className="text-xl font-black text-foreground">My Achievements</h1>
       <p className="mt-1 text-sm text-muted-foreground">Upload one quiz per subject each week, one test per subject and one certificate each month, and one mark sheet every three months.</p>
     </div>
+    <Card><CardContent className="space-y-3 p-4">
+      <div><h2 className="font-bold">Scan marks for points</h2><p className="text-xs text-muted-foreground">Take a clear photo of your quiz, test, or marksheet. Check the detected score before submitting it for approval.</p></div>
+      <Select value={resultType} onValueChange={(value) => setResultType(value as typeof resultType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{(["Quiz", "Test", "Mark sheet"] as const).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select>
+      <Select value={subjectId} onValueChange={setSubjectId}><SelectTrigger><SelectValue placeholder="Choose subject" /></SelectTrigger><SelectContent>{subjects.map((subject) => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}</SelectContent></Select>
+      {submissionFile && <p className="text-xs text-muted-foreground">{submissionFile.name}</p>}
+      {previewUrl && submissionFile && <img src={previewUrl} alt="Mark photo preview" className="mx-auto max-h-56 rounded-lg border object-contain" />}
+      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3 text-sm font-semibold text-primary hover:bg-primary/10"><Camera className="h-4 w-4" /> {scanning ? "Scanning image…" : "Take or choose a photo to scan"}<input className="sr-only" type="file" accept="image/*" capture="environment" disabled={scanning || submittingMark} onChange={(event) => { void scanMark(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+      <label className="text-sm font-semibold">Score detected (check and correct it)</label><Input type="number" min="0" step="1" value={score} onChange={(event) => setScore(event.target.value)} placeholder={scanning ? "Scanning…" : "Enter score"} />
+      {detectedText && <details className="text-xs text-muted-foreground"><summary>See scanned text</summary><p className="mt-1 whitespace-pre-wrap">{detectedText}</p></details>}
+      <Button className="w-full" disabled={submittingMark || scanning || !submissionFile || !subjectId || !score} onClick={() => void submitMark()}>{submittingMark ? "Submitting…" : "Submit for points approval"}</Button>
+      <p className="text-xs text-muted-foreground">Points are added only after a teacher or superadmin approves your score and photo.</p>
+    </CardContent></Card>
     <Card><CardContent className="space-y-4 p-4">
       <label className="text-sm font-semibold">Document type</label>
       <Select value={type} onValueChange={(value) => { setType(value as DocumentType); setSubjectId(""); }}>
@@ -130,10 +191,17 @@ function StudentDocuments() {
         {availableSubjects.length === 0 && <p className="text-xs text-muted-foreground">No subjects are configured for {type}.</p>}
       </>}
       <p className="text-xs text-muted-foreground">Uploads remaining in this period: {remaining()}</p>
-      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm font-semibold text-primary hover:bg-primary/10">
-        <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Choose a file"}
-        <input className="sr-only" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={uploading || !studentId || ((type === "Quiz" || type === "Test") && (!subjectId || availableSubjects.length === 0)) || remaining() === 0} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-      </label>
+      {previewUrl && <img src={previewUrl} alt="Selected marks photo preview" className="mx-auto max-h-64 rounded-lg border object-contain" />}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm font-semibold text-primary hover:bg-primary/10">
+          <Camera className="h-4 w-4" /> Take a photo
+          <input className="sr-only" type="file" accept="image/*" capture="environment" disabled={uploading || !studentId || ((type === "Quiz" || type === "Test") && (!subjectId || availableSubjects.length === 0)) || remaining() === 0} onChange={(event) => { const file = event.target.files?.[0]; if (file) { setPreviewUrl(URL.createObjectURL(file)); void upload(file); } event.currentTarget.value = ""; }} />
+        </label>
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm font-semibold text-primary hover:bg-primary/10">
+          <ImagePlus className="h-4 w-4" /> Choose a photo or file
+          <input className="sr-only" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={uploading || !studentId || ((type === "Quiz" || type === "Test") && (!subjectId || availableSubjects.length === 0)) || remaining() === 0} onChange={(event) => { const file = event.target.files?.[0]; if (file?.type.startsWith("image/")) setPreviewUrl(URL.createObjectURL(file)); else setPreviewUrl(null); void upload(file); event.currentTarget.value = ""; }} />
+        </label>
+      </div>
       <p className="text-xs text-muted-foreground">PDF, JPG, PNG, or WEBP · up to 10 MB</p>
     </CardContent></Card>
     <section className="space-y-2">

@@ -176,7 +176,7 @@ function TeacherScan() {
 
     const { data: subs } = await supabase
       .from("subjects")
-      .select("id, name, point_rules(passing_marks, multiplier, min_marks, max_marks)")
+      .select("id, name, point_rules(min_marks, max_marks)")
       .eq("class_id", studentData.class_id);
     setSubjectsForClass(subs || []);
 
@@ -212,7 +212,7 @@ function TeacherScan() {
   const getRule = () => {
     const sub = subjectsForClass.find((s) => s.id === selectedSubjectId);
     const r = sub?.point_rules;
-    return r ? { passing: Number(r.passing_marks), multiplier: Number(r.multiplier), min: Number(r.min_marks), max: Number(r.max_marks) } : null;
+    return r ? { min: Number(r.min_marks), max: Number(r.max_marks) } : null;
   };
 
   const handleMarksChange = (val: string) => {
@@ -220,8 +220,7 @@ function TeacherScan() {
     const num = parseInt(val, 10);
     const rule = getRule();
     if (rule && !isNaN(num)) {
-      const points = Math.floor((num - rule.passing) * rule.multiplier);
-      setCalculatedPoints(points > 0 ? points : 0);
+      setCalculatedPoints(Math.max(0, num));
     } else {
       setCalculatedPoints(0);
     }
@@ -278,12 +277,7 @@ function TeacherScan() {
       return;
     }
 
-    const points = Math.floor((score - rule.passing) * rule.multiplier);
-    const awardedPoints = points > 0 ? points : 0;
-    if (awardedPoints < 1) {
-      toast.error("Points must be at least 1 to award");
-      return;
-    }
+    const awardedPoints = score;
     let activeTeacherId: string | null = null;
     try {
       activeTeacherId = await getActiveTeacherId();
@@ -302,8 +296,8 @@ function TeacherScan() {
       teacher_id: activeTeacherId,
       subject_id: selectedSubjectId,
       marks_entered: score,
-      passing_marks: rule.passing,
-      multiplier: rule.multiplier,
+      passing_marks: 0,
+      multiplier: 1,
       points_awarded: awardedPoints,
       school_id: student.school_id || null,
       branch_id: student.branch_id || user?.branchId || null,

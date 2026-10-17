@@ -142,8 +142,7 @@ export function findStudentByQR(qrCode: string): Student | undefined {
 }
 
 export function calculatePoints(marks: number, passingMarks: number, multiplier: number): number {
-  if (marks < passingMarks) return 0;
-  return Math.floor((marks - passingMarks) * multiplier);
+  return Math.max(0, Math.floor(marks));
 }
 
 export function getStudentBadges(totalPoints: number): Badge[] {

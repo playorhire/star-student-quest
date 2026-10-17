@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!customSchoolRequested && (!schoolId || !branchId || !classId)) {
+    if (!customSchoolRequested && (!schoolId || !classId)) {
       return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -198,15 +198,6 @@ Deno.serve(async (req) => {
       }
       school = schoolData;
 
-      const { data: branchLookupData, error: branchLookupError } = await supabase
-        .from("branches")
-        .select("id, school_id")
-        .eq("id", branchId)
-        .maybeSingle();
-
-      if (branchLookupError) {
-        throw branchLookupError;
-      }
       if (!school) {
         return new Response(JSON.stringify({ error: "We couldn't resolve the selected school." }), {
           status: 400,
@@ -214,13 +205,40 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (!branchLookupData || branchLookupData.school_id !== school.id) {
-        return new Response(JSON.stringify({ error: "We couldn't find that branch for your school. Please ask your school admin to confirm the branch name." }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (branchId) {
+        const { data: branchLookupData, error: branchLookupError } = await supabase
+          .from("branches")
+          .select("id, school_id")
+          .eq("id", branchId)
+          .maybeSingle();
+
+        if (branchLookupError) {
+          throw branchLookupError;
+        }
+        if (!branchLookupData || branchLookupData.school_id !== school.id) {
+          return new Response(JSON.stringify({ error: "We couldn't find that branch for your school. Please ask your school admin to confirm the branch name." }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        branchRow = branchLookupData;
+      } else {
+        const { data: schoolBranches, error: schoolBranchesError } = await supabase
+          .from("branches")
+          .select("id")
+          .eq("school_id", school.id)
+          .limit(1);
+
+        if (schoolBranchesError) {
+          throw schoolBranchesError;
+        }
+        if (schoolBranches?.length) {
+          return new Response(JSON.stringify({ error: "Please select a branch for your school." }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
-      branchRow = branchLookupData;
 
       if (!school) {
         return new Response(JSON.stringify({ error: "We couldn't resolve the selected school." }), {
@@ -251,15 +269,14 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (!branchRow) {
-        return new Response(JSON.stringify({ error: "We couldn't resolve the selected branch." }), {
+      if (branchRow && classLookupData.branch_id && classLookupData.branch_id !== branchRow.id) {
+        return new Response(JSON.stringify({ error: "The selected class does not belong to the selected branch." }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      if (classLookupData.branch_id && classLookupData.branch_id !== branchRow.id) {
-        return new Response(JSON.stringify({ error: "The selected class does not belong to the selected branch." }), {
+      if (!branchRow && classLookupData.branch_id) {
+        return new Response(JSON.stringify({ error: "The selected class belongs to a branch. Please select that branch and try again." }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -267,7 +284,7 @@ Deno.serve(async (req) => {
       classRow = classLookupData;
     }
 
-    if (!school || !branchRow || !classRow) {
+    if (!school || !classRow || (customSchoolRequested && !branchRow)) {
       return new Response(JSON.stringify({ error: "We couldn't complete the school setup for your signup." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -305,7 +322,7 @@ Deno.serve(async (req) => {
       role: "student",
       tenant_role: "student",
       school_id: school.id,
-      branch_id: branchRow.id,
+      branch_id: branchRow?.id ?? null,
       email: email || null,
       name,
       is_primary: true,
@@ -320,7 +337,7 @@ Deno.serve(async (req) => {
       email: email || null,
       user_id: newUser.user.id,
       school_id: school.id,
-      branch_id: branchRow.id,
+      branch_id: branchRow?.id ?? null,
       class_id: classRow.id,
       roll_number: rollNumber,
       section,

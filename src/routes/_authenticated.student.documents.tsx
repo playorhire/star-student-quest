@@ -16,6 +16,29 @@ type DocumentType = (typeof TYPES)[number];
 type Subject = { id: string; name: string; document_type: string };
 type StoredDocument = { name: string; id: string; created_at: string | null; metadata: { size?: number; mimetype?: string } | null };
 
+/** Upscale and normalize phone photos before OCR; small, low-contrast handwriting
+ * is otherwise easily mistaken for lines of random letters. */
+async function prepareOcrImage(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(2, 2400 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("Could not prepare image");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const gray = pixels.data[i] * 0.299 + pixels.data[i + 1] * 0.587 + pixels.data[i + 2] * 0.114;
+      const enhanced = Math.max(0, Math.min(255, (gray - 145) * 1.7 + 145));
+      pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = enhanced;
+    }
+    context.putImageData(pixels, 0, 0);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not encode image")), "image/png"));
+  } finally { bitmap.close(); }
+}
+
 export const Route = createFileRoute("/_authenticated/student/documents")({ component: StudentDocuments });
 
 function StudentDocuments() {
@@ -117,7 +140,10 @@ function StudentDocuments() {
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng");
       let data;
-      try { ({ data } = await worker.recognize(file)); }
+      try {
+        await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
+        ({ data } = await worker.recognize(await prepareOcrImage(file)));
+      }
       finally { await worker.terminate(); }
       setDetectedText(data.text);
       const scoreMatch = data.text.match(/(?:marks?|score|obtained)\s*[:=\-]?\s*(\d{1,3})/i) || data.text.match(/(\d{1,3})\s*\/\s*\d{1,3}/);

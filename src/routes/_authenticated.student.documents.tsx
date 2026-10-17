@@ -141,7 +141,7 @@ function StudentDocuments() {
       const worker = await createWorker("eng");
       let data;
       try {
-        await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
+        await worker.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789./", preserve_interword_spaces: "0" });
         ({ data } = await worker.recognize(await prepareOcrImage(file)));
       }
       finally { await worker.terminate(); }

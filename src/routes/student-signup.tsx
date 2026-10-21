@@ -5,8 +5,11 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent } from "../components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "../components/ui/command";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/student-signup")({
   component: StudentSignup,
@@ -40,14 +43,12 @@ function StudentSignup() {
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([]);
   const [schoolSearch, setSchoolSearch] = useState("");
+  const [schoolPickerOpen, setSchoolPickerOpen] = useState(false);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const [schoolLoading, setSchoolLoading] = useState(true);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
-  const matchingSchools = schools.filter((school) =>
-    school.name.toLocaleLowerCase().includes(schoolSearch.trim().toLocaleLowerCase()),
-  );
 
   useEffect(() => {
     async function loadSchools() {
@@ -267,41 +268,69 @@ function StudentSignup() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="school_id">School</Label>
-                <Input
-                  id="school_search"
-                  type="search"
-                  value={schoolSearch}
-                  onChange={(e) => setSchoolSearch(e.target.value)}
-                  placeholder="Search your school"
-                  aria-label="Search schools"
-                  disabled={schoolLoading}
-                />
-                <select
-                  id="school_id"
-                  required={!form.use_custom_school}
-                  value={form.use_custom_school ? "custom" : form.school_id}
-                  onChange={(e) => {
-                    if (e.target.value === "custom") {
-                      setForm((f) => ({ ...f, school_id: "", branch_id: "", class_id: "", use_custom_school: true }));
-                    } else {
-                      setForm((f) => ({ ...f, school_id: e.target.value, branch_id: "", class_id: "", use_custom_school: false }));
-                    }
-                  }}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="" disabled>
-                    {schoolLoading ? "Loading schools..." : "Select a school"}
-                  </option>
-                  {matchingSchools.map((school) => (
-                    <option key={school.id} value={school.id}>
-                      {school.name}
-                    </option>
-                  ))}
-                  <option value="custom">My school is not listed</option>
-                </select>
-                {!schoolLoading && schoolSearch.trim() && matchingSchools.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No matching schools. You can choose “My school is not listed”.</p>
-                )}
+                <Popover open={schoolPickerOpen} onOpenChange={(open) => {
+                  setSchoolPickerOpen(open);
+                  if (!open) setSchoolSearch("");
+                }}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="school_id"
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={schoolPickerOpen}
+                      aria-required={!form.use_custom_school}
+                      className="h-10 w-full justify-between rounded-md border-input bg-background px-3 font-normal"
+                    >
+                      <span className="truncate">
+                        {form.use_custom_school
+                          ? "My school is not listed"
+                          : schools.find((school) => school.id === form.school_id)?.name || (schoolLoading ? "Loading schools..." : "Select a school")}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command shouldFilter>
+                      <CommandInput
+                        value={schoolSearch}
+                        onValueChange={setSchoolSearch}
+                        placeholder="Search your school..."
+                      />
+                      <CommandList>
+                        {schoolLoading ? (
+                          <CommandEmpty>Loading schools...</CommandEmpty>
+                        ) : (
+                          <CommandEmpty>No school found.</CommandEmpty>
+                        )}
+                        {schools.map((school) => (
+                          <CommandItem
+                            key={school.id}
+                            value={school.name}
+                            onSelect={() => {
+                              setForm((f) => ({ ...f, school_id: school.id, branch_id: "", class_id: "", use_custom_school: false }));
+                              setSchoolPickerOpen(false);
+                              setSchoolSearch("");
+                            }}
+                          >
+                            <Check className={cn("h-4 w-4", form.school_id === school.id ? "opacity-100" : "opacity-0")} />
+                            {school.name}
+                          </CommandItem>
+                        ))}
+                        <CommandItem
+                          value="My school is not listed"
+                          onSelect={() => {
+                            setForm((f) => ({ ...f, school_id: "", branch_id: "", class_id: "", use_custom_school: true }));
+                            setSchoolPickerOpen(false);
+                            setSchoolSearch("");
+                          }}
+                        >
+                          My school is not listed
+                        </CommandItem>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               {form.use_custom_school ? (
                 <div className="space-y-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3">

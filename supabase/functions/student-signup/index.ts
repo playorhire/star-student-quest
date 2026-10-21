@@ -46,14 +46,14 @@ Deno.serve(async (req) => {
     const section = (payload?.section || "A").toString().trim() || "A";
 
     if (!name || !password || !rollNumber || (registrationMethod !== "email" && registrationMethod !== "phone") || (registrationMethod === "email" ? !email : !phone)) {
-      return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
+      return new Response(JSON.stringify({ error: "Please provide your name, registration contact, password, and roll number." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (!customSchoolRequested && (!schoolId || !classId)) {
-      return new Response(JSON.stringify({ error: "Please complete all required fields." }), {
+      return new Response(JSON.stringify({ error: !schoolId ? "Please select a school." : "Please select a class." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

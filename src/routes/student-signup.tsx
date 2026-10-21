@@ -183,17 +183,12 @@ function StudentSignup() {
           return;
         }
 
-        console.log("student-signup payload:", payload);
-
         const { data, error } = await supabase.functions.invoke("student-signup", {
           body: payload,
         });
 
-        console.log("student-signup result:", { data, error });
-
         const message = error instanceof Error ? error.message : (data as any)?.error || "Signup failed";
         if (error || (data as any)?.error) {
-          console.error("student-signup error payload:", { data, error });
           throw new Error(message);
         }
 

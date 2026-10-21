@@ -39,11 +39,15 @@ function StudentSignup() {
   });
   const [loading, setLoading] = useState(false);
   const [schools, setSchools] = useState<Array<{ id: string; name: string }>>([]);
+  const [schoolSearch, setSchoolSearch] = useState("");
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
   const [schoolLoading, setSchoolLoading] = useState(true);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
+  const matchingSchools = schools.filter((school) =>
+    school.name.toLocaleLowerCase().includes(schoolSearch.trim().toLocaleLowerCase()),
+  );
 
   useEffect(() => {
     async function loadSchools() {
@@ -263,6 +267,15 @@ function StudentSignup() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="school_id">School</Label>
+                <Input
+                  id="school_search"
+                  type="search"
+                  value={schoolSearch}
+                  onChange={(e) => setSchoolSearch(e.target.value)}
+                  placeholder="Search your school"
+                  aria-label="Search schools"
+                  disabled={schoolLoading}
+                />
                 <select
                   id="school_id"
                   required={!form.use_custom_school}
@@ -279,17 +292,20 @@ function StudentSignup() {
                   <option value="" disabled>
                     {schoolLoading ? "Loading schools..." : "Select a school"}
                   </option>
-                  {schools.map((school) => (
+                  {matchingSchools.map((school) => (
                     <option key={school.id} value={school.id}>
                       {school.name}
                     </option>
                   ))}
                   <option value="custom">My school is not listed</option>
                 </select>
+                {!schoolLoading && schoolSearch.trim() && matchingSchools.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No matching schools. You can choose “My school is not listed”.</p>
+                )}
               </div>
               {form.use_custom_school ? (
                 <div className="space-y-3 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3">
-                  <p className="text-sm font-medium text-foreground">We’ll create this school and branch for you.</p>
+                  <p className="text-sm font-medium text-foreground">We’ll add this school and branch for you.</p>
                   <div className="space-y-2">
                     <Label htmlFor="custom_school_name">School name</Label>
                     <Input id="custom_school_name" required value={form.custom_school_name} onChange={(e) => update("custom_school_name", e.target.value)} placeholder="Enter school name" />

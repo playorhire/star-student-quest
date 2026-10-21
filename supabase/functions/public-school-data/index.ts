@@ -71,9 +71,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: schools, error } = await supabase.from("schools").select("id, name").order("name");
-    if (error) {
-      throw error;
+    // PostgREST applies a per-request row cap. Fetch in pages so public signup
+    // can offer every registered school, even when the table grows past it.
+    const pageSize = 1000;
+    const schools: Array<{ id: string; name: string }> = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("schools")
+        .select("id, name")
+        .order("name")
+        .order("id")
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      schools.push(...(data || []));
+      if (!data || data.length < pageSize) break;
     }
 
     return new Response(JSON.stringify({ schools }), {

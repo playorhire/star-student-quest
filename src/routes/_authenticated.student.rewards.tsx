@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { ShoppingCart, ShoppingBag, Sparkles } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Sparkles, Target, BookOpen, Trophy, CalendarCheck, Star, Music2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { VendorProductGrid } from "@/components/VendorProductGrid";
 import {
@@ -38,6 +38,7 @@ function StudentRewards() {
     | { kind: "vendor"; id: string; name: string; cost: number; stock: number; shop?: string }
     | null
   >(null);
+  const [earningFocus, setEarningFocus] = useState<string | null>(null);
 
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -268,6 +269,20 @@ function StudentRewards() {
 
   if (!student) return <div className="flex justify-center py-12"><div className="text-2xl animate-bounce">🎁</div></div>;
 
+  const nextReward = [
+    ...rewards.filter((r) => (r.stock ?? 0) > 0).map((r) => ({ id: `school-${r.id}`, name: r.name, emoji: r.emoji || "🎁", cost: r.point_cost, source: "School reward" })),
+    ...marketplace.map((p) => ({ id: `vendor-${p.id}`, name: p.product_name, emoji: "🛍️", cost: p.required_points, source: p.vendors?.shop_name || "Marketplace" })),
+  ].filter((reward) => reward.cost > student.total_points).sort((a, b) => a.cost - b.cost)[0];
+  const pointGap = nextReward ? nextReward.cost - student.total_points : 0;
+  const pathProgress = nextReward ? Math.min(100, (student.total_points / nextReward.cost) * 100) : 100;
+  const earningWays = [
+    { id: "study", label: "Study", icon: BookOpen, prompt: "Choose a subject to focus on, then ask your teacher which classwork or mark achievements earn StarPoints." },
+    { id: "sports", label: "Sports", icon: Trophy, prompt: "Pick a team, practice, or competition you can take part in. Check with your school which sports achievements count." },
+    { id: "attendance", label: "Attendance", icon: CalendarCheck, prompt: "Aim for your next school day on time. Ask your teacher whether attendance or punctuality earns points at your school." },
+    { id: "leadership", label: "Leadership", icon: Star, prompt: "Look for one helpful responsibility you can take on, then confirm with a teacher how leadership is recognized." },
+    { id: "activities", label: "Activities", icon: Music2, prompt: "Choose a club, performance, or extracurricular activity that interests you. Check which participation milestones award points." },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 p-4 text-primary-foreground shadow-lg">
@@ -286,6 +301,47 @@ function StudentRewards() {
           </div>
         </div>
       </div>
+
+      <Card className="overflow-hidden border-primary/20 shadow-sm">
+        <div className="bg-gradient-to-br from-violet-600 via-primary to-fuchsia-500 p-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 text-2xl">✨</div>
+            <div>
+              <div className="flex items-center gap-1.5 text-lg font-black"><Sparkles className="h-4 w-4" /> StarBuddy</div>
+              <p className="text-xs text-white/85">Your personal path to the next reward</p>
+            </div>
+          </div>
+        </div>
+        <CardContent className="space-y-4 p-4">
+          {nextReward ? <>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Your next goal · {nextReward.source}</p>
+                <p className="mt-1 font-black text-foreground">{nextReward.emoji} {nextReward.name}</p>
+              </div>
+              <div className="shrink-0 rounded-xl bg-primary/10 px-3 py-1.5 text-right">
+                <div className="text-lg font-black leading-none text-primary">{pointGap}</div>
+                <div className="mt-1 text-[10px] text-muted-foreground">points to go</div>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground"><span>{student.total_points} points</span><span>{nextReward.cost} points</span></div>
+              <Progress value={pathProgress} className="h-2.5" />
+            </div>
+            <div className="rounded-xl bg-muted/60 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-foreground"><Target className="h-3.5 w-3.5 text-primary" /> Pick one way to work toward it</p>
+              <div className="flex flex-wrap gap-1.5">
+                {earningWays.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setEarningFocus(earningFocus === id ? null : id)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${earningFocus === id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground hover:border-primary/50"}`}><Icon className="h-3 w-3" />{label}</button>)}
+              </div>
+              {earningFocus && <div className="mt-3 flex gap-2 rounded-lg bg-background p-2.5 text-xs leading-relaxed text-muted-foreground"><ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />{earningWays.find((way) => way.id === earningFocus)?.prompt}</div>}
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">Point awards depend on your school’s rules. StarBuddy helps you plan; your teacher can confirm which activities count.</p>
+          </> : <div className="py-1">
+            <p className="flex items-center gap-2 font-bold text-foreground"><CheckCircle2 className="h-5 w-5 text-emerald-500" />{rewards.length || marketplace.length ? "You can reach every available reward!" : "Your reward journey starts here"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{rewards.length || marketplace.length ? "Pick a reward below and enjoy what you’ve earned." : "New rewards will appear here when your school adds them."}</p>
+          </div>}
+        </CardContent>
+      </Card>
 
       {error && (
         <div className="p-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950">

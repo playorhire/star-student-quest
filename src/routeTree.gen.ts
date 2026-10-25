@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterSchoolRouteImport } from './routes/register-school'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as StudentSignupRouteImport } from './routes/student-signup'
+import { Route as VendorRegisterRouteImport } from './routes/vendor-register'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedBranchAdminRouteImport } from './routes/_authenticated.branch-admin'
 import { Route as AuthenticatedParentRouteImport } from './routes/_authenticated.parent'
@@ -123,6 +124,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const StudentSignupRoute = StudentSignupRouteImport.update({
   id: '/student-signup',
   path: '/student-signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorRegisterRoute = VendorRegisterRouteImport.update({
+  id: '/vendor-register',
+  path: '/vendor-register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -569,6 +575,7 @@ export interface FileRoutesByFullPath {
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student-signup': typeof StudentSignupRoute
+  '/vendor-register': typeof VendorRegisterRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -651,6 +658,7 @@ export interface FileRoutesByTo {
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student-signup': typeof StudentSignupRoute
+  '/vendor-register': typeof VendorRegisterRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/parent': typeof AuthenticatedParentRouteWithChildren
@@ -735,6 +743,7 @@ export interface FileRoutesById {
   '/register-school': typeof RegisterSchoolRoute
   '/reset-password': typeof ResetPasswordRoute
   '/student-signup': typeof StudentSignupRoute
+  '/vendor-register': typeof VendorRegisterRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/branch-admin': typeof AuthenticatedBranchAdminRouteWithChildren
   '/_authenticated/parent': typeof AuthenticatedParentRouteWithChildren
@@ -819,6 +828,7 @@ export interface FileRouteTypes {
     | '/register-school'
     | '/reset-password'
     | '/student-signup'
+    | '/vendor-register'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -901,6 +911,7 @@ export interface FileRouteTypes {
     | '/register-school'
     | '/reset-password'
     | '/student-signup'
+    | '/vendor-register'
     | '/admin'
     | '/branch-admin'
     | '/parent'
@@ -984,6 +995,7 @@ export interface FileRouteTypes {
     | '/register-school'
     | '/reset-password'
     | '/student-signup'
+    | '/vendor-register'
     | '/_authenticated/admin'
     | '/_authenticated/branch-admin'
     | '/_authenticated/parent'
@@ -1068,6 +1080,7 @@ export interface RootRouteChildren {
   RegisterSchoolRoute: typeof RegisterSchoolRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentSignupRoute: typeof StudentSignupRoute
+  VendorRegisterRoute: typeof VendorRegisterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1119,6 +1132,13 @@ declare module '@tanstack/react-router' {
       path: '/student-signup'
       fullPath: '/student-signup'
       preLoaderRoute: typeof StudentSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendor-register': {
+      id: '/vendor-register'
+      path: '/vendor-register'
+      fullPath: '/vendor-register'
+      preLoaderRoute: typeof VendorRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -1907,6 +1927,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterSchoolRoute: RegisterSchoolRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   StudentSignupRoute: StudentSignupRoute,
+  VendorRegisterRoute: VendorRegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

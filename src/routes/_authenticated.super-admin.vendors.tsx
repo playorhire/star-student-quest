@@ -20,8 +20,9 @@ const PAGE_SIZE = 20;
 
 function SuperAdminVendors() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<"vendors" | "products">("vendors");
+  const [tab, setTab] = useState<"vendors" | "products" | "applications">("applications");
   const [vendors, setVendors] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
@@ -40,6 +41,8 @@ function SuperAdminVendors() {
   const [rejectReason, setRejectReason] = useState("");
   const [stats, setStats] = useState({ pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0, activeVendors: 0 });
   const [vendorPendingCounts, setVendorPendingCounts] = useState<Record<string, number>>({});
+  const [reviewing, setReviewing] = useState<any>(null);
+  const [reviewPassword, setReviewPassword] = useState("");
 
   useEffect(() => {
     if (user) { loadSidebars(); loadStats(); }
@@ -64,15 +67,17 @@ function SuperAdminVendors() {
 
   async function loadSidebars() {
     setLoading(true);
-    const [v, s] = await Promise.all([
+    const [v, s, a] = await Promise.all([
       (supabase as any).from("vendors").select("*").order("created_at", { ascending: false }),
       (supabase as any).from("schools").select("id, name").order("name"),
+      (supabase as any).from("vendor_applications").select("*").eq("status", "pending").order("created_at", { ascending: true }),
     ]);
     if (v.error || s.error) {
       toast.error(v.error?.message || s.error?.message || "Failed to load vendor data");
     }
     setVendors(v.data || []);
     setSchools(s.data || []);
+    setApplications(a.data || []);
     setLoading(false);
   }
 
@@ -149,6 +154,29 @@ function SuperAdminVendors() {
     setCreating(false); setForm({}); loadSidebars();
   }
 
+  async function approveApplication() {
+    if (!reviewing || !reviewPassword || reviewPassword.length < 6) { toast.error("Set a temporary password with at least 6 characters"); return; }
+    if (assignedSchools.size === 0) { toast.error("Assign at least one school before approving"); return; }
+    const res = await supabase.functions.invoke("create-user", { body: {
+      email: reviewing.email, password: reviewPassword, role: "vendor", tenant_role: "vendor", is_primary: true,
+      meta: { shop_name: reviewing.shop_name, owner_name: reviewing.owner_name, phone: reviewing.phone, address: reviewing.address, city: reviewing.city },
+    } });
+    if (res.error || res.data?.error) { toast.error(res.data?.error || res.error?.message || "Could not create vendor login"); return; }
+    const { data: vendor } = await (supabase as any).from("vendors").select("id").eq("user_id", res.data.userId).single();
+    if (!vendor) { toast.error("Vendor account was created but could not be loaded. Assign schools from the vendor record."); return; }
+    const { error: schoolError } = await (supabase as any).from("vendor_schools").insert([...assignedSchools].map((school_id) => ({ vendor_id: vendor.id, school_id })));
+    if (schoolError) { toast.error(`Account created, but school assignment failed: ${schoolError.message}`); return; }
+    const { error } = await (supabase as any).from("vendor_applications").update({ status: "approved" }).eq("id", reviewing.id);
+    if (error) { toast.error(`Account created, but application status could not be updated: ${error.message}`); return; }
+    toast.success("Vendor approved. Share the temporary password with the applicant.");
+    setReviewing(null); setReviewPassword(""); setAssignedSchools(new Set()); loadSidebars(); loadStats();
+  }
+
+  async function rejectApplication(application: any) {
+    const { error } = await (supabase as any).from("vendor_applications").update({ status: "rejected" }).eq("id", application.id);
+    if (error) toast.error(error.message); else { toast.success("Application declined"); loadSidebars(); }
+  }
+
   async function toggleStatus(v: any) {
     const next = v.status === "active" ? "suspended" : "active";
     const { error } = await (supabase as any).from("vendors").update({ status: next }).eq("id", v.id);
@@ -167,6 +195,14 @@ function SuperAdminVendors() {
   async function setApproval(id: string, admin_status: "approved" | "rejected") {
     const { error } = await (supabase as any).from("vendor_products").update({ admin_status }).eq("id", id);
     if (error) toast.error(error.message); else {
+      if (admin_status === "approved") {
+        const { data: product } = await (supabase as any).from("vendor_products").select("vendor_id").eq("id", id).single();
+        const { data: vendorSchools } = product ? await (supabase as any).from("vendor_schools").select("school_id").eq("vendor_id", product.vendor_id) : { data: [] };
+        if (vendorSchools?.length) {
+          const { error: assignmentError } = await (supabase as any).from("vendor_product_schools").upsert(vendorSchools.map((row: any) => ({ product_id: id, school_id: row.school_id, approved: true })), { onConflict: "product_id,school_id" });
+          if (assignmentError) toast.error(`Product approved, but school listing failed: ${assignmentError.message}`);
+        }
+      }
       toast.success(`Product ${admin_status}`);
       loadProducts();
       loadStats();
@@ -217,6 +253,7 @@ function SuperAdminVendors() {
       </div>
 
       <div className="flex gap-2">
+        <Button size="sm" variant={tab === "applications" ? "default" : "outline"} onClick={() => setTab("applications")} className="rounded-xl">Applications{applications.length > 0 && <span className="ml-2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{applications.length}</span>}</Button>
         <Button size="sm" variant={tab === "vendors" ? "default" : "outline"} onClick={() => setTab("vendors")} className="rounded-xl">Vendors</Button>
         <Button size="sm" variant={tab === "products" ? "default" : "outline"} onClick={() => setTab("products")} className="rounded-xl">
           Products
@@ -225,6 +262,10 @@ function SuperAdminVendors() {
           )}
         </Button>
       </div>
+
+      {tab === "applications" && <div className="grid gap-3">
+        {loading ? <p className="py-6 text-center text-sm text-muted-foreground">Loading applications...</p> : applications.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No pending applications</p> : applications.map((a) => <Card key={a.id} className="border-0 shadow-sm"><CardContent className="space-y-2 p-4"><div className="flex items-start justify-between gap-3"><div><h2 className="font-bold">{a.shop_name}</h2><p className="text-xs text-muted-foreground">{a.owner_name} · {a.email}</p></div><span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-700">Pending review</span></div><p className="text-sm">{a.phone} · {a.city}</p><p className="text-xs text-muted-foreground">{a.address}</p>{a.description && <p className="text-sm">{a.description}</p>}<div className="flex gap-2 pt-1"><Button size="sm" onClick={() => { setReviewing(a); setReviewPassword(""); setAssignedSchools(new Set()); }} className="rounded-lg">Review & approve</Button><Button size="sm" variant="outline" onClick={() => rejectApplication(a)} className="rounded-lg">Decline</Button></div></CardContent></Card>)}
+      </div>}
 
       {tab === "vendors" && (
         <div className="grid gap-2">
@@ -355,6 +396,15 @@ function SuperAdminVendors() {
             <div><Label className="text-xs">Address</Label><Input value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} className="rounded-xl" /></div>
             <Button type="submit" className="w-full rounded-xl">Create</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reviewing} onOpenChange={(open) => { if (!open) setReviewing(null); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Approve {reviewing?.shop_name}</DialogTitle></DialogHeader>
+          <div className="space-y-3"><div><Label className="text-xs">Temporary vendor password (share with applicant)</Label><Input type="password" value={reviewPassword} onChange={(e) => setReviewPassword(e.target.value)} className="rounded-xl" minLength={6} /></div>
+            <div><Label className="text-xs">Schools this vendor may serve</Label><div className="mt-1 space-y-1">{schools.map((school) => { const selected = assignedSchools.has(school.id); return <button key={school.id} type="button" onClick={() => { const next = new Set(assignedSchools); selected ? next.delete(school.id) : next.add(school.id); setAssignedSchools(next); }} className="flex w-full items-center gap-2 rounded-xl p-2 text-left hover:bg-muted">{selected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}<span className="text-sm">{school.name}</span></button>; })}</div></div>
+            <Button onClick={approveApplication} className="w-full rounded-xl">Create vendor account & approve</Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../lib/auth-context";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { Progress } from "../components/ui/progress";
 import { ShoppingCart, ShoppingBag, Sparkles, Target, BookOpen, Trophy, CalendarCheck, Star, Music2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { VendorProductGrid } from "@/components/VendorProductGrid";

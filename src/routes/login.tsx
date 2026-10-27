@@ -15,11 +15,13 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { login, loading: authLoading } = useAuth();
+  const { login, requestPhoneCode, verifyPhoneCode, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [method, setMethod] = useState<"email" | "phone">("email");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,10 +32,21 @@ function LoginPage() {
     if (!value) { setError(`Please enter your ${method === "email" ? "email" : "mobile number"}.`); return; }
     if (method === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setError("That doesn't look like a valid email address."); return; }
     if (method === "phone" && !/^\+[1-9]\d{7,14}$/.test(value)) { setError("Enter your mobile number with country code, for example +923001234567."); return; }
-    if (!password) { setError("Please enter your password."); return; }
     setLoading(true);
     try {
-      await login(value, password, method);
+      if (method === "phone" && !phoneCodeSent) {
+        await requestPhoneCode(value);
+        setPhoneCodeSent(true);
+        toast.success("Verification code sent", { description: "Check your phone for the SMS code." });
+        return;
+      }
+      if (method === "phone") {
+        if (!/^\d{6}$/.test(otp.trim())) { setError("Enter the 6-digit code sent to your phone."); return; }
+        await verifyPhoneCode(value, otp.trim());
+      } else {
+        if (!password) { setError("Please enter your password."); return; }
+        await login(value, password, method);
+      }
       // Auth state change listener will handle role detection and redirect happens in _authenticated or index
       navigate({ to: "/" });
     } catch (err: unknown) {
@@ -66,25 +79,31 @@ function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4 text-left mb-8">
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1" role="group" aria-label="Sign-in method">
-            <button type="button" onClick={() => { setMethod("email"); setIdentifier(""); setError(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "email" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          <button type="button" onClick={() => { setMethod("email"); setIdentifier(""); setError(""); setPhoneCodeSent(false); setOtp(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "email" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
               <Mail className="h-4 w-4" /> Email
             </button>
-            <button type="button" onClick={() => { setMethod("phone"); setIdentifier(""); setError(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "phone" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          <button type="button" onClick={() => { setMethod("phone"); setIdentifier(""); setError(""); setPhoneCodeSent(false); setOtp(""); }} className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold ${method === "phone" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
               <Phone className="h-4 w-4" /> Mobile
             </button>
           </div>
+          {method === "phone" && phoneCodeSent ? <div>
+            <label className="block text-sm font-semibold text-foreground mb-1">SMS verification code</label>
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))} required className="w-full rounded-xl border border-border bg-card px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary" placeholder="6-digit code" />
+            <button type="button" onClick={() => { setPhoneCodeSent(false); setOtp(""); setError(""); }} className="mt-2 text-xs font-bold text-primary hover:underline">Use a different number</button>
+          </div> : null}
           <div>
             <label className="block text-sm font-semibold text-foreground mb-1">{method === "email" ? "Email" : "Mobile number"}</label>
             <input
               type={method === "email" ? "email" : "tel"}
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
+              readOnly={method === "phone" && phoneCodeSent}
               required
               className="w-full rounded-xl border border-border bg-card px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder={method === "email" ? "you@school.edu" : "+923001234567"}
             />
           </div>
-          <div>
+          {method === "email" && <div>
             <label className="block text-sm font-semibold text-foreground mb-1">Password</label>
             <input
               type="password"
@@ -94,7 +113,7 @@ function LoginPage() {
               className="w-full rounded-xl border border-border bg-card px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="••••••••"
             />
-          </div>
+          </div>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="text-right">
             {method === "email" && <Link to="/forgot-password" className="text-xs font-bold text-primary hover:underline">
@@ -106,7 +125,7 @@ function LoginPage() {
             disabled={loading || authLoading}
             className="w-full rounded-xl bg-primary py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? (method === "phone" && !phoneCodeSent ? "Sending code..." : "Signing in...") : method === "phone" && !phoneCodeSent ? "Send SMS code" : "Sign In"}
           </button>
         </form>
 

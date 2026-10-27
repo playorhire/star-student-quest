@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.public-school-data]
 verify_jwt = false
+
+[functions.send-whatsapp-otp]
+verify_jwt = false

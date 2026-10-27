@@ -18,6 +18,8 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   login: (identifier: string, password: string, method?: "email" | "phone") => Promise<void>;
+  requestPhoneCode: (phone: string) => Promise<void>;
+  verifyPhoneCode: (phone: string, token: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -117,6 +119,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const requestPhoneCode = useCallback(async (phone: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) throw error;
+  }, []);
+
+  const verifyPhoneCode = useCallback(async (phone: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+    if (error) throw error;
+  }, []);
+
   const signup = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
@@ -129,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, user, session, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated: !!user, user, session, loading, login, requestPhoneCode, verifyPhoneCode, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
